@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:metro_ui/merto/app.dart';
+import 'package:metro_ui/merto/page.dart';
 import 'package:metro_ui/tile.dart';
 
 void main() {
@@ -11,7 +13,7 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MetroApp(
       title: 'Flutter Demo',
       theme: ThemeData(
         // This is the theme of your application.
@@ -57,7 +59,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   final List<GlobalKey> _keys = [];
-  bool _isAddPostFrame = false; //渲染完成回调
+  //bool _isAddPostFrame = false; //渲染完成回调
 
   late List<AnimationController> _controllers;
   late List<Animation<double>> _animations;
@@ -116,7 +118,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       setState(() {
-        _isAddPostFrame = true;
+        //_isAddPostFrame = true;
       });
     });
   }
@@ -146,7 +148,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
     int thisIndex = 0;
 
-    for (int i = 0; i < _keys.length; i++) {
+    for (int i = _keys.length - 1; i >= 0; i--) {
       final RenderBox renderBox =
           _keys[i].currentContext!.findRenderObject() as RenderBox;
       final position = renderBox.localToGlobal(Offset.zero);
@@ -199,7 +201,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return MetroPage(
       backgroundColor: Color.fromARGB(0, 0, 0, 0),
       // appBar: AppBar(
       //   // TRY THIS: Try changing the color here to a specific color (to
@@ -210,6 +212,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       //   // the App.build method, and use it to set our appbar title.
       //   title: Text(widget.title),
       // ),
+      
       body: Transform(
         alignment: FractionalOffset.center,
         transform: Matrix4.identity()..setEntry(3, 2, 0.001) // 设置Z轴偏移
@@ -281,6 +284,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
           ),
         ),
       ),
+    
     );
   }
 }
