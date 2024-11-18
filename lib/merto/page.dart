@@ -17,24 +17,13 @@ import 'package:flutter/material.dart';
 // late int tabCount;
 // late TickerProvider tickerProvider;
 
-
-const Curve _standardBottomSheetCurve = standardEasing;
-// 当底部表单的顶部越过此阈值时，它将开始缩小FAB并显示蒙版。
-const double _kBottomSheetDominatesPercentage = 0.3;
-const double _kMinBottomSheetScrimOpacity = 0.1;
-const double _kMaxBottomSheetScrimOpacity = 0.6;
-
 enum _ScaffoldSlot {
   body,
-  appBar,
   bodyScrim,
-  bottomSheet,
   snackBar,
   materialBanner,
   persistentFooter,
   bottomNavigationBar,
-  drawer,
-  endDrawer,
   statusBar,
 }
 
@@ -107,7 +96,8 @@ class MetroPageMessenger extends StatefulWidget {
   static MetroPageMessengerState of(BuildContext context) {
     assert(debugCheckHasScaffoldMessenger(context));
 
-    final _MetroPageMessengerScope scope = context.dependOnInheritedWidgetOfExactType<_MetroPageMessengerScope>()!;
+    final _MetroPageMessengerScope scope =
+        context.dependOnInheritedWidgetOfExactType<_MetroPageMessengerScope>()!;
     return scope._scaffoldMessengerState;
   }
 
@@ -119,8 +109,8 @@ class MetroPageMessenger extends StatefulWidget {
   ///
   ///  * [of]，这是一个类似的函数，不同之处在于如果在给定上下文中未找到 [MetroPageMessenger]，它将抛出异常。
   static MetroPageMessengerState? maybeOf(BuildContext context) {
-
-    final _MetroPageMessengerScope? scope = context.dependOnInheritedWidgetOfExactType<_MetroPageMessengerScope>();
+    final _MetroPageMessengerScope? scope =
+        context.dependOnInheritedWidgetOfExactType<_MetroPageMessengerScope>();
     return scope?._scaffoldMessengerState;
   }
 
@@ -135,26 +125,34 @@ class MetroPageMessenger extends StatefulWidget {
 /// Scaffolds 将注册以从其最近的 ScaffoldMessenger 祖先接收 [SnackBar] 和 [MaterialBanner]。
 ///
 /// 通常通过 [MetroPageMessenger.of] 获取。
-class MetroPageMessengerState extends State<MetroPageMessenger> with TickerProviderStateMixin {
-  final LinkedHashSet<MetroPageState> _scaffolds = LinkedHashSet<MetroPageState>();
-  final Queue<MetroPageFeatureController<MaterialBanner, MaterialBannerClosedReason>> _materialBanners = Queue<MetroPageFeatureController<MaterialBanner, MaterialBannerClosedReason>>();
+class MetroPageMessengerState extends State<MetroPageMessenger>
+    with TickerProviderStateMixin {
+  final LinkedHashSet<MetroPageState> _scaffolds =
+      LinkedHashSet<MetroPageState>();
+  final Queue<
+      MetroPageFeatureController<MaterialBanner,
+          MaterialBannerClosedReason>> _materialBanners = Queue<
+      MetroPageFeatureController<MaterialBanner, MaterialBannerClosedReason>>();
   AnimationController? _materialBannerController;
-  final Queue<MetroPageFeatureController<SnackBar, SnackBarClosedReason>> _snackBars = Queue<MetroPageFeatureController<SnackBar, SnackBarClosedReason>>();
+  final Queue<MetroPageFeatureController<SnackBar, SnackBarClosedReason>>
+      _snackBars =
+      Queue<MetroPageFeatureController<SnackBar, SnackBarClosedReason>>();
   AnimationController? _snackBarController;
   Timer? _snackBarTimer;
   bool? _accessibleNavigation;
 
   @override
   void didChangeDependencies() {
-    final bool accessibleNavigation = MediaQuery.accessibleNavigationOf(context);
+    final bool accessibleNavigation =
+        MediaQuery.accessibleNavigationOf(context);
     // 如果我们从无障碍导航过渡到非无障碍导航
     // 并且有一个 SnackBar 本应超时但已经
     // 完成了它的计时器，则关闭该 SnackBar。如果计时器尚未完成
     // 让它正常超时。
-    if ((_accessibleNavigation ?? false)
-        && !accessibleNavigation
-        && _snackBarTimer != null
-        && !_snackBarTimer!.isActive) {
+    if ((_accessibleNavigation ?? false) &&
+        !accessibleNavigation &&
+        _snackBarTimer != null &&
+        !_snackBarTimer!.isActive) {
       hideCurrentSnackBar(reason: SnackBarClosedReason.timeout);
     }
     _accessibleNavigation = accessibleNavigation;
@@ -192,7 +190,8 @@ class MetroPageMessengerState extends State<MetroPageMessenger> with TickerProvi
 
   // 嵌套的 Scaffold 由 ScaffoldMessenger 处理，仅在嵌套集的根 Scaffold 中显示 MaterialBanner 或 SnackBar。
   bool _isRoot(MetroPageState scaffold) {
-    final MetroPageState? parent = scaffold.context.findAncestorStateOfType<MetroPageState>();
+    final MetroPageState? parent =
+        scaffold.context.findAncestorStateOfType<MetroPageState>();
     return parent == null || !_scaffolds.contains(parent);
   }
 
@@ -251,9 +250,8 @@ class MetroPageMessengerState extends State<MetroPageMessenger> with TickerProvi
   /// ** 请参阅 examples/api/lib/material/scaffold/scaffold_messenger_state.show_snack_bar.2.dart 中的代码 **
   /// {@end-tool}
   MetroPageFeatureController<SnackBar, SnackBarClosedReason> showSnackBar(
-    SnackBar snackBar,
-    { AnimationStyle? snackBarAnimationStyle }
-  ) {
+      SnackBar snackBar,
+      {AnimationStyle? snackBarAnimationStyle}) {
     assert(
       _scaffolds.isNotEmpty,
       'ScaffoldMessenger.showSnackBar was called, but there are currently no '
@@ -261,25 +259,24 @@ class MetroPageMessengerState extends State<MetroPageMessenger> with TickerProvi
     );
     _didUpdateAnimationStyle(snackBarAnimationStyle);
     _snackBarController ??= SnackBar.createAnimationController(
-        duration: snackBarAnimationStyle?.duration,
-        reverseDuration: snackBarAnimationStyle?.reverseDuration,
-        vsync: this,
-      )
-      ..addStatusListener(_handleSnackBarStatusChanged);
+      duration: snackBarAnimationStyle?.duration,
+      reverseDuration: snackBarAnimationStyle?.reverseDuration,
+      vsync: this,
+    )..addStatusListener(_handleSnackBarStatusChanged);
     if (_snackBars.isEmpty) {
       assert(_snackBarController!.isDismissed);
       _snackBarController!.forward();
     }
     late MetroPageFeatureController<SnackBar, SnackBarClosedReason> controller;
     controller = MetroPageFeatureController<SnackBar, SnackBarClosedReason>._(
-        // 我们提供备用键，以便如果连续出现的 SnackBar 结构相同，
-        // Material Ink飞溅和高亮效果不会从一个保留到下一个。
+      // 我们提供备用键，以便如果连续出现的 SnackBar 结构相同，
+      // Material Ink飞溅和高亮效果不会从一个保留到下一个。
       snackBar.withAnimation(_snackBarController!, fallbackKey: UniqueKey()),
       Completer<SnackBarClosedReason>(),
-        () {
-          assert(_snackBars.first == controller);
-          hideCurrentSnackBar();
-        },
+      () {
+        assert(_snackBars.first == controller);
+        hideCurrentSnackBar();
+      },
       null, // SnackBar doesn't use a builder function so setState() wouldn't rebuild it
     );
     try {
@@ -288,12 +285,14 @@ class MetroPageMessengerState extends State<MetroPageMessenger> with TickerProvi
       });
       _updateScaffolds();
     } catch (exception) {
-      assert (() {
+      assert(() {
         if (exception is FlutterError) {
           final String summary = exception.diagnostics.first.toDescription();
-          if (summary == 'setState() or markNeedsBuild() called during build.') {
+          if (summary ==
+              'setState() or markNeedsBuild() called during build.') {
             final List<DiagnosticsNode> information = <DiagnosticsNode>[
-              ErrorSummary('The showSnackBar() method cannot be called during build.'),
+              ErrorSummary(
+                  'The showSnackBar() method cannot be called during build.'),
               ErrorDescription(
                 'The showSnackBar() method was called during build, which is '
                 'prohibited as showing snack bars requires updating state. Updating '
@@ -325,7 +324,8 @@ class MetroPageMessengerState extends State<MetroPageMessenger> with TickerProvi
   void _didUpdateAnimationStyle(AnimationStyle? snackBarAnimationStyle) {
     if (snackBarAnimationStyle != null) {
       if (_snackBarController?.duration != snackBarAnimationStyle.duration ||
-          _snackBarController?.reverseDuration != snackBarAnimationStyle.reverseDuration) {
+          _snackBarController?.reverseDuration !=
+              snackBarAnimationStyle.reverseDuration) {
         _snackBarController?.dispose();
         _snackBarController = null;
       }
@@ -359,11 +359,13 @@ class MetroPageMessengerState extends State<MetroPageMessenger> with TickerProvi
   ///
   /// 移除的 snack bar 不会运行其正常的退出动画。如果有任何排队的 snack bars，
   /// 它们会立即开始进入动画。
-  void removeCurrentSnackBar({ SnackBarClosedReason reason = SnackBarClosedReason.remove }) {
+  void removeCurrentSnackBar(
+      {SnackBarClosedReason reason = SnackBarClosedReason.remove}) {
     if (_snackBars.isEmpty) {
       return;
     }
-    final Completer<SnackBarClosedReason> completer = _snackBars.first._completer;
+    final Completer<SnackBarClosedReason> completer =
+        _snackBars.first._completer;
     if (!completer.isCompleted) {
       completer.complete(reason);
     }
@@ -374,13 +376,15 @@ class MetroPageMessengerState extends State<MetroPageMessenger> with TickerProvi
   }
 
   /// 移除当前的 [SnackBar]，通过运行其正常的退出动画。
-  /// 
+  ///
   /// 动画完成后，调用关闭的 completer。
-  void hideCurrentSnackBar({ SnackBarClosedReason reason = SnackBarClosedReason.hide }) {
+  void hideCurrentSnackBar(
+      {SnackBarClosedReason reason = SnackBarClosedReason.hide}) {
     if (_snackBars.isEmpty || _snackBarController!.isDismissed) {
       return;
     }
-    final Completer<SnackBarClosedReason> completer = _snackBars.first._completer;
+    final Completer<SnackBarClosedReason> completer =
+        _snackBars.first._completer;
     if (_accessibleNavigation!) {
       _snackBarController!.value = 0.0;
       completer.complete(reason);
@@ -401,7 +405,8 @@ class MetroPageMessengerState extends State<MetroPageMessenger> with TickerProvi
     if (_snackBars.isEmpty || _snackBarController!.isDismissed) {
       return;
     }
-    final MetroPageFeatureController<SnackBar, SnackBarClosedReason> currentSnackbar = _snackBars.first;
+    final MetroPageFeatureController<SnackBar, SnackBarClosedReason>
+        currentSnackbar = _snackBars.first;
     _snackBars.clear();
     _snackBars.add(currentSnackbar);
     hideCurrentSnackBar();
@@ -428,25 +433,30 @@ class MetroPageMessengerState extends State<MetroPageMessenger> with TickerProvi
   ///
   /// ** 请参阅 examples/api/lib/material/scaffold/scaffold_messenger_state.show_material_banner.0.dart 中的代码 **
   /// {@end-tool}
-  MetroPageFeatureController<MaterialBanner, MaterialBannerClosedReason> showMaterialBanner(MaterialBanner materialBanner) {
+  MetroPageFeatureController<MaterialBanner, MaterialBannerClosedReason>
+      showMaterialBanner(MaterialBanner materialBanner) {
     assert(
       _scaffolds.isNotEmpty,
       'ScaffoldMessenger.showMaterialBanner was called, but there are currently no '
       'descendant Scaffolds to present to.',
     );
-    _materialBannerController ??= MaterialBanner.createAnimationController(vsync: this)
-      ..addStatusListener(_handleMaterialBannerStatusChanged);
+    _materialBannerController ??=
+        MaterialBanner.createAnimationController(vsync: this)
+          ..addStatusListener(_handleMaterialBannerStatusChanged);
     if (_materialBanners.isEmpty) {
       assert(_materialBannerController!.isDismissed);
       _materialBannerController!.forward();
     }
-    late MetroPageFeatureController<MaterialBanner, MaterialBannerClosedReason> controller;
-    controller = MetroPageFeatureController<MaterialBanner, MaterialBannerClosedReason>._(
+    late MetroPageFeatureController<MaterialBanner, MaterialBannerClosedReason>
+        controller;
+    controller = MetroPageFeatureController<MaterialBanner,
+        MaterialBannerClosedReason>._(
       // 我们提供一个备用键，以防连续的Material Banner在结构上相匹配，
       // 这样Material的Ink飞溅和高亮效果就不会从一个保留到下一个。
-      materialBanner.withAnimation(_materialBannerController!, fallbackKey: UniqueKey()),
+      materialBanner.withAnimation(_materialBannerController!,
+          fallbackKey: UniqueKey()),
       Completer<MaterialBannerClosedReason>(),
-          () {
+      () {
         assert(_materialBanners.first == controller);
         hideCurrentMaterialBanner();
       },
@@ -482,11 +492,13 @@ class MetroPageMessengerState extends State<MetroPageMessenger> with TickerProvi
   ///
   /// 被移除的 material banner 不会执行其正常的退出动画。如果有任何排队的 material banners，
   /// 它们会立即开始进入动画。
-  void removeCurrentMaterialBanner({ MaterialBannerClosedReason reason = MaterialBannerClosedReason.remove }) {
+  void removeCurrentMaterialBanner(
+      {MaterialBannerClosedReason reason = MaterialBannerClosedReason.remove}) {
     if (_materialBanners.isEmpty) {
       return;
     }
-    final Completer<MaterialBannerClosedReason> completer = _materialBanners.first._completer;
+    final Completer<MaterialBannerClosedReason> completer =
+        _materialBanners.first._completer;
     if (!completer.isCompleted) {
       completer.complete(reason);
     }
@@ -498,11 +510,13 @@ class MetroPageMessengerState extends State<MetroPageMessenger> with TickerProvi
   /// Removes the current [MaterialBanner] by running its normal exit animation.
   ///
   /// The closed completer is called after the animation is complete.
-  void hideCurrentMaterialBanner({ MaterialBannerClosedReason reason = MaterialBannerClosedReason.hide }) {
+  void hideCurrentMaterialBanner(
+      {MaterialBannerClosedReason reason = MaterialBannerClosedReason.hide}) {
     if (_materialBanners.isEmpty || _materialBannerController!.isDismissed) {
       return;
     }
-    final Completer<MaterialBannerClosedReason> completer = _materialBanners.first._completer;
+    final Completer<MaterialBannerClosedReason> completer =
+        _materialBanners.first._completer;
     if (_accessibleNavigation!) {
       _materialBannerController!.value = 0.0;
       completer.complete(reason);
@@ -522,7 +536,8 @@ class MetroPageMessengerState extends State<MetroPageMessenger> with TickerProvi
     if (_materialBanners.isEmpty || _materialBannerController!.isDismissed) {
       return;
     }
-    final MetroPageFeatureController<MaterialBanner, MaterialBannerClosedReason> currentMaterialBanner = _materialBanners.first;
+    final MetroPageFeatureController<MaterialBanner, MaterialBannerClosedReason>
+        currentMaterialBanner = _materialBanners.first;
     _materialBanners.clear();
     _materialBanners.add(currentMaterialBanner);
     hideCurrentMaterialBanner();
@@ -541,7 +556,8 @@ class MetroPageMessengerState extends State<MetroPageMessenger> with TickerProvi
           _snackBarTimer = Timer(snackBar.duration, () {
             assert(_snackBarController!.isForwardOrCompleted);
             // Look up MediaQuery again in case the setting changed.
-            if (snackBar.action != null && MediaQuery.accessibleNavigationOf(context)) {
+            if (snackBar.action != null &&
+                MediaQuery.accessibleNavigationOf(context)) {
               return;
             }
             hideCurrentSnackBar(reason: SnackBarClosedReason.timeout);
@@ -575,7 +591,8 @@ class _MetroPageMessengerScope extends InheritedWidget {
   final MetroPageMessengerState _scaffoldMessengerState;
 
   @override
-  bool updateShouldNotify(_MetroPageMessengerScope old) => _scaffoldMessengerState != old._scaffoldMessengerState;
+  bool updateShouldNotify(_MetroPageMessengerScope old) =>
+      _scaffoldMessengerState != old._scaffoldMessengerState;
 }
 
 /// [MetroPage] 布局完所有内容后的空间信息，不包括 [FloatingActionButton]。
@@ -722,13 +739,16 @@ class MetroPageGeometry {
     Rect? floatingActionButtonArea,
   }) {
     return MetroPageGeometry(
-      bottomNavigationBarTop: bottomNavigationBarTop ?? this.bottomNavigationBarTop,
-      floatingActionButtonArea: floatingActionButtonArea ?? this.floatingActionButtonArea,
+      bottomNavigationBarTop:
+          bottomNavigationBarTop ?? this.bottomNavigationBarTop,
+      floatingActionButtonArea:
+          floatingActionButtonArea ?? this.floatingActionButtonArea,
     );
   }
 }
 
-class _ScaffoldGeometryNotifier extends ChangeNotifier implements ValueListenable<MetroPageGeometry> {
+class _ScaffoldGeometryNotifier extends ChangeNotifier
+    implements ValueListenable<MetroPageGeometry> {
   _ScaffoldGeometryNotifier(this.geometry, this.context);
 
   final BuildContext context;
@@ -741,9 +761,9 @@ class _ScaffoldGeometryNotifier extends ChangeNotifier implements ValueListenabl
       final RenderObject? renderObject = context.findRenderObject();
       if (renderObject == null || !renderObject.owner!.debugDoingPaint) {
         throw FlutterError(
-            'Scaffold.geometryOf() must only be accessed during the paint phase.\n'
-            'The ScaffoldGeometry is only available during the paint phase, because '
-            'its value is computed during the animation and layout phases prior to painting.',
+          'Scaffold.geometryOf() must only be accessed during the paint phase.\n'
+          'The ScaffoldGeometry is only available during the paint phase, because '
+          'its value is computed during the animation and layout phases prior to painting.',
         );
       }
       return true;
@@ -754,7 +774,8 @@ class _ScaffoldGeometryNotifier extends ChangeNotifier implements ValueListenabl
   void _updateWith({
     double? bottomNavigationBarTop,
   }) {
-    this.floatingActionButtonScale = floatingActionButtonScale ?? this.floatingActionButtonScale;
+    this.floatingActionButtonScale =
+        floatingActionButtonScale ?? this.floatingActionButtonScale;
     geometry = geometry.copyWith(
       bottomNavigationBarTop: bottomNavigationBarTop,
     );
@@ -774,9 +795,9 @@ class _BodyBoxConstraints extends BoxConstraints {
     required this.bottomWidgetsHeight,
     required this.appBarHeight,
     required this.materialBannerHeight,
-  }) : assert(bottomWidgetsHeight >= 0),
-       assert(appBarHeight >= 0),
-       assert(materialBannerHeight >= 0);
+  })  : assert(bottomWidgetsHeight >= 0),
+        assert(appBarHeight >= 0),
+        assert(materialBannerHeight >= 0);
 
   final double bottomWidgetsHeight;
   final double appBarHeight;
@@ -789,14 +810,15 @@ class _BodyBoxConstraints extends BoxConstraints {
     if (super != other) {
       return false;
     }
-    return other is _BodyBoxConstraints
-        && other.materialBannerHeight == materialBannerHeight
-        && other.bottomWidgetsHeight == bottomWidgetsHeight
-        && other.appBarHeight == appBarHeight;
+    return other is _BodyBoxConstraints &&
+        other.materialBannerHeight == materialBannerHeight &&
+        other.bottomWidgetsHeight == bottomWidgetsHeight &&
+        other.appBarHeight == appBarHeight;
   }
 
   @override
-  int get hashCode => Object.hash(super.hashCode, materialBannerHeight, bottomWidgetsHeight, appBarHeight);
+  int get hashCode => Object.hash(
+      super.hashCode, materialBannerHeight, bottomWidgetsHeight, appBarHeight);
 }
 
 // 当 Scaffold 的 extendBody 为 true 时，使用 MediaQuery 包裹 scaffold 的 body，
@@ -823,17 +845,21 @@ class _BodyBuilder extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final _BodyBoxConstraints bodyConstraints = constraints as _BodyBoxConstraints;
+        final _BodyBoxConstraints bodyConstraints =
+            constraints as _BodyBoxConstraints;
         final MediaQueryData metrics = MediaQuery.of(context);
 
         final double bottom = extendBody
-          ? math.max(metrics.padding.bottom, bodyConstraints.bottomWidgetsHeight)
-          : metrics.padding.bottom;
+            ? math.max(
+                metrics.padding.bottom, bodyConstraints.bottomWidgetsHeight)
+            : metrics.padding.bottom;
 
         final double top = extendBodyBehindAppBar
-          ? math.max(metrics.padding.top,
-              bodyConstraints.appBarHeight + bodyConstraints.materialBannerHeight)
-          : metrics.padding.top;
+            ? math.max(
+                metrics.padding.top,
+                bodyConstraints.appBarHeight +
+                    bodyConstraints.materialBannerHeight)
+            : metrics.padding.top;
 
         return MediaQuery(
           data: metrics.copyWith(
@@ -880,24 +906,22 @@ class _MetroPageLayout extends MultiChildLayoutDelegate {
 
     // 这部分布局的效果与将应用栏和主体放在一列并使主体可伸缩相同。不同之处在于，在这种情况下，应用栏出现在主体之后，因此应用栏的阴影绘制在主体的顶部。
 
-    final BoxConstraints fullWidthConstraints = looseConstraints.tighten(width: size.width);
+    final BoxConstraints fullWidthConstraints =
+        looseConstraints.tighten(width: size.width);
     final double bottom = size.height;
     double contentTop = 0.0;
     double bottomWidgetsHeight = 0.0;
     double appBarHeight = 0.0;
 
-    if (hasChild(_ScaffoldSlot.appBar)) {
-      appBarHeight = layoutChild(_ScaffoldSlot.appBar, fullWidthConstraints).height;
-      contentTop = extendBodyBehindAppBar ? 0.0 : appBarHeight;
-      positionChild(_ScaffoldSlot.appBar, Offset.zero);
-    }
-
     double? bottomNavigationBarTop;
     if (hasChild(_ScaffoldSlot.bottomNavigationBar)) {
-      final double bottomNavigationBarHeight = layoutChild(_ScaffoldSlot.bottomNavigationBar, fullWidthConstraints).height;
+      final double bottomNavigationBarHeight =
+          layoutChild(_ScaffoldSlot.bottomNavigationBar, fullWidthConstraints)
+              .height;
       bottomWidgetsHeight += bottomNavigationBarHeight;
       bottomNavigationBarTop = math.max(0.0, bottom - bottomWidgetsHeight);
-      positionChild(_ScaffoldSlot.bottomNavigationBar, Offset(0.0, bottomNavigationBarTop));
+      positionChild(_ScaffoldSlot.bottomNavigationBar,
+          Offset(0.0, bottomNavigationBarTop));
     }
 
     if (hasChild(_ScaffoldSlot.persistentFooter)) {
@@ -905,14 +929,17 @@ class _MetroPageLayout extends MultiChildLayoutDelegate {
         maxWidth: fullWidthConstraints.maxWidth,
         maxHeight: math.max(0.0, bottom - bottomWidgetsHeight - contentTop),
       );
-      final double persistentFooterHeight = layoutChild(_ScaffoldSlot.persistentFooter, footerConstraints).height;
+      final double persistentFooterHeight =
+          layoutChild(_ScaffoldSlot.persistentFooter, footerConstraints).height;
       bottomWidgetsHeight += persistentFooterHeight;
-      positionChild(_ScaffoldSlot.persistentFooter, Offset(0.0, math.max(0.0, bottom - bottomWidgetsHeight)));
+      positionChild(_ScaffoldSlot.persistentFooter,
+          Offset(0.0, math.max(0.0, bottom - bottomWidgetsHeight)));
     }
 
     Size materialBannerSize = Size.zero;
     if (hasChild(_ScaffoldSlot.materialBanner)) {
-      materialBannerSize = layoutChild(_ScaffoldSlot.materialBanner, fullWidthConstraints);
+      materialBannerSize =
+          layoutChild(_ScaffoldSlot.materialBanner, fullWidthConstraints);
       positionChild(_ScaffoldSlot.materialBanner, Offset(0.0, appBarHeight));
 
       // Push content down only if elevation is 0.
@@ -922,15 +949,18 @@ class _MetroPageLayout extends MultiChildLayoutDelegate {
     }
 
     // 设置内容底部，考虑底部组件或键盘等系统UI的高度中较大的值。
-    final double contentBottom = math.max(0.0, bottom - math.max(minInsets.bottom, bottomWidgetsHeight));
+    final double contentBottom =
+        math.max(0.0, bottom - math.max(minInsets.bottom, bottomWidgetsHeight));
 
     if (hasChild(_ScaffoldSlot.body)) {
       double bodyMaxHeight = math.max(0.0, contentBottom - contentTop);
 
       if (extendBody) {
         bodyMaxHeight += bottomWidgetsHeight;
-        bodyMaxHeight = clampDouble(bodyMaxHeight, 0.0, looseConstraints.maxHeight - contentTop);
-        assert(bodyMaxHeight <= math.max(0.0, looseConstraints.maxHeight - contentTop));
+        bodyMaxHeight = clampDouble(
+            bodyMaxHeight, 0.0, looseConstraints.maxHeight - contentTop);
+        assert(bodyMaxHeight <=
+            math.max(0.0, looseConstraints.maxHeight - contentTop));
       }
 
       final BoxConstraints bodyConstraints = _BodyBoxConstraints(
@@ -952,7 +982,7 @@ class _MetroPageLayout extends MultiChildLayoutDelegate {
     // 如果三个元素同时存在，那么 FAB 的中心要么跨越 BottomSheet 的顶部边缘，
     // 要么 FAB 的底部比 SnackBar 高出 kFloatingActionButtonMargin，
     // 取决于哪种方式使 FAB 离父组件底部更远。
-    // 如果只有 FAB 有非零高度，那么它会从父组件的右边和底部边缘内缩 
+    // 如果只有 FAB 有非零高度，那么它会从父组件的右边和底部边缘内缩
     // kFloatingActionButtonMargin。
 
     Size bottomSheetSize = Size.zero;
@@ -971,19 +1001,9 @@ class _MetroPageLayout extends MultiChildLayoutDelegate {
       snackBarSize = layoutChild(_ScaffoldSlot.snackBar, fullWidthConstraints);
     }
 
-    if (hasChild(_ScaffoldSlot.bottomSheet)) {
-      final BoxConstraints bottomSheetConstraints = BoxConstraints(
-        maxWidth: fullWidthConstraints.maxWidth,
-        maxHeight: math.max(0.0, contentBottom - contentTop),
-      );
-      bottomSheetSize = layoutChild(_ScaffoldSlot.bottomSheet, bottomSheetConstraints);
-      positionChild(_ScaffoldSlot.bottomSheet, Offset((size.width - bottomSheetSize.width) / 2.0, contentBottom - bottomSheetSize.height));
-    }
-
-    late Rect floatingActionButtonRect;
-
     if (hasChild(_ScaffoldSlot.snackBar)) {
-      final bool hasCustomWidth = snackBarWidth != null && snackBarWidth! < size.width;
+      final bool hasCustomWidth =
+          snackBarWidth != null && snackBarWidth! < size.width;
       if (snackBarSize == Size.zero) {
         snackBarSize = layoutChild(
           _ScaffoldSlot.snackBar,
@@ -992,34 +1012,36 @@ class _MetroPageLayout extends MultiChildLayoutDelegate {
       }
 
       final double snackBarYOffsetBase;
-        // SnackBarBehavior.fixed 会自动应用 SafeArea。
-        // SnackBarBehavior.floating 不会，因为如果有 FloatingActionButton（见上面的条件），
-        // 其定位会受到影响。如果没有 FAB，请确保在 SnackBar 浮动时考虑安全空间。
-        final double safeYOffsetBase = size.height - minViewPadding.bottom;
-        snackBarYOffsetBase = isSnackBarFloating
+      // SnackBarBehavior.fixed 会自动应用 SafeArea。
+      // SnackBarBehavior.floating 不会，因为如果有 FloatingActionButton（见上面的条件），
+      // 其定位会受到影响。如果没有 FAB，请确保在 SnackBar 浮动时考虑安全空间。
+      final double safeYOffsetBase = size.height - minViewPadding.bottom;
+      snackBarYOffsetBase = isSnackBarFloating
           ? math.min(contentBottom, safeYOffsetBase)
           : contentBottom;
 
-      final double xOffset = hasCustomWidth ? (size.width - snackBarWidth!) / 2 : 0.0;
-      positionChild(_ScaffoldSlot.snackBar, Offset(xOffset, snackBarYOffsetBase - snackBarSize.height));
+      final double xOffset =
+          hasCustomWidth ? (size.width - snackBarWidth!) / 2 : 0.0;
+      positionChild(_ScaffoldSlot.snackBar,
+          Offset(xOffset, snackBarYOffsetBase - snackBarSize.height));
 
-      assert((){
+      assert(() {
         // 判断一个悬浮的 SnackBar 是否被抬得太高。
         //
         // 为了提升开发者体验，这个断言放在 positionChild 调用之后。
         // 如果我们提前断言，SnackBar 会因为默认位置是 (0,0) 而被显示，
         // 这会让用户混淆错误信息，认为 SnackBar 显示在屏幕外。
         if (isSnackBarFloating) {
-          final bool snackBarVisible = (snackBarYOffsetBase - snackBarSize.height) >= 0;
+          final bool snackBarVisible =
+              (snackBarYOffsetBase - snackBarSize.height) >= 0;
           if (!snackBarVisible) {
             throw FlutterError.fromParts(<DiagnosticsNode>[
               ErrorSummary('Floating SnackBar presented off screen.'),
               ErrorDescription(
-                'A SnackBar with behavior property set to SnackBarBehavior.floating is fully '
-                'or partially off screen because some or all the widgets provided to '
-                'Scaffold.floatingActionButton, Scaffold.persistentFooterButtons and '
-                'Scaffold.bottomNavigationBar take up too much vertical space.\n'
-              ),
+                  'A SnackBar with behavior property set to SnackBarBehavior.floating is fully '
+                  'or partially off screen because some or all the widgets provided to '
+                  'Scaffold.floatingActionButton, Scaffold.persistentFooterButtons and '
+                  'Scaffold.bottomNavigationBar take up too much vertical space.\n'),
               ErrorHint(
                 'Consider constraining the size of these widgets to allow room for the SnackBar to be visible.',
               ),
@@ -1031,18 +1053,9 @@ class _MetroPageLayout extends MultiChildLayoutDelegate {
     }
 
     if (hasChild(_ScaffoldSlot.statusBar)) {
-      layoutChild(_ScaffoldSlot.statusBar, fullWidthConstraints.tighten(height: minInsets.top));
+      layoutChild(_ScaffoldSlot.statusBar,
+          fullWidthConstraints.tighten(height: minInsets.top));
       positionChild(_ScaffoldSlot.statusBar, Offset.zero);
-    }
-
-    if (hasChild(_ScaffoldSlot.drawer)) {
-      layoutChild(_ScaffoldSlot.drawer, BoxConstraints.tight(size));
-      positionChild(_ScaffoldSlot.drawer, Offset.zero);
-    }
-
-    if (hasChild(_ScaffoldSlot.endDrawer)) {
-      layoutChild(_ScaffoldSlot.endDrawer, BoxConstraints.tight(size));
-      positionChild(_ScaffoldSlot.endDrawer, Offset.zero);
     }
 
     geometryNotifier._updateWith(
@@ -1052,11 +1065,11 @@ class _MetroPageLayout extends MultiChildLayoutDelegate {
 
   @override
   bool shouldRelayout(_MetroPageLayout oldDelegate) {
-    return oldDelegate.minInsets != minInsets
-      || oldDelegate.minViewPadding != minViewPadding
-      || oldDelegate.textDirection != textDirection
-      || oldDelegate.extendBody != extendBody
-      || oldDelegate.extendBodyBehindAppBar != extendBodyBehindAppBar;
+    return oldDelegate.minInsets != minInsets ||
+        oldDelegate.minViewPadding != minViewPadding ||
+        oldDelegate.textDirection != textDirection ||
+        oldDelegate.extendBody != extendBody ||
+        oldDelegate.extendBodyBehindAppBar != extendBodyBehindAppBar;
   }
 }
 
@@ -1084,10 +1097,13 @@ class _FloatingActionButtonTransition extends StatefulWidget {
   final AnimationController currentController;
 
   @override
-  _FloatingActionButtonTransitionState createState() => _FloatingActionButtonTransitionState();
+  _FloatingActionButtonTransitionState createState() =>
+      _FloatingActionButtonTransitionState();
 }
 
-class _FloatingActionButtonTransitionState extends State<_FloatingActionButtonTransition> with TickerProviderStateMixin {
+class _FloatingActionButtonTransitionState
+    extends State<_FloatingActionButtonTransition>
+    with TickerProviderStateMixin {
   // The animations applied to the Floating Action Button when it is entering or exiting.
   // Controls the previous widget.child as it exits.
   late AnimationController _previousController;
@@ -1136,14 +1152,16 @@ class _FloatingActionButtonTransitionState extends State<_FloatingActionButtonTr
   @override
   void didUpdateWidget(_FloatingActionButtonTransition oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.fabMotionAnimator != widget.fabMotionAnimator || oldWidget.fabMoveAnimation != widget.fabMoveAnimation) {
+    if (oldWidget.fabMotionAnimator != widget.fabMotionAnimator ||
+        oldWidget.fabMoveAnimation != widget.fabMoveAnimation) {
       _disposeAnimations();
       // Get the right scale and rotation animations to use for this widget.
       _updateAnimations();
     }
     final bool oldChildIsNull = oldWidget.child == null;
     final bool newChildIsNull = widget.child == null;
-    if (oldChildIsNull == newChildIsNull && oldWidget.child?.key == widget.child?.key) {
+    if (oldChildIsNull == newChildIsNull &&
+        oldWidget.child?.key == widget.child?.key) {
       return;
     }
     if (_previousController.isDismissed) {
@@ -1187,39 +1205,49 @@ class _FloatingActionButtonTransitionState extends State<_FloatingActionButtonTr
     );
     _previousExitRotationCurvedAnimation?.dispose();
     _previousExitRotationCurvedAnimation = CurvedAnimation(
-        parent: _previousController,
-        curve: Curves.easeIn,
-      );
-
-    final Animation<double> previousExitRotationAnimation = Tween<double>(begin: 1.0, end: 1.0).animate(
-      _previousExitRotationCurvedAnimation!
+      parent: _previousController,
+      curve: Curves.easeIn,
     );
+
+    final Animation<double> previousExitRotationAnimation =
+        Tween<double>(begin: 1.0, end: 1.0)
+            .animate(_previousExitRotationCurvedAnimation!);
 
     _currentEntranceScaleAnimation?.dispose();
     _currentEntranceScaleAnimation = CurvedAnimation(
       parent: widget.currentController,
       curve: Curves.easeIn,
     );
-    final Animation<double> currentEntranceRotationAnimation = widget.currentController.drive(_entranceTurnTween);
+    final Animation<double> currentEntranceRotationAnimation =
+        widget.currentController.drive(_entranceTurnTween);
 
     // Get the animations for when the FAB is moving.
-    final Animation<double> moveScaleAnimation = widget.fabMotionAnimator.getScaleAnimation(parent: widget.fabMoveAnimation);
-    final Animation<double> moveRotationAnimation = widget.fabMotionAnimator.getRotationAnimation(parent: widget.fabMoveAnimation);
+    final Animation<double> moveScaleAnimation = widget.fabMotionAnimator
+        .getScaleAnimation(parent: widget.fabMoveAnimation);
+    final Animation<double> moveRotationAnimation = widget.fabMotionAnimator
+        .getRotationAnimation(parent: widget.fabMoveAnimation);
 
     // Aggregate the animations.
     if (widget.fabMotionAnimator == FloatingActionButtonAnimator.noAnimation) {
       _previousScaleAnimation = moveScaleAnimation;
       _currentScaleAnimation = moveScaleAnimation;
-      _previousRotationAnimation = TrainHoppingAnimation(moveRotationAnimation, null);
-      _currentRotationAnimation = TrainHoppingAnimation(moveRotationAnimation, null);
+      _previousRotationAnimation =
+          TrainHoppingAnimation(moveRotationAnimation, null);
+      _currentRotationAnimation =
+          TrainHoppingAnimation(moveRotationAnimation, null);
     } else {
-      _previousScaleAnimation = AnimationMin<double>(moveScaleAnimation, _previousExitScaleAnimation!);
-      _currentScaleAnimation = AnimationMin<double>(moveScaleAnimation, _currentEntranceScaleAnimation!);
-      _previousRotationAnimation = TrainHoppingAnimation(previousExitRotationAnimation, moveRotationAnimation);
-      _currentRotationAnimation = TrainHoppingAnimation(currentEntranceRotationAnimation, moveRotationAnimation);
+      _previousScaleAnimation = AnimationMin<double>(
+          moveScaleAnimation, _previousExitScaleAnimation!);
+      _currentScaleAnimation = AnimationMin<double>(
+          moveScaleAnimation, _currentEntranceScaleAnimation!);
+      _previousRotationAnimation = TrainHoppingAnimation(
+          previousExitRotationAnimation, moveRotationAnimation);
+      _currentRotationAnimation = TrainHoppingAnimation(
+          currentEntranceRotationAnimation, moveRotationAnimation);
     }
 
-    _extendedCurrentScaleAnimation = _currentScaleAnimation.drive(CurveTween(curve: const Interval(0.0, 0.1)));
+    _extendedCurrentScaleAnimation = _currentScaleAnimation
+        .drive(CurveTween(curve: const Interval(0.0, 0.1)));
     _currentScaleAnimation.addListener(_onProgressChanged);
     _previousScaleAnimation.addListener(_onProgressChanged);
   }
@@ -1234,8 +1262,7 @@ class _FloatingActionButtonTransitionState extends State<_FloatingActionButtonTr
   }
 
   bool _isExtendedFloatingActionButton(Widget? widget) {
-    return widget is FloatingActionButton
-        && widget.isExtended;
+    return widget is FloatingActionButton && widget.isExtended;
   }
 
   @override
@@ -1278,18 +1305,19 @@ class _FloatingActionButtonTransitionState extends State<_FloatingActionButtonTr
   }
 
   void _onProgressChanged() {
-    _updateGeometryScale(math.max(_previousScaleAnimation.value, _currentScaleAnimation.value));
+    _updateGeometryScale(
+        math.max(_previousScaleAnimation.value, _currentScaleAnimation.value));
   }
 
   void _updateGeometryScale(double scale) {
     widget.geometryNotifier._updateWith(
-      //floatingActionButtonScale: scale,
-    );
+        //floatingActionButtonScale: scale,
+        );
   }
 }
 
 /// 实现基本的 Material Design 视觉布局结构。
-/// 
+///
 /// 注：Windows Phone的底部菜单和这个逻辑不一样所以需要进行移除改造
 ///
 /// 此类提供显示抽屉和底部工作表的 API。
@@ -1406,23 +1434,16 @@ class MetroPage extends StatefulWidget {
   /// 创建 Material Design 小部件的视觉脚手架。
   const MetroPage({
     super.key,
-    this.appBar,
     this.body,
     this.persistentFooterButtons,
     this.persistentFooterAlignment = AlignmentDirectional.centerEnd,
-    this.drawer,
-    this.onDrawerChanged,
-    this.endDrawer,
-    this.onEndDrawerChanged,
     this.bottomNavigationBar,
-    this.bottomSheet,
     this.backgroundColor,
     this.resizeToAvoidBottomInset,
     this.primary = true,
     this.drawerDragStartBehavior = DragStartBehavior.start,
     this.extendBody = false,
     this.extendBodyBehindAppBar = false,
-    this.drawerScrimColor,
     this.drawerEdgeDragWidth,
     this.drawerEnableOpenDragGesture = true,
     this.endDrawerEnableOpenDragGesture = true,
@@ -1457,9 +1478,6 @@ class MetroPage extends StatefulWidget {
   ///  * [extendBody]，它将 body 的高度延伸到 scaffold 的底部。
   final bool extendBodyBehindAppBar;
 
-  /// 一个显示在 scaffold 顶部的应用栏。
-  final PreferredSizeWidget? appBar;
-
   /// Scaffold 的主要内容。
   ///
   /// 显示在 [appBar] 下面，位于环境 [MediaQuery] 的 [MediaQueryData.viewInsets] 底部之上，
@@ -1488,52 +1506,6 @@ class MetroPage extends StatefulWidget {
   /// Defaults to [AlignmentDirectional.centerEnd].
   final AlignmentDirectional persistentFooterAlignment;
 
-  /// 显示在 [body] 旁边的面板，通常在移动设备上隐藏。
-  /// 可以从左到右 ([TextDirection.ltr]) 或从右到左 ([TextDirection.rtl]) 滑动打开。
-  ///
-  /// 通常是一个 [Drawer]。
-  ///
-  /// 要打开抽屉，请使用 [MetroPageState.openDrawer] 函数。
-  ///
-  /// 要关闭抽屉，请使用 [MetroPageState.closeDrawer]、[Navigator.pop] 或按键盘上的退出键。
-  ///
-  /// {@tool dartpad}
-  /// 要在移动设备上禁用抽屉边缘滑动，请将 [MetroPage.drawerEnableOpenDragGesture] 设置为 false。
-  /// 然后，使用 [MetroPageState.openDrawer] 打开抽屉，使用 [Navigator.pop] 关闭抽屉。
-  ///
-  /// ** 请参阅 examples/api/lib/material/scaffold/scaffold.drawer.0.dart 中的代码 **
-  /// {@end-tool}
-  final Widget? drawer;
-
-  /// Optional callback that is called when the [MetroPage.drawer] is opened or closed.
-  final DrawerCallback? onDrawerChanged;
-
-  /// 显示在 [body] 旁边的面板，通常在移动设备上隐藏。
-  /// 可以从右到左 ([TextDirection.ltr]) 或从左到右 ([TextDirection.rtl]) 滑动打开。
-  ///
-  /// 通常是一个 [Drawer]。
-  ///
-  /// 要打开抽屉，请使用 [MetroPageState.openEndDrawer] 函数。
-  ///
-  /// 要关闭抽屉，请使用 [MetroPageState.closeEndDrawer]、[Navigator.pop] 或按键盘上的退出键。
-  ///
-  /// {@tool dartpad}
-  /// 要在移动设备上禁用抽屉边缘滑动，请将 [MetroPage.endDrawerEnableOpenDragGesture] 设置为 false。
-  /// 然后，使用 [MetroPageState.openEndDrawer] 打开抽屉，使用 [Navigator.pop] 关闭抽屉。
-  ///
-  /// ** 请参阅 examples/api/lib/material/scaffold/scaffold.end_drawer.0.dart 中的代码 **
-  /// {@end-tool}
-  final Widget? endDrawer;
-
-  /// Optional callback that is called when the [MetroPage.endDrawer] is opened or closed.
-  final DrawerCallback? onEndDrawerChanged;
-
-  /// The color to use for the scrim that obscures primary content while a drawer is open.
-  ///
-  /// If this is null, then [DrawerThemeData.scrimColor] is used. If that
-  /// is also null, then it defaults to [Colors.black54].
-  final Color? drawerScrimColor;
-
   /// [Material] 小部件的颜色，它在整个 Scaffold 下方。
   ///
   /// 默认情况下使用主题的 [ThemeData.scaffoldBackgroundColor]。
@@ -1545,25 +1517,6 @@ class MetroPage extends StatefulWidget {
   ///
   /// [bottomNavigationBar] 渲染在 [persistentFooterButtons] 和 [body] 之下。
   final Widget? bottomNavigationBar;
-
-  /// 要显示的持久性底部工作表。
-  ///
-  /// 持久性底部工作表显示补充应用程序主要内容的信息。即使用户与应用程序的其他部分交互，持久性底部工作表仍然可见。
-  ///
-  /// 一个密切相关的小部件是模态底部工作表，它是菜单或对话框的替代品，并且阻止用户与应用程序的其他部分交互。可以使用 [showModalBottomSheet] 函数创建和显示模态底部工作表。
-  ///
-  /// 与 [showBottomSheet] 显示的持久性底部工作表不同，此底部工作表不是 [LocalHistoryEntry]，无法通过脚手架应用栏的返回按钮关闭。
-  ///
-  /// 如果已经显示了使用 [showBottomSheet] 创建的持久性底部工作表，则必须在使用新的 [bottomSheet] 构建 Scaffold 之前将其关闭。
-  ///
-  /// [bottomSheet] 的值可以是任何小部件。它不太可能实际是 [BottomSheet]，因为 [showBottomSheet] 和 [showModalBottomSheet] 的实现使用了 [BottomSheet]。通常它是一个包含 [Material] 的小部件。
-  ///
-  /// 另请参见:
-  ///
-  ///  * [showBottomSheet]，它显示一个可以通过脚手架的返回按钮关闭的底部工作表作为路由。
-  ///  * [showModalBottomSheet]，它显示一个模态底部工作表。
-  ///  * [BottomSheetThemeData]，它可以用于在使用 [BottomSheet] 时自定义默认的底部工作表属性值。
-  final Widget? bottomSheet;
 
   /// 如果为 true，[body] 和 scaffold 的浮动小部件应调整大小以避免屏幕键盘，
   /// 其高度由环境 [MediaQuery] 的 [MediaQueryData.viewInsets] `bottom` 属性定义。
@@ -1644,7 +1597,8 @@ class MetroPage extends StatefulWidget {
   ///
   /// 如果范围内没有 [MetroPage]，则会抛出异常。要在没有 [MetroPage] 时返回 null，请使用 [maybeOf]。
   static MetroPageState of(BuildContext context) {
-    final MetroPageState? result = context.findAncestorStateOfType<MetroPageState>();
+    final MetroPageState? result =
+        context.findAncestorStateOfType<MetroPageState>();
     if (result != null) {
       return result;
     }
@@ -1690,63 +1644,6 @@ class MetroPage extends StatefulWidget {
     return context.findAncestorStateOfType<MetroPageState>();
   }
 
-  /// 返回给定上下文最近的 [MetroPage] 祖先的 [MetroPageGeometry] 的 [ValueListenable]。
-  ///
-  /// [ValueListenable.value] 仅在绘制时可用。
-  ///
-  /// 通知保证在新几何图形的第一次绘制通过之前发送，但不能保证在通知和下一次绘制通过之间是否会发生构建或布局通过。
-  ///
-  /// 上下文的最近 [MetroPage] 祖先可能会改变，例如当一个元素从一个 scaffold 移动到另一个 scaffold 时。对于使用此可监听对象的 [StatefulWidget]，[MetroPage] 祖先的变化将触发 [State.didChangeDependencies]。
-  ///
-  /// 监听 scaffold 几何图形的典型模式是在 [State.didChangeDependencies] 中调用 [MetroPage.geometryOf]，将返回值与之前的可监听对象进行比较，如果它发生了变化，则取消注册监听器，并注册到新的 [MetroPageGeometry] 可监听对象。
-  static ValueListenable<MetroPageGeometry> geometryOf(BuildContext context) {
-    final _ScaffoldScope? scaffoldScope = context.dependOnInheritedWidgetOfExactType<_ScaffoldScope>();
-    if (scaffoldScope == null) {
-      throw FlutterError.fromParts(<DiagnosticsNode>[
-        ErrorSummary(
-          'Scaffold.geometryOf() called with a context that does not contain a Scaffold.',
-        ),
-        ErrorDescription(
-          'This usually happens when the context provided is from the same StatefulWidget as that '
-          'whose build function actually creates the Scaffold widget being sought.',
-        ),
-        ErrorHint(
-          'There are several ways to avoid this problem. The simplest is to use a Builder to get a '
-          'context that is "under" the Scaffold. For an example of this, please see the '
-          'documentation for Scaffold.of():\n'
-          '  https://api.flutter.dev/flutter/material/Scaffold/of.html',
-        ),
-        ErrorHint(
-          'A more efficient solution is to split your build function into several widgets. This '
-          'introduces a new context from which you can obtain the Scaffold. In this solution, '
-          'you would have an outer widget that creates the Scaffold populated by instances of '
-          'your new inner widgets, and then in these inner widgets you would use Scaffold.geometryOf().',
-        ),
-        context.describeElement('The context used was'),
-      ]);
-    }
-    return scaffoldScope.geometryNotifier;
-  }
-
-  /// 给定上下文中最紧密包含的 Scaffold 是否有抽屉。
-  ///
-  /// 如果在构建过程中使用此方法（例如决定是否显示“打开抽屉”按钮），请将 `registerForUpdates` 参数设置为 true。
-  /// 这将建立与 Scaffold 的 [InheritedWidget] 关系，以便每当 [hasDrawer] 值更改时，客户端小部件会重新构建。
-  ///
-  /// 此方法可能会很耗时（它会遍历元素树）。
-  ///
-  /// 另请参见:
-  ///
-  ///  * [MetroPage.of]，它提供对整个 [MetroPageState] 对象的访问，可以从中显示底部工作表等。
-  static bool hasDrawer(BuildContext context, { bool registerForUpdates = true }) {
-    if (registerForUpdates) {
-      final _ScaffoldScope? scaffold = context.dependOnInheritedWidgetOfExactType<_ScaffoldScope>();
-      return scaffold?.hasDrawer ?? false;
-    } else {
-      final MetroPageState? scaffold = context.findAncestorStateOfType<MetroPageState>();
-      return scaffold?.hasDrawer ?? false;
-    }
-  }
 
   @override
   MetroPageState createState() => MetroPageState();
@@ -1755,123 +1652,34 @@ class MetroPage extends StatefulWidget {
 /// [MetroPage] 的状态。
 ///
 /// 可以显示 [BottomSheet]。使用 [MetroPage.of] 从当前的 [BuildContext] 中获取 [MetroPageState]。
-class MetroPageState extends State<MetroPage> with TickerProviderStateMixin, RestorationMixin {
+class MetroPageState extends State<MetroPage>
+    with TickerProviderStateMixin, RestorationMixin {
   @override
   String? get restorationId => widget.restorationId;
 
   @override
   void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
-    registerForRestoration(_drawerOpened, 'drawer_open');
-    registerForRestoration(_endDrawerOpened, 'end_drawer_open');
+    // registerForRestoration(_drawerOpened, 'drawer_open');
+    // registerForRestoration(_endDrawerOpened, 'end_drawer_open');
   }
 
   // DRAWER API
 
-  final GlobalKey<DrawerControllerState> _drawerKey = GlobalKey<DrawerControllerState>();
-  final GlobalKey<DrawerControllerState> _endDrawerKey = GlobalKey<DrawerControllerState>();
-
   final GlobalKey _bodyKey = GlobalKey();
-
-  /// Whether this scaffold has a non-null [MetroPage.appBar].
-  bool get hasAppBar => widget.appBar != null;
-  /// Whether this scaffold has a non-null [MetroPage.drawer].
-  bool get hasDrawer => widget.drawer != null;
-  /// Whether this scaffold has a non-null [MetroPage.endDrawer].
-  bool get hasEndDrawer => widget.endDrawer != null;
-
-  double? _appBarMaxHeight;
-  /// The max height the [MetroPage.appBar] uses.
-  ///
-  /// This is based on the appBar preferred height plus the top padding.
-  double? get appBarMaxHeight => _appBarMaxHeight;
-  final RestorableBool _drawerOpened = RestorableBool(false);
-  final RestorableBool _endDrawerOpened = RestorableBool(false);
-
-  /// Whether the [MetroPage.drawer] is opened.
-  ///
-  /// See also:
-  ///
-  ///  * [MetroPageState.openDrawer], which opens the [MetroPage.drawer] of a
-  ///    [MetroPage].
-  bool get isDrawerOpen => _drawerOpened.value;
-
-  /// Whether the [MetroPage.endDrawer] is opened.
-  ///
-  /// See also:
-  ///
-  ///  * [MetroPageState.openEndDrawer], which opens the [MetroPage.endDrawer] of
-  ///    a [MetroPage].
-  bool get isEndDrawerOpen => _endDrawerOpened.value;
-
-  void _drawerOpenedCallback(bool isOpened) {
-    if (_drawerOpened.value != isOpened && _drawerKey.currentState != null) {
-      setState(() {
-        _drawerOpened.value = isOpened;
-      });
-      widget.onDrawerChanged?.call(isOpened);
-    }
-  }
-
-  void _endDrawerOpenedCallback(bool isOpened) {
-    if (_endDrawerOpened.value != isOpened && _endDrawerKey.currentState != null) {
-      setState(() {
-        _endDrawerOpened.value = isOpened;
-      });
-      widget.onEndDrawerChanged?.call(isOpened);
-    }
-  }
-
-  /// Opens the [Drawer] (if any).
-  ///
-  /// If the scaffold has a non-null [MetroPage.drawer], this function will cause
-  /// the drawer to begin its entrance animation.
-  ///
-  /// Normally this is not needed since the [MetroPage] automatically shows an
-  /// appropriate [IconButton], and handles the edge-swipe gesture, to show the
-  /// drawer.
-  ///
-  /// To close the drawer, use either [MetroPageState.closeDrawer] or
-  /// [Navigator.pop].
-  ///
-  /// See [MetroPage.of] for information about how to obtain the [MetroPageState].
-  void openDrawer() {
-    if (_endDrawerKey.currentState != null && _endDrawerOpened.value) {
-      _endDrawerKey.currentState!.close();
-    }
-    _drawerKey.currentState?.open();
-  }
-
-  /// Opens the end side [Drawer] (if any).
-  ///
-  /// If the scaffold has a non-null [MetroPage.endDrawer], this function will cause
-  /// the end side drawer to begin its entrance animation.
-  ///
-  /// Normally this is not needed since the [MetroPage] automatically shows an
-  /// appropriate [IconButton], and handles the edge-swipe gesture, to show the
-  /// drawer.
-  ///
-  /// To close the drawer, use either [MetroPageState.closeEndDrawer] or
-  /// [Navigator.pop].
-  ///
-  /// See [MetroPage.of] for information about how to obtain the [MetroPageState].
-  void openEndDrawer() {
-    if (_drawerKey.currentState != null && _drawerOpened.value) {
-      _drawerKey.currentState!.close();
-    }
-    _endDrawerKey.currentState?.open();
-  }
 
   // Used for both the snackbar and material banner APIs
   MetroPageMessengerState? _scaffoldMessenger;
 
   // SNACKBAR API
-  MetroPageFeatureController<SnackBar, SnackBarClosedReason>? _messengerSnackBar;
+  MetroPageFeatureController<SnackBar, SnackBarClosedReason>?
+      _messengerSnackBar;
 
   // This is used to update the _messengerSnackBar by the ScaffoldMessenger.
   void _updateSnackBar() {
-    final MetroPageFeatureController<SnackBar, SnackBarClosedReason>? messengerSnackBar = _scaffoldMessenger!._snackBars.isNotEmpty
-        ? _scaffoldMessenger!._snackBars.first
-        : null;
+    final MetroPageFeatureController<SnackBar, SnackBarClosedReason>?
+        messengerSnackBar = _scaffoldMessenger!._snackBars.isNotEmpty
+            ? _scaffoldMessenger!._snackBars.first
+            : null;
 
     if (_messengerSnackBar != messengerSnackBar) {
       setState(() {
@@ -1884,13 +1692,16 @@ class MetroPageState extends State<MetroPage> with TickerProviderStateMixin, Res
 
   // The _messengerMaterialBanner represents the current MaterialBanner being managed by
   // the ScaffoldMessenger, instead of the Scaffold.
-  MetroPageFeatureController<MaterialBanner, MaterialBannerClosedReason>? _messengerMaterialBanner;
+  MetroPageFeatureController<MaterialBanner, MaterialBannerClosedReason>?
+      _messengerMaterialBanner;
 
   // This is used to update the _messengerMaterialBanner by the ScaffoldMessenger.
   void _updateMaterialBanner() {
-    final MetroPageFeatureController<MaterialBanner, MaterialBannerClosedReason>? messengerMaterialBanner = _scaffoldMessenger!._materialBanners.isNotEmpty
-        ? _scaffoldMessenger!._materialBanners.first
-        : null;
+    final MetroPageFeatureController<MaterialBanner,
+            MaterialBannerClosedReason>? messengerMaterialBanner =
+        _scaffoldMessenger!._materialBanners.isNotEmpty
+            ? _scaffoldMessenger!._materialBanners.first
+            : null;
 
     if (_messengerMaterialBanner != messengerMaterialBanner) {
       setState(() {
@@ -1898,361 +1709,13 @@ class MetroPageState extends State<MetroPage> with TickerProviderStateMixin, Res
       });
     }
   }
-
-  // PERSISTENT BOTTOM SHEET API
-
-  // Contains bottom sheets that may still be animating out of view.
-  // Important if the app/user takes an action that could repeatedly show a
-  // bottom sheet.
-  final List<_StandardBottomSheet> _dismissedBottomSheets = <_StandardBottomSheet>[];
-  PersistentBottomSheetController? _currentBottomSheet;
-  final GlobalKey _currentBottomSheetKey = GlobalKey();
-  LocalHistoryEntry? _persistentSheetHistoryEntry;
-
-  void _maybeBuildPersistentBottomSheet() {
-    if (widget.bottomSheet != null && _currentBottomSheet == null) {
-      // The new _currentBottomSheet is not a local history entry so a "back" button
-      // will not be added to the Scaffold's appbar and the bottom sheet will not
-      // support drag or swipe to dismiss.
-      final AnimationController animationController = BottomSheet.createAnimationController(this)..value = 1.0;
-      bool persistentBottomSheetExtentChanged(DraggableScrollableNotification notification) {
-        if (notification.extent - notification.initialExtent > precisionErrorTolerance) {
-          if (_persistentSheetHistoryEntry == null) {
-            _persistentSheetHistoryEntry = LocalHistoryEntry(onRemove: () {
-              DraggableScrollableActuator.reset(notification.context);
-              showBodyScrim(false, 0.0);
-              _floatingActionButtonVisibilityValue = 1.0;
-              _persistentSheetHistoryEntry = null;
-            });
-            ModalRoute.of(context)!.addLocalHistoryEntry(_persistentSheetHistoryEntry!);
-          }
-        } else if (_persistentSheetHistoryEntry != null) {
-          _persistentSheetHistoryEntry!.remove();
-        }
-        return false;
-      }
-
-      // Stop the animation and unmount the dismissed sheets from the tree immediately,
-      // otherwise may cause duplicate GlobalKey assertion if the sheet sub-tree contains
-      // GlobalKey widgets.
-      if (_dismissedBottomSheets.isNotEmpty) {
-        final List<_StandardBottomSheet> sheets = List<_StandardBottomSheet>.of(_dismissedBottomSheets, growable: false);
-        for (final _StandardBottomSheet sheet in sheets) {
-          sheet.animationController.reset();
-        }
-        assert(_dismissedBottomSheets.isEmpty);
-      }
-
-      _currentBottomSheet = _buildBottomSheet(
-        (BuildContext context) {
-          return NotificationListener<DraggableScrollableNotification>(
-            onNotification: persistentBottomSheetExtentChanged,
-            child: DraggableScrollableActuator(
-              child: StatefulBuilder(
-                key: _currentBottomSheetKey,
-                builder: (BuildContext context, StateSetter setState) {
-                  return widget.bottomSheet ?? const SizedBox.shrink();
-                },
-              ),
-            ),
-          );
-        },
-        isPersistent: true,
-        animationController: animationController,
-      );
-    }
-  }
-
-  void _closeCurrentBottomSheet() {
-    if (_currentBottomSheet != null) {
-      if (!_currentBottomSheet!._isLocalHistoryEntry) {
-        _currentBottomSheet!.close();
-      }
-      assert(() {
-        _currentBottomSheet?._completer.future.whenComplete(() {
-          assert(_currentBottomSheet == null);
-        });
-        return true;
-      }());
-    }
-  }
-
-  /// Closes [MetroPage.drawer] if it is currently opened.
-  ///
-  /// See [MetroPage.of] for information about how to obtain the [MetroPageState].
-  void closeDrawer() {
-   if (hasDrawer && isDrawerOpen) {
-     _drawerKey.currentState!.close();
-   }
-  }
-
-  /// Closes [MetroPage.endDrawer] if it is currently opened.
-  ///
-  /// See [MetroPage.of] for information about how to obtain the [MetroPageState].
-  void closeEndDrawer() {
-    if (hasEndDrawer && isEndDrawerOpen) {
-      _endDrawerKey.currentState!.close();
-    }
-  }
-
-  void _updatePersistentBottomSheet() {
-    _currentBottomSheetKey.currentState!.setState(() {});
-  }
-
-  PersistentBottomSheetController _buildBottomSheet(
-    WidgetBuilder builder, {
-    required bool isPersistent,
-    required AnimationController animationController,
-    Color? backgroundColor,
-    double? elevation,
-    ShapeBorder? shape,
-    Clip? clipBehavior,
-    BoxConstraints? constraints,
-    bool? enableDrag,
-    bool? showDragHandle,
-    bool shouldDisposeAnimationController = true,
-  }) {
-    assert(() {
-      if (widget.bottomSheet != null && isPersistent && _currentBottomSheet != null) {
-        throw FlutterError(
-          'Scaffold.bottomSheet cannot be specified while a bottom sheet '
-          'displayed with showBottomSheet() is still visible.\n'
-          'Rebuild the Scaffold with a null bottomSheet before calling showBottomSheet().',
-        );
-      }
-      return true;
-    }());
-
-    final Completer<void> completer = Completer<void>();
-    final GlobalKey<_StandardBottomSheetState> bottomSheetKey = GlobalKey<_StandardBottomSheetState>();
-    late _StandardBottomSheet bottomSheet;
-
-    bool removedEntry = false;
-    bool doingDispose = false;
-
-    void removePersistentSheetHistoryEntryIfNeeded() {
-      assert(isPersistent);
-      if (_persistentSheetHistoryEntry != null) {
-        _persistentSheetHistoryEntry!.remove();
-        _persistentSheetHistoryEntry = null;
-      }
-    }
-
-    void removeCurrentBottomSheet() {
-      removedEntry = true;
-      if (_currentBottomSheet == null) {
-        return;
-      }
-      assert(_currentBottomSheet!._widget == bottomSheet);
-      assert(bottomSheetKey.currentState != null);
-      _showFloatingActionButton();
-
-      if (isPersistent) {
-        removePersistentSheetHistoryEntryIfNeeded();
-      }
-
-      bottomSheetKey.currentState!.close();
-      setState(() {
-        _showBodyScrim = false;
-        _bodyScrimColor = Colors.black.withOpacity(0.0);
-        _currentBottomSheet = null;
-      });
-
-      if (!animationController.isDismissed) {
-        _dismissedBottomSheets.add(bottomSheet);
-      }
-      completer.complete();
-    }
-
-    final LocalHistoryEntry? entry = isPersistent
-      ? null
-      : LocalHistoryEntry(onRemove: () {
-          if (!removedEntry && _currentBottomSheet?._widget == bottomSheet && !doingDispose) {
-            removeCurrentBottomSheet();
-          }
-        });
-
-    void removeEntryIfNeeded() {
-      if (!isPersistent && !removedEntry) {
-        assert(entry != null);
-        entry!.remove();
-        removedEntry = true;
-      }
-    }
-
-    bottomSheet = _StandardBottomSheet(
-      key: bottomSheetKey,
-      animationController: animationController,
-      enableDrag: enableDrag ?? !isPersistent,
-      showDragHandle: showDragHandle,
-      onClosing: () {
-        if (_currentBottomSheet == null) {
-          return;
-        }
-        assert(_currentBottomSheet!._widget == bottomSheet);
-        removeEntryIfNeeded();
-      },
-      onDismissed: () {
-        if (_dismissedBottomSheets.contains(bottomSheet)) {
-          setState(() {
-            _dismissedBottomSheets.remove(bottomSheet);
-          });
-        }
-      },
-      onDispose: () {
-        doingDispose = true;
-        removeEntryIfNeeded();
-        if (shouldDisposeAnimationController) {
-          animationController.dispose();
-        }
-      },
-      builder: builder,
-      isPersistent: isPersistent,
-      backgroundColor: backgroundColor,
-      elevation: elevation,
-      shape: shape,
-      clipBehavior: clipBehavior,
-      constraints: constraints,
-    );
-
-    if (!isPersistent) {
-      ModalRoute.of(context)!.addLocalHistoryEntry(entry!);
-    }
-
-    return PersistentBottomSheetController._(
-      bottomSheet,
-      completer,
-      entry != null
-        ? entry.remove
-        : removeCurrentBottomSheet,
-      (VoidCallback fn) { bottomSheetKey.currentState?.setState(fn); },
-      !isPersistent,
-    );
-  }
-
-  /// 在最近的 [MetroPage] 中显示一个 Material Design 底部工作表。要显示持久性底部工作表，请使用 [MetroPage.bottomSheet]。
-  ///
-  /// 返回一个控制器，可用于关闭和操作底部工作表。
-  ///
-  /// 要重建底部工作表（例如，如果它是有状态的），请调用此方法返回的控制器上的 [PersistentBottomSheetController.setState]。
-  ///
-  /// 新的底部工作表成为封闭 [ModalRoute] 的 [LocalHistoryEntry]，并在 [MetroPage] 的应用栏中添加一个返回按钮以关闭底部工作表。
-  ///
-  /// [transitionAnimationController] 控制底部工作表的进入和退出动画。控制器的所有者需要在不再需要控制器时调用 [AnimationController.dispose]。
-  ///
-  /// 要创建一个不是 [LocalHistoryEntry] 且不会在封闭 Scaffold 的应用栏中添加返回按钮的持久性底部工作表，请使用 [MetroPage.bottomSheet] 构造函数参数。
-  ///
-  /// 持久性底部工作表显示补充应用程序主要内容的信息。即使用户与应用程序的其他部分交互，持久性底部工作表仍然可见。
-  ///
-  /// 一个密切相关的小部件是模态底部工作表，它是菜单或对话框的替代品，并且阻止用户与应用程序的其他部分交互。可以使用 [showModalBottomSheet] 函数创建和显示模态底部工作表。
-  ///
-  /// {@tool dartpad}
-  /// 此示例演示如何使用 [showBottomSheet] 在用户点击按钮时显示底部工作表。它还演示了如何使用 Navigator 关闭底部工作表。
-  ///
-  /// ** 请参阅 examples/api/lib/material/scaffold/scaffold_state.show_bottom_sheet.0.dart 中的代码 **
-  /// {@end-tool}
-  ///
-  /// [sheetAnimationStyle] 参数用于覆盖底部工作表动画持续时间和反向动画持续时间。
-  ///
-  /// 如果提供了 [AnimationStyle.duration]，它将用于覆盖底部工作表动画的持续时间。
-  ///
-  /// 如果提供了 [AnimationStyle.reverseDuration]，它将用于覆盖底部工作表反向动画的持续时间。
-  ///
-  /// 要禁用底部工作表动画，请使用 [AnimationStyle.noAnimation]。
-  ///
-  /// {@tool dartpad}
-  /// 此示例展示了如何使用 [AnimationStyle] 覆盖 [showBottomSheet] 动画持续时间和反向动画持续时间。
-  ///
-  /// ** 请参阅 examples/api/lib/material/scaffold/scaffold_state.show_bottom_sheet.1.dart 中的代码 **
-  /// {@end-tool}
-  ///
-  /// 另请参见:
-  ///
-  ///  * [BottomSheet]，它成为 `builder` 返回的小部件的父级。
-  ///  * [showBottomSheet]，它在给定 [BuildContext] 时调用此方法。
-  ///  * [showModalBottomSheet]，可用于显示模态底部工作表。
-  ///  * [MetroPage.of]，了解如何获取 [MetroPageState] 的信息。
-  ///  * Material 2 规范 <https://m2.material.io/components/sheets-bottom>。
-  ///  * Material 3 规范 <https://m3.material.io/components/bottom-sheets/overview>。
-  ///  * [AnimationStyle]，用于覆盖模态底部工作表动画持续时间和反向动画持续时间。
-  PersistentBottomSheetController showBottomSheet(
-    WidgetBuilder builder, {
-    Color? backgroundColor,
-    double? elevation,
-    ShapeBorder? shape,
-    Clip? clipBehavior,
-    BoxConstraints? constraints,
-    bool? enableDrag,
-    bool? showDragHandle,
-    AnimationController? transitionAnimationController,
-    AnimationStyle? sheetAnimationStyle,
-  }) {
-    assert(() {
-      if (widget.bottomSheet != null) {
-        throw FlutterError(
-          'Scaffold.bottomSheet cannot be specified while a bottom sheet '
-          'displayed with showBottomSheet() is still visible.\n'
-          'Rebuild the Scaffold with a null bottomSheet before calling showBottomSheet().',
-        );
-      }
-      return true;
-    }());
-    assert(debugCheckHasMediaQuery(context));
-
-    _closeCurrentBottomSheet();
-    final AnimationController controller = (transitionAnimationController
-      ?? BottomSheet.createAnimationController(this, sheetAnimationStyle: sheetAnimationStyle))
-         ..forward();
-    setState(() {
-      _currentBottomSheet = _buildBottomSheet(
-        builder,
-        isPersistent: false,
-        animationController: controller,
-        backgroundColor: backgroundColor,
-        elevation: elevation,
-        shape: shape,
-        clipBehavior: clipBehavior,
-        constraints: constraints,
-        enableDrag: enableDrag,
-        showDragHandle: showDragHandle,
-        shouldDisposeAnimationController: transitionAnimationController == null,
-      );
-    });
-    return _currentBottomSheet!;
-  }
-
-  // Floating Action Button API
-  late AnimationController _floatingActionButtonMoveController;
-  late FloatingActionButtonAnimator _floatingActionButtonAnimator;
-  FloatingActionButtonLocation? _previousFloatingActionButtonLocation;
-  FloatingActionButtonLocation? _floatingActionButtonLocation;
-
-  late AnimationController _floatingActionButtonVisibilityController;
-
-  /// Gets the current value of the visibility animation for the
-  /// [MetroPage.floatingActionButton].
-  double get _floatingActionButtonVisibilityValue => _floatingActionButtonVisibilityController.value;
-
-  /// Sets the current value of the visibility animation for the
-  /// [MetroPage.floatingActionButton].
-  set _floatingActionButtonVisibilityValue(double newValue) {
-    _floatingActionButtonVisibilityController.value = clampDouble(newValue,
-      _floatingActionButtonVisibilityController.lowerBound,
-      _floatingActionButtonVisibilityController.upperBound,
-    );
-  }
-
-  /// Shows the [MetroPage.floatingActionButton].
-  TickerFuture _showFloatingActionButton() {
-    return _floatingActionButtonVisibilityController.forward();
-  }
-
   // iOS 特性 - 状态栏点击，返回手势
 
   // 在 iOS 上，点击状态栏会将应用的主要可滚动内容滚动到顶部。
   // 我们通过查找主要滚动控制器并在点击时将其滚动到顶部来实现这一点。
   void _handleStatusBarTap() {
-    final ScrollController? primaryScrollController = PrimaryScrollController.maybeOf(context);
+    final ScrollController? primaryScrollController =
+        PrimaryScrollController.maybeOf(context);
     if (primaryScrollController != null && primaryScrollController.hasClients) {
       primaryScrollController.animateTo(
         0.0,
@@ -2273,46 +1736,33 @@ class MetroPageState extends State<MetroPage> with TickerProviderStateMixin, Res
   @override
   void initState() {
     super.initState();
-    _geometryNotifier = _ScaffoldGeometryNotifier(const MetroPageGeometry(), context);
-    _previousFloatingActionButtonLocation = _floatingActionButtonLocation;
-    _floatingActionButtonMoveController = AnimationController(
-      vsync: this,
-      value: 1.0,
-      duration: kFloatingActionButtonSegue * 2,
-    );
-
-    _floatingActionButtonVisibilityController = AnimationController(
-      duration: kFloatingActionButtonSegue,
-      vsync: this,
-    );
+    _geometryNotifier =
+        _ScaffoldGeometryNotifier(const MetroPageGeometry(), context);
   }
 
   @override
   void didChangeDependencies() {
     // Using maybeOf is valid here since both the Scaffold and ScaffoldMessenger
     // are currently available for managing SnackBars.
-    final MetroPageMessengerState? currentScaffoldMessenger = MetroPageMessenger.maybeOf(context);
+    final MetroPageMessengerState? currentScaffoldMessenger =
+        MetroPageMessenger.maybeOf(context);
     // If our ScaffoldMessenger has changed, unregister with the old one first.
     if (_scaffoldMessenger != null &&
-      (currentScaffoldMessenger == null || _scaffoldMessenger != currentScaffoldMessenger)) {
+        (currentScaffoldMessenger == null ||
+            _scaffoldMessenger != currentScaffoldMessenger)) {
       _scaffoldMessenger?._unregister(this);
     }
     // Register with the current ScaffoldMessenger, if there is one.
     _scaffoldMessenger = currentScaffoldMessenger;
     _scaffoldMessenger?._register(this);
 
-    _maybeBuildPersistentBottomSheet();
     super.didChangeDependencies();
   }
 
   @override
   void dispose() {
     _geometryNotifier.dispose();
-    _floatingActionButtonMoveController.dispose();
-    _floatingActionButtonVisibilityController.dispose();
     _scaffoldMessenger?._unregister(this);
-    _drawerOpened.dispose();
-    _endDrawerOpened.dispose();
     super.dispose();
   }
 
@@ -2353,58 +1803,6 @@ class MetroPageState extends State<MetroPage> with TickerProviderStateMixin, Res
     }
   }
 
-  void _buildEndDrawer(List<LayoutId> children, TextDirection textDirection) {
-    if (widget.endDrawer != null) {
-      assert(hasEndDrawer);
-      _addIfNonNull(
-        children,
-        DrawerController(
-          key: _endDrawerKey,
-          alignment: DrawerAlignment.end,
-          drawerCallback: _endDrawerOpenedCallback,
-          dragStartBehavior: widget.drawerDragStartBehavior,
-          scrimColor: widget.drawerScrimColor,
-          edgeDragWidth: widget.drawerEdgeDragWidth,
-          enableOpenDragGesture: widget.endDrawerEnableOpenDragGesture,
-          isDrawerOpen: _endDrawerOpened.value,
-          child: widget.endDrawer!,
-        ),
-        _ScaffoldSlot.endDrawer,
-        // remove the side padding from the side we're not touching
-        removeLeftPadding: textDirection == TextDirection.ltr,
-        removeTopPadding: false,
-        removeRightPadding: textDirection == TextDirection.rtl,
-        removeBottomPadding: false,
-      );
-    }
-  }
-
-  void _buildDrawer(List<LayoutId> children, TextDirection textDirection) {
-    if (widget.drawer != null) {
-      assert(hasDrawer);
-      _addIfNonNull(
-        children,
-        DrawerController(
-          key: _drawerKey,
-          alignment: DrawerAlignment.start,
-          drawerCallback: _drawerOpenedCallback,
-          dragStartBehavior: widget.drawerDragStartBehavior,
-          scrimColor: widget.drawerScrimColor,
-          edgeDragWidth: widget.drawerEdgeDragWidth,
-          enableOpenDragGesture: widget.drawerEnableOpenDragGesture,
-          isDrawerOpen: _drawerOpened.value,
-          child: widget.drawer!,
-        ),
-        _ScaffoldSlot.drawer,
-        // remove the side padding from the side we're not touching
-        removeLeftPadding: textDirection == TextDirection.rtl,
-        removeTopPadding: false,
-        removeRightPadding: textDirection == TextDirection.ltr,
-        removeBottomPadding: false,
-      );
-    }
-  }
-
   bool _showBodyScrim = false;
   Color _bodyScrimColor = Colors.black;
 
@@ -2429,16 +1827,19 @@ class MetroPageState extends State<MetroPage> with TickerProviderStateMixin, Res
     final List<LayoutId> children = <LayoutId>[];
     _addIfNonNull(
       children,
-      widget.body == null ? null : _BodyBuilder(
-        extendBody: widget.extendBody,
-        extendBodyBehindAppBar: widget.extendBodyBehindAppBar,
-        body: KeyedSubtree(key: _bodyKey, child: widget.body!),
-      ),
+      widget.body == null
+          ? null
+          : _BodyBuilder(
+              extendBody: widget.extendBody,
+              extendBodyBehindAppBar: widget.extendBodyBehindAppBar,
+              body: KeyedSubtree(key: _bodyKey, child: widget.body!),
+            ),
       _ScaffoldSlot.body,
       removeLeftPadding: false,
-      removeTopPadding: widget.appBar != null,
+      removeTopPadding: true,
       removeRightPadding: false,
-      removeBottomPadding: widget.bottomNavigationBar != null || widget.persistentFooterButtons != null,
+      removeBottomPadding: widget.bottomNavigationBar != null ||
+          widget.persistentFooterButtons != null,
       removeBottomInset: _resizeToAvoidBottomInset,
     );
     if (_showBodyScrim) {
@@ -2456,56 +1857,18 @@ class MetroPageState extends State<MetroPage> with TickerProviderStateMixin, Res
       );
     }
 
-    if (widget.appBar != null) {
-      final double topPadding = widget.primary ? MediaQuery.paddingOf(context).top : 0.0;
-      _appBarMaxHeight = AppBar.preferredHeightFor(context, widget.appBar!.preferredSize) + topPadding;
-      assert(_appBarMaxHeight! >= 0.0 && _appBarMaxHeight!.isFinite);
-      _addIfNonNull(
-        children,
-        ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: _appBarMaxHeight!),
-          child: FlexibleSpaceBar.createSettings(
-            currentExtent: _appBarMaxHeight!,
-            child: widget.appBar!,
-          ),
-        ),
-        _ScaffoldSlot.appBar,
-        removeLeftPadding: false,
-        removeTopPadding: false,
-        removeRightPadding: false,
-        removeBottomPadding: true,
-      );
-    }
-
     bool isSnackBarFloating = false;
     double? snackBarWidth;
 
-    if (_currentBottomSheet != null || _dismissedBottomSheets.isNotEmpty) {
-      final Widget stack = Stack(
-        alignment: Alignment.bottomCenter,
-        children: <Widget>[
-          ..._dismissedBottomSheets,
-          if (_currentBottomSheet != null) _currentBottomSheet!._widget,
-        ],
-      );
-      _addIfNonNull(
-        children,
-        stack,
-        _ScaffoldSlot.bottomSheet,
-        removeLeftPadding: false,
-        removeTopPadding: true,
-        removeRightPadding: false,
-        removeBottomPadding: _resizeToAvoidBottomInset,
-      );
-    }
-
     // SnackBar set by ScaffoldMessenger
     if (_messengerSnackBar != null) {
-      final SnackBarBehavior snackBarBehavior = _messengerSnackBar?._widget.behavior
-        ?? themeData.snackBarTheme.behavior
-        ?? SnackBarBehavior.fixed;
+      final SnackBarBehavior snackBarBehavior =
+          _messengerSnackBar?._widget.behavior ??
+              themeData.snackBarTheme.behavior ??
+              SnackBarBehavior.fixed;
       isSnackBarFloating = snackBarBehavior == SnackBarBehavior.floating;
-      snackBarWidth = _messengerSnackBar?._widget.width ?? themeData.snackBarTheme.width;
+      snackBarWidth =
+          _messengerSnackBar?._widget.width ?? themeData.snackBarTheme.width;
 
       _addIfNonNull(
         children,
@@ -2514,7 +1877,8 @@ class MetroPageState extends State<MetroPage> with TickerProviderStateMixin, Res
         removeLeftPadding: false,
         removeTopPadding: true,
         removeRightPadding: false,
-        removeBottomPadding: widget.bottomNavigationBar != null || widget.persistentFooterButtons != null,
+        removeBottomPadding: widget.bottomNavigationBar != null ||
+            widget.persistentFooterButtons != null,
         maintainBottomViewPadding: !_resizeToAvoidBottomInset,
       );
     }
@@ -2522,8 +1886,11 @@ class MetroPageState extends State<MetroPage> with TickerProviderStateMixin, Res
     bool extendBodyBehindMaterialBanner = false;
     // MaterialBanner set by ScaffoldMessenger
     if (_messengerMaterialBanner != null) {
-      final MaterialBannerThemeData bannerTheme = MaterialBannerTheme.of(context);
-      final double elevation = _messengerMaterialBanner?._widget.elevation ?? bannerTheme.elevation ?? 0.0;
+      final MaterialBannerThemeData bannerTheme =
+          MaterialBannerTheme.of(context);
+      final double elevation = _messengerMaterialBanner?._widget.elevation ??
+          bannerTheme.elevation ??
+          0.0;
       extendBodyBehindMaterialBanner = elevation != 0.0;
 
       _addIfNonNull(
@@ -2531,7 +1898,7 @@ class MetroPageState extends State<MetroPage> with TickerProviderStateMixin, Res
         _messengerMaterialBanner?._widget,
         _ScaffoldSlot.materialBanner,
         removeLeftPadding: false,
-        removeTopPadding: widget.appBar != null,
+        removeTopPadding: true,
         removeRightPadding: false,
         removeBottomPadding: true,
         maintainBottomViewPadding: !_resizeToAvoidBottomInset,
@@ -2608,75 +1975,45 @@ class MetroPageState extends State<MetroPage> with TickerProviderStateMixin, Res
         break;
     }
 
-    if (_endDrawerOpened.value) {
-      _buildDrawer(children, textDirection);
-      _buildEndDrawer(children, textDirection);
-    } else {
-      _buildEndDrawer(children, textDirection);
-      _buildDrawer(children, textDirection);
-    }
-
     // The minimum insets for contents of the Scaffold to keep visible.
     final EdgeInsets minInsets = MediaQuery.paddingOf(context).copyWith(
-      bottom: _resizeToAvoidBottomInset ? MediaQuery.viewInsetsOf(context).bottom : 0.0,
+      bottom: _resizeToAvoidBottomInset
+          ? MediaQuery.viewInsetsOf(context).bottom
+          : 0.0,
     );
 
     // The minimum viewPadding for interactive elements positioned by the
     // Scaffold to keep within safe interactive areas.
-    final EdgeInsets minViewPadding = MediaQuery.viewPaddingOf(context).copyWith(
-      bottom: _resizeToAvoidBottomInset && MediaQuery.viewInsetsOf(context).bottom != 0.0 ? 0.0 : null,
+    final EdgeInsets minViewPadding =
+        MediaQuery.viewPaddingOf(context).copyWith(
+      bottom: _resizeToAvoidBottomInset &&
+              MediaQuery.viewInsetsOf(context).bottom != 0.0
+          ? 0.0
+          : null,
     );
 
     // extendBody locked when keyboard is open
     final bool extendBody = minInsets.bottom <= 0 && widget.extendBody;
 
-    return _ScaffoldScope(
-      hasDrawer: hasDrawer,
-      geometryNotifier: _geometryNotifier,
-      child: ScrollNotificationObserver(
-        child: Material(
-          color: widget.backgroundColor ?? themeData.scaffoldBackgroundColor,
-          child: AnimatedBuilder(animation: _floatingActionButtonMoveController, builder: (BuildContext context, Widget? child) {
-            return Actions(
-              actions: <Type, Action<Intent>>{
-                DismissIntent: _DismissDrawerAction(context),
-              },
-              child: CustomMultiChildLayout(
-                delegate: _MetroPageLayout(
-                  extendBody: extendBody,
-                  extendBodyBehindAppBar: widget.extendBodyBehindAppBar,
-                  minInsets: minInsets,
-                  minViewPadding: minViewPadding,
-                  geometryNotifier: _geometryNotifier,
-                  textDirection: textDirection,
-                  isSnackBarFloating: isSnackBarFloating,
-                  extendBodyBehindMaterialBanner: extendBodyBehindMaterialBanner,
-                  snackBarWidth: snackBarWidth,
-                ),
-                children: children,
-              ),
-            );
-          }),
+    return ScrollNotificationObserver(
+      child: Material(
+        color: widget.backgroundColor ?? themeData.scaffoldBackgroundColor,
+        child: CustomMultiChildLayout(
+          delegate: _MetroPageLayout(
+            extendBody: extendBody,
+            extendBodyBehindAppBar: widget.extendBodyBehindAppBar,
+            minInsets: minInsets,
+            minViewPadding: minViewPadding,
+            geometryNotifier: _geometryNotifier,
+            textDirection: textDirection,
+            isSnackBarFloating: isSnackBarFloating,
+            extendBodyBehindMaterialBanner: extendBodyBehindMaterialBanner,
+            snackBarWidth: snackBarWidth,
+          ),
+          children: children,
         ),
       ),
     );
-  }
-}
-
-class _DismissDrawerAction extends DismissAction {
-  _DismissDrawerAction(this.context);
-
-  final BuildContext context;
-
-  @override
-  bool isEnabled(DismissIntent intent) {
-    return MetroPage.of(context).isDrawerOpen || MetroPage.of(context).isEndDrawerOpen;
-  }
-
-  @override
-  void invoke(DismissIntent intent) {
-    MetroPage.of(context).closeDrawer();
-    MetroPage.of(context).closeEndDrawer();
   }
 }
 
@@ -2684,7 +2021,8 @@ class _DismissDrawerAction extends DismissAction {
 ///
 /// 通常从 [MetroPageMessengerState.showSnackBar] 或 [MetroPageState.showBottomSheet] 获取。
 class MetroPageFeatureController<T extends Widget, U> {
-  const MetroPageFeatureController._(this._widget, this._completer, this.close, this.setState);
+  const MetroPageFeatureController._(
+      this._widget, this._completer, this.close, this.setState);
   final T _widget;
   final Completer<U> _completer;
 
@@ -2696,180 +2034,4 @@ class MetroPageFeatureController<T extends Widget, U> {
 
   /// 标记功能（例如，底部工作表或 snack bar）需要重建。
   final StateSetter? setState;
-}
-
-class _StandardBottomSheet extends StatefulWidget {
-  const _StandardBottomSheet({
-    super.key,
-    required this.animationController,
-    this.enableDrag = true,
-    this.showDragHandle,
-    required this.onClosing,
-    required this.onDismissed,
-    required this.builder,
-    this.isPersistent = false,
-    this.backgroundColor,
-    this.elevation,
-    this.shape,
-    this.clipBehavior,
-    this.constraints,
-    this.onDispose,
-  });
-
-  final AnimationController animationController; // we control it, but it must be disposed by whoever created it.
-  final bool enableDrag;
-  final bool? showDragHandle;
-  final VoidCallback? onClosing;
-  final VoidCallback? onDismissed;
-  final VoidCallback? onDispose;
-  final WidgetBuilder builder;
-  final bool isPersistent;
-  final Color? backgroundColor;
-  final double? elevation;
-  final ShapeBorder? shape;
-  final Clip? clipBehavior;
-  final BoxConstraints? constraints;
-
-  @override
-  _StandardBottomSheetState createState() => _StandardBottomSheetState();
-}
-
-class _StandardBottomSheetState extends State<_StandardBottomSheet> {
-  ParametricCurve<double> animationCurve = _standardBottomSheetCurve;
-
-  @override
-  void initState() {
-    super.initState();
-    assert(widget.animationController.isForwardOrCompleted);
-    widget.animationController.addStatusListener(_handleStatusChange);
-  }
-
-  @override
-  void dispose() {
-    widget.onDispose?.call();
-    super.dispose();
-  }
-
-  @override
-  void didUpdateWidget(_StandardBottomSheet oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    assert(widget.animationController == oldWidget.animationController);
-  }
-
-  void close() {
-    widget.animationController.reverse();
-    widget.onClosing?.call();
-  }
-
-  void _handleDragStart(DragStartDetails details) {
-    // Allow the bottom sheet to track the user's finger accurately.
-    animationCurve = Curves.linear;
-  }
-
-  void _handleDragEnd(DragEndDetails details, { bool? isClosing }) {
-    // Allow the bottom sheet to animate smoothly from its current position.
-    animationCurve = Split(
-      widget.animationController.value,
-      endCurve: _standardBottomSheetCurve,
-    );
-  }
-
-  void _handleStatusChange(AnimationStatus status) {
-    if (status.isDismissed) {
-      widget.onDismissed?.call();
-    }
-  }
-
-  bool extentChanged(DraggableScrollableNotification notification) {
-    final double extentRemaining = 1.0 - notification.extent;
-    final MetroPageState scaffold = MetroPage.of(context);
-    if (extentRemaining < _kBottomSheetDominatesPercentage) {
-      scaffold._floatingActionButtonVisibilityValue = extentRemaining * _kBottomSheetDominatesPercentage * 10;
-      scaffold.showBodyScrim(true,  math.max(
-        _kMinBottomSheetScrimOpacity,
-        _kMaxBottomSheetScrimOpacity - scaffold._floatingActionButtonVisibilityValue,
-      ));
-    } else {
-      scaffold._floatingActionButtonVisibilityValue = 1.0;
-      scaffold.showBodyScrim(false, 0.0);
-    }
-    // If the Scaffold.bottomSheet != null, we're a persistent bottom sheet.
-    if (notification.extent == notification.minExtent &&
-        scaffold.widget.bottomSheet == null &&
-        notification.shouldCloseOnMinExtent) {
-      close();
-    }
-    return false;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: widget.animationController,
-      builder: (BuildContext context, Widget? child) {
-        return Align(
-          alignment: AlignmentDirectional.topStart,
-          heightFactor: animationCurve.transform(widget.animationController.value),
-          child: child,
-        );
-      },
-      child: Semantics(
-        container: true,
-        onDismiss: !widget.isPersistent ? close : null,
-        child:  NotificationListener<DraggableScrollableNotification>(
-          onNotification: extentChanged,
-          child: BottomSheet(
-            animationController: widget.animationController,
-            enableDrag: widget.enableDrag,
-            showDragHandle: widget.showDragHandle,
-            onDragStart: _handleDragStart,
-            onDragEnd: _handleDragEnd,
-            onClosing: widget.onClosing!,
-            builder: widget.builder,
-            backgroundColor: widget.backgroundColor,
-            elevation: widget.elevation,
-            shape: widget.shape,
-            clipBehavior: widget.clipBehavior,
-            constraints: widget.constraints,
-          ),
-        ),
-      ),
-    );
-  }
-
-}
-
-/// A [MetroPageFeatureController] for standard bottom sheets.
-///
-/// This is the type of objects returned by [MetroPageState.showBottomSheet].
-///
-/// This controller is used to display both standard and persistent bottom
-/// sheets. A bottom sheet is only persistent if it is set as the
-/// [MetroPage.bottomSheet].
-class PersistentBottomSheetController extends MetroPageFeatureController<_StandardBottomSheet, void> {
-  const PersistentBottomSheetController._(
-    super.widget,
-    super.completer,
-    super.close,
-    StateSetter super.setState,
-    this._isLocalHistoryEntry,
-  ) : super._();
-
-  final bool _isLocalHistoryEntry;
-}
-
-class _ScaffoldScope extends InheritedWidget {
-  const _ScaffoldScope({
-    required this.hasDrawer,
-    required this.geometryNotifier,
-    required super.child,
-  });
-
-  final bool hasDrawer;
-  final _ScaffoldGeometryNotifier geometryNotifier;
-
-  @override
-  bool updateShouldNotify(_ScaffoldScope oldWidget) {
-    return hasDrawer != oldWidget.hasDrawer;
-  }
 }
