@@ -17,8 +17,6 @@ import 'package:flutter/material.dart';
 // late int tabCount;
 // late TickerProvider tickerProvider;
 
-const FloatingActionButtonLocation _kDefaultFloatingActionButtonLocation = FloatingActionButtonLocation.endFloat;
-const FloatingActionButtonAnimator _kDefaultFloatingActionButtonAnimator = FloatingActionButtonAnimator.scaling;
 
 const Curve _standardBottomSheetCurve = standardEasing;
 // 当底部表单的顶部越过此阈值时，它将开始缩小FAB并显示蒙版。
@@ -35,7 +33,6 @@ enum _ScaffoldSlot {
   materialBanner,
   persistentFooter,
   bottomNavigationBar,
-  floatingActionButton,
   drawer,
   endDrawer,
   statusBar,
@@ -756,13 +753,10 @@ class _ScaffoldGeometryNotifier extends ChangeNotifier implements ValueListenabl
 
   void _updateWith({
     double? bottomNavigationBarTop,
-    Rect? floatingActionButtonArea,
-    double? floatingActionButtonScale,
   }) {
     this.floatingActionButtonScale = floatingActionButtonScale ?? this.floatingActionButtonScale;
     geometry = geometry.copyWith(
       bottomNavigationBarTop: bottomNavigationBarTop,
-      floatingActionButtonArea: floatingActionButtonArea,
     );
     notifyListeners();
   }
@@ -855,17 +849,12 @@ class _BodyBuilder extends StatelessWidget {
   }
 }
 
-class _ScaffoldLayout extends MultiChildLayoutDelegate {
-  _ScaffoldLayout({
+class _MetroPageLayout extends MultiChildLayoutDelegate {
+  _MetroPageLayout({
     required this.minInsets,
     required this.minViewPadding,
     required this.textDirection,
     required this.geometryNotifier,
-    // for floating action button
-    required this.previousFloatingActionButtonLocation,
-    required this.currentFloatingActionButtonLocation,
-    required this.floatingActionButtonMoveAnimationProgress,
-    required this.floatingActionButtonMotionAnimator,
     required this.isSnackBarFloating,
     required this.snackBarWidth,
     required this.extendBody,
@@ -879,11 +868,6 @@ class _ScaffoldLayout extends MultiChildLayoutDelegate {
   final EdgeInsets minViewPadding;
   final TextDirection textDirection;
   final _ScaffoldGeometryNotifier geometryNotifier;
-
-  final FloatingActionButtonLocation previousFloatingActionButtonLocation;
-  final FloatingActionButtonLocation currentFloatingActionButtonLocation;
-  final double floatingActionButtonMoveAnimationProgress;
-  final FloatingActionButtonAnimator floatingActionButtonMotionAnimator;
 
   final bool isSnackBarFloating;
   final double? snackBarWidth;
@@ -997,34 +981,6 @@ class _ScaffoldLayout extends MultiChildLayoutDelegate {
     }
 
     late Rect floatingActionButtonRect;
-    if (hasChild(_ScaffoldSlot.floatingActionButton)) {
-      final Size fabSize = layoutChild(_ScaffoldSlot.floatingActionButton, looseConstraints);
-
-        // 为了考虑到 FAB 位置的改变，我们将会在旧位置和新位置之间进行动画变化。
-      final MetroPagePrelayoutGeometry currentGeometry = MetroPagePrelayoutGeometry(
-        bottomSheetSize: bottomSheetSize,
-        contentBottom: contentBottom,
-        /// [appBarHeight] should be used instead of [contentTop] because
-        /// ScaffoldPrelayoutGeometry.contentTop must not be affected by [extendBodyBehindAppBar].
-        contentTop: appBarHeight,
-        floatingActionButtonSize: fabSize,
-        minInsets: minInsets,
-        scaffoldSize: size,
-        snackBarSize: snackBarSize,
-        materialBannerSize: materialBannerSize,
-        textDirection: textDirection,
-        minViewPadding: minViewPadding,
-      );
-      final Offset currentFabOffset = Offset(0, 0);
-      final Offset previousFabOffset = Offset(0, 0);
-      final Offset fabOffset = floatingActionButtonMotionAnimator.getOffset(
-        begin: previousFabOffset,
-        end: currentFabOffset,
-        progress: floatingActionButtonMoveAnimationProgress,
-      );
-      positionChild(_ScaffoldSlot.floatingActionButton, fabOffset);
-      floatingActionButtonRect = fabOffset & fabSize;
-    }
 
     if (hasChild(_ScaffoldSlot.snackBar)) {
       final bool hasCustomWidth = snackBarWidth != null && snackBarWidth! < size.width;
@@ -1036,45 +992,13 @@ class _ScaffoldLayout extends MultiChildLayoutDelegate {
       }
 
       final double snackBarYOffsetBase;
-      final bool showAboveFab = switch (currentFloatingActionButtonLocation) {
-        FloatingActionButtonLocation.startTop
-        || FloatingActionButtonLocation.centerTop
-        || FloatingActionButtonLocation.endTop
-        || FloatingActionButtonLocation.miniStartTop
-        || FloatingActionButtonLocation.miniCenterTop
-        || FloatingActionButtonLocation.miniEndTop => false,
-        FloatingActionButtonLocation.startDocked
-        || FloatingActionButtonLocation.startFloat
-        || FloatingActionButtonLocation.centerDocked
-        || FloatingActionButtonLocation.centerFloat
-        || FloatingActionButtonLocation.endContained
-        || FloatingActionButtonLocation.endDocked
-        || FloatingActionButtonLocation.endFloat
-        || FloatingActionButtonLocation.miniStartDocked
-        || FloatingActionButtonLocation.miniStartFloat
-        || FloatingActionButtonLocation.miniCenterDocked
-        || FloatingActionButtonLocation.miniCenterFloat
-        || FloatingActionButtonLocation.miniEndDocked
-        || FloatingActionButtonLocation.miniEndFloat => true,
-        FloatingActionButtonLocation() => true,
-      };
-      if (floatingActionButtonRect.size != Size.zero && isSnackBarFloating && showAboveFab) {
-        if (bottomNavigationBarTop != null) {
-          snackBarYOffsetBase = math.min(bottomNavigationBarTop, floatingActionButtonRect.top);
-        } else {
-          snackBarYOffsetBase = floatingActionButtonRect.top;
-        }
-      } else {
-        // SnackBarBehavior.fixed applies a SafeArea automatically.
-        // SnackBarBehavior.floating does not since the positioning is affected
-        // if there is a FloatingActionButton (see condition above). If there is
-        // no FAB, make sure we account for safe space when the SnackBar is
-        // floating.
+        // SnackBarBehavior.fixed 会自动应用 SafeArea。
+        // SnackBarBehavior.floating 不会，因为如果有 FloatingActionButton（见上面的条件），
+        // 其定位会受到影响。如果没有 FAB，请确保在 SnackBar 浮动时考虑安全空间。
         final double safeYOffsetBase = size.height - minViewPadding.bottom;
         snackBarYOffsetBase = isSnackBarFloating
           ? math.min(contentBottom, safeYOffsetBase)
           : contentBottom;
-      }
 
       final double xOffset = hasCustomWidth ? (size.width - snackBarWidth!) / 2 : 0.0;
       positionChild(_ScaffoldSlot.snackBar, Offset(xOffset, snackBarYOffsetBase - snackBarSize.height));
@@ -1123,18 +1047,14 @@ class _ScaffoldLayout extends MultiChildLayoutDelegate {
 
     geometryNotifier._updateWith(
       bottomNavigationBarTop: bottomNavigationBarTop,
-      floatingActionButtonArea: floatingActionButtonRect,
     );
   }
 
   @override
-  bool shouldRelayout(_ScaffoldLayout oldDelegate) {
+  bool shouldRelayout(_MetroPageLayout oldDelegate) {
     return oldDelegate.minInsets != minInsets
       || oldDelegate.minViewPadding != minViewPadding
       || oldDelegate.textDirection != textDirection
-      || oldDelegate.floatingActionButtonMoveAnimationProgress != floatingActionButtonMoveAnimationProgress
-      || oldDelegate.previousFloatingActionButtonLocation != previousFloatingActionButtonLocation
-      || oldDelegate.currentFloatingActionButtonLocation != currentFloatingActionButtonLocation
       || oldDelegate.extendBody != extendBody
       || oldDelegate.extendBodyBehindAppBar != extendBodyBehindAppBar;
   }
@@ -1363,7 +1283,7 @@ class _FloatingActionButtonTransitionState extends State<_FloatingActionButtonTr
 
   void _updateGeometryScale(double scale) {
     widget.geometryNotifier._updateWith(
-      floatingActionButtonScale: scale,
+      //floatingActionButtonScale: scale,
     );
   }
 }
@@ -1488,9 +1408,6 @@ class MetroPage extends StatefulWidget {
     super.key,
     this.appBar,
     this.body,
-    this.floatingActionButton,
-    this.floatingActionButtonLocation,
-    this.floatingActionButtonAnimator,
     this.persistentFooterButtons,
     this.persistentFooterAlignment = AlignmentDirectional.centerEnd,
     this.drawer,
@@ -1556,21 +1473,6 @@ class MetroPage extends StatefulWidget {
   /// 如果你有一列小部件，通常应该适合屏幕，但可能会溢出并在这种情况下需要滚动，
   /// 请考虑使用 [ListView] 作为 Scaffold 的主体。这也是你的主体是可滚动列表的一个好选择。
   final Widget? body;
-
-  /// A button displayed floating above [body], in the bottom right corner.
-  ///
-  /// Typically a [FloatingActionButton].
-  final Widget? floatingActionButton;
-
-  /// Responsible for determining where the [floatingActionButton] should go.
-  ///
-  /// If null, the [MetroPageState] will use the default location, [FloatingActionButtonLocation.endFloat].
-  final FloatingActionButtonLocation? floatingActionButtonLocation;
-
-  /// Animator to move the [floatingActionButton] to a new [floatingActionButtonLocation].
-  ///
-  /// If null, the [MetroPageState] will use the default animator, [FloatingActionButtonAnimator.scaling].
-  final FloatingActionButtonAnimator? floatingActionButtonAnimator;
 
   /// 一组显示在脚手架底部的按钮。
   ///
@@ -1876,8 +1778,6 @@ class MetroPageState extends State<MetroPage> with TickerProviderStateMixin, Res
   bool get hasDrawer => widget.drawer != null;
   /// Whether this scaffold has a non-null [MetroPage.endDrawer].
   bool get hasEndDrawer => widget.endDrawer != null;
-  /// Whether this scaffold has a non-null [MetroPage.floatingActionButton].
-  bool get hasFloatingActionButton => widget.floatingActionButton != null;
 
   double? _appBarMaxHeight;
   /// The max height the [MetroPage.appBar] uses.
@@ -2374,8 +2274,6 @@ class MetroPageState extends State<MetroPage> with TickerProviderStateMixin, Res
   void initState() {
     super.initState();
     _geometryNotifier = _ScaffoldGeometryNotifier(const MetroPageGeometry(), context);
-    _floatingActionButtonLocation = widget.floatingActionButtonLocation ?? _kDefaultFloatingActionButtonLocation;
-    _floatingActionButtonAnimator = widget.floatingActionButtonAnimator ?? _kDefaultFloatingActionButtonAnimator;
     _previousFloatingActionButtonLocation = _floatingActionButtonLocation;
     _floatingActionButtonMoveController = AnimationController(
       vsync: this,
@@ -2686,22 +2584,6 @@ class MetroPageState extends State<MetroPage> with TickerProviderStateMixin, Res
       );
     }
 
-    _addIfNonNull(
-      children,
-      _FloatingActionButtonTransition(
-        fabMoveAnimation: _floatingActionButtonMoveController,
-        fabMotionAnimator: _floatingActionButtonAnimator,
-        geometryNotifier: _geometryNotifier,
-        currentController: _floatingActionButtonVisibilityController,
-        child: widget.floatingActionButton,
-      ),
-      _ScaffoldSlot.floatingActionButton,
-      removeLeftPadding: true,
-      removeTopPadding: true,
-      removeRightPadding: true,
-      removeBottomPadding: true,
-    );
-
     switch (themeData.platform) {
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:
@@ -2760,16 +2642,12 @@ class MetroPageState extends State<MetroPage> with TickerProviderStateMixin, Res
                 DismissIntent: _DismissDrawerAction(context),
               },
               child: CustomMultiChildLayout(
-                delegate: _ScaffoldLayout(
+                delegate: _MetroPageLayout(
                   extendBody: extendBody,
                   extendBodyBehindAppBar: widget.extendBodyBehindAppBar,
                   minInsets: minInsets,
                   minViewPadding: minViewPadding,
-                  currentFloatingActionButtonLocation: _floatingActionButtonLocation!,
-                  floatingActionButtonMoveAnimationProgress: _floatingActionButtonMoveController.value,
-                  floatingActionButtonMotionAnimator: _floatingActionButtonAnimator,
                   geometryNotifier: _geometryNotifier,
-                  previousFloatingActionButtonLocation: _previousFloatingActionButtonLocation!,
                   textDirection: textDirection,
                   isSnackBarFloating: isSnackBarFloating,
                   extendBodyBehindMaterialBanner: extendBodyBehindMaterialBanner,
