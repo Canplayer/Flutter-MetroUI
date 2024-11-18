@@ -3,6 +3,7 @@ import 'package:metro_ui/merto/app.dart';
 import 'package:metro_ui/merto/page.dart';
 import 'package:metro_ui/tile.dart';
 
+
 void main() {
   runApp(const MyApp());
 }
@@ -34,6 +35,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
+      
       home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
@@ -242,8 +244,22 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                         child: Tile(
                           allowBack: true,
                           onTap: () async {
+                            
                             //等待两秒
                             await _startAnimations(_keys[index]);
+                            //跳转到新页面
+                            Navigator.of(context).push(MaterialPageRoute(
+                              builder: (context) {
+                                return Scaffold(
+                                  appBar: AppBar(
+                                    title: Text(key),
+                                  ),
+                                  body: Center(
+                                    child: Text('This is the $key page'),
+                                  ),
+                                );
+                              },
+                            ));
                           },
                           child: Container(
                             color: const Color(0xFF2196F3),
