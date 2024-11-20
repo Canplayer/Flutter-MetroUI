@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:metro_ui/merto/app.dart';
-import 'package:metro_ui/merto/page.dart';
+import 'package:metro_ui/merto/page_scaffold.dart';
 import 'package:metro_ui/tile.dart';
 
 
@@ -16,24 +16,10 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MetroApp(
       title: 'Flutter Demo',
+      themeMode: MetroThemeMode.light,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+        primaryColor: const Color.fromARGB(255, 86, 182, 255),
+        //scaffoldBackgroundColor: const Color.fromARGB(255, 0, 0, 0),
       ),
       
       home: const MyHomePage(title: 'Flutter Demo Home Page'),
@@ -178,7 +164,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     //   controller.forward();
     // }
     //播放完动画后，重置动画
-    await Future.delayed(const Duration(milliseconds: 1000));
+    await Future.delayed(const Duration(milliseconds: 500));
     for (var controller in _controllers) {
       controller.reset();
     }
@@ -203,17 +189,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return MetroPage(
-      backgroundColor: Color.fromARGB(0, 0, 0, 0),
-      // appBar: AppBar(
-      //   // TRY THIS: Try changing the color here to a specific color (to
-      //   // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-      //   // change color while the other colors stay the same.
-      //   backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      //   // Here we take the value from the MyHomePage object that was created by
-      //   // the App.build method, and use it to set our appbar title.
-      //   title: Text(widget.title),
-      // ),
+    return
+     MetroPageScaffold(
+      // backgroundColor: const Color.fromARGB(0, 0, 0, 0),
       
       body: Transform(
         alignment: FractionalOffset.center,
@@ -262,7 +240,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                             ));
                           },
                           child: Container(
-                            color: const Color(0xFF2196F3),
+                            color: Theme.of(context).primaryColor,
                             child:
                                 //分层布局
                                 Stack(
@@ -285,6 +263,16 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                                       color: Colors.white,
                                       fontSize: 20,
                                     ),
+                                  ),
+                                ),
+                                Positioned(
+                                  right: 10,
+                                  bottom: 10,
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                     
+                                    },
+                                    child: const Text('Go'),
                                   ),
                                 ),
                               ],

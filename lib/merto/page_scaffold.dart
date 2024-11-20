@@ -9,22 +9,12 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-
-// Examples can assume:
-// late TabController tabController;
-// void setState(VoidCallback fn) { }
-// late String appBarTitle;
-// late int tabCount;
-// late TickerProvider tickerProvider;
-
 enum _MetroPageSlot {
-  body,
-  bodyScrim,
-  persistentFooter,
-  statusBar,
+  body, //主体
+  statusBar, //状态栏
 }
 
-/// 管理后代 [MetroPage] 的 [SnackBar] 和 [MetroBanner]。
+/// 管理后代 [MetroPageScaffold] 的 [SnackBar] 和 [MetroBanner]。
 ///
 /// {@youtube 560 315 https://www.youtube.com/watch?v=lytQi-slT5Y}
 ///
@@ -33,7 +23,7 @@ enum _MetroPageSlot {
 /// 要显示这些通知，请通过 [MetroPageMessenger.of] 获取当前 [BuildContext] 的 [MetroPageMessengerState]，
 /// 然后使用 [MetroPageMessengerState.showSnackBar] 或 [MetroPageMessengerState.showMetroBanner] 函数。
 ///
-/// 当 [MetroPageMessenger] 有嵌套的 [MetroPage] 后代时，MetroPageMessenger 只会将通知显示给子树中根 Scaffold。
+/// 当 [MetroPageMessenger] 有嵌套的 [MetroPageScaffold] 后代时，MetroPageMessenger 只会将通知显示给子树中根 Scaffold。
 /// 为了在内部嵌套的 Scaffold 中显示通知，请在嵌套级别之间实例化一个新的 MetroPageMessenger 以设置新的作用域。
 ///
 /// {@youtube 560 315 https://www.youtube.com/watch?v=lytQi-slT5Y}
@@ -45,7 +35,7 @@ enum _MetroPageSlot {
 ///  * [debugCheckHasMetroPageMessenger]，它断言给定的上下文有一个 [MetroPageMessenger] 祖先。
 ///  * Cookbook: [显示 SnackBar](https://docs.flutter.dev/cookbook/design/snackbars)
 class MetroPageMessenger extends StatefulWidget {
-  /// Creates a widget that manages [SnackBar]s for [MetroPage] descendants.
+  /// Creates a widget that manages [SnackBar]s for [MetroPageScaffold] descendants.
   const MetroPageMessenger({
     super.key,
     required this.child,
@@ -111,15 +101,15 @@ class MetroPageMessenger extends StatefulWidget {
 
 /// [MetroPageMessenger] 的状态。
 ///
-/// [MetroPageMessengerState] 对象可用于为每个注册的 [MetroPage] 显示 [SnackBar] 或 [MetroBanner]，
-/// 这些 [MetroPage] 是关联的 [MetroPageMessenger] 的后代。
+/// [MetroPageMessengerState] 对象可用于为每个注册的 [MetroPageScaffold] 显示 [SnackBar] 或 [MetroBanner]，
+/// 这些 [MetroPageScaffold] 是关联的 [MetroPageMessenger] 的后代。
 /// Scaffolds 将注册以从其最近的 MetroPageMessenger 祖先接收 [SnackBar] 和 [MetroBanner]。
 ///
 /// 通常通过 [MetroPageMessenger.of] 获取。
 class MetroPageMessengerState extends State<MetroPageMessenger>
     with TickerProviderStateMixin {
-  final LinkedHashSet<MetroPageState> _scaffolds =
-      LinkedHashSet<MetroPageState>();
+  final LinkedHashSet<MetroPageScaffoldState> _scaffolds =
+      LinkedHashSet<MetroPageScaffoldState>();
 
   bool? _accessibleNavigation;
 
@@ -139,7 +129,7 @@ class MetroPageMessengerState extends State<MetroPageMessenger>
     super.didChangeDependencies();
   }
 
-  void _register(MetroPageState page) {
+  void _register(MetroPageScaffoldState page) {
     _scaffolds.add(page);
 
     if (_isRoot(page)) {
@@ -153,25 +143,25 @@ class MetroPageMessengerState extends State<MetroPageMessenger>
     }
   }
 
-  void _unregister(MetroPageState scaffold) {
+  void _unregister(MetroPageScaffoldState scaffold) {
     final bool removed = _scaffolds.remove(scaffold);
     // ScaffoldStates应该只被移除一次。
     assert(removed);
   }
 
-  void _updateScaffolds() {
-    for (final MetroPageState scaffold in _scaffolds) {
-      if (_isRoot(scaffold)) {
-        // scaffold._updateSnackBar();
-        // scaffold._updateMetroBanner();
-      }
-    }
-  }
+  // void _updateScaffolds() {
+  //   for (final MetroPageState scaffold in _scaffolds) {
+  //     if (_isRoot(scaffold)) {
+  //       // scaffold._updateSnackBar();
+  //       // scaffold._updateMetroBanner();
+  //     }
+  //   }
+  // }
 
   // 嵌套的 Scaffold 由 MetroPageMessenger 处理，仅在嵌套集的根 Scaffold 中显示 MetroBanner 或 SnackBar。
-  bool _isRoot(MetroPageState scaffold) {
-    final MetroPageState? parent =
-        scaffold.context.findAncestorStateOfType<MetroPageState>();
+  bool _isRoot(MetroPageScaffoldState scaffold) {
+    final MetroPageScaffoldState? parent =
+        scaffold.context.findAncestorStateOfType<MetroPageScaffoldState>();
     return parent == null || !_scaffolds.contains(parent);
   }
 
@@ -186,10 +176,10 @@ class MetroPageMessengerState extends State<MetroPageMessenger>
     );
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
+  // @override
+  // void dispose() {
+  //   super.dispose();
+  // }
 }
 
 class _MetroPageMessengerScope extends InheritedWidget {
@@ -205,9 +195,9 @@ class _MetroPageMessengerScope extends InheritedWidget {
       _scaffoldMessengerState != old._scaffoldMessengerState;
 }
 
-/// [MetroPage] 布局完所有内容后的空间信息。
+/// [MetroPageScaffold] 布局完所有内容后的空间信息。
 ///
-/// 想了解 [MetroPage] 完成布局后的详细几何信息，可以看看 [MetroPageGeometry]。
+/// 想了解 [MetroPageScaffold] 完成布局后的详细几何信息，可以看看 [MetroPageGeometry]。
 @immutable
 class MetroPagePrelayoutGeometry {
   /// 抽象常量构造函数。这个构造函数允许子类提供常量构造函数，以便在常量表达式中使用。
@@ -220,43 +210,43 @@ class MetroPagePrelayoutGeometry {
     required this.textDirection,
   });
 
-  /// 从 Scaffold 原点到 [MetroPage.body] 底部的垂直距离。
+  /// 从 Scaffold 原点到 [MetroPageScaffold.body] 底部的垂直距离。
   ///
   /// 这在设计将 [FloatingActionButton] 放置在屏幕底部的 [FloatingActionButtonLocation] 中很有用，
-  /// 同时将其保持在 [BottomSheet]、[MetroPage.bottomNavigationBar] 或键盘之上。
+  /// 同时将其保持在 [BottomSheet]、[MetroPageScaffold.bottomNavigationBar] 或键盘之上。
   ///
-  /// [MetroPage.body] 已根据 [minInsets] 进行布局，这意味着 [FloatingActionButtonLocation]
+  /// [MetroPageScaffold.body] 已根据 [minInsets] 进行布局，这意味着 [FloatingActionButtonLocation]
   /// 在将 [FloatingActionButton] 对齐到 [contentBottom] 时，无需考虑 [minInsets] 的 [EdgeInsets.bottom]。
   final double contentBottom;
 
-  /// 从 [MetroPage] 原点到 [MetroPage.body] 顶部的垂直距离。
+  /// 从 [MetroPageScaffold] 原点到 [MetroPageScaffold.body] 顶部的垂直距离。
   ///
   /// 这在设计将 [FloatingActionButton] 放置在屏幕顶部的 [FloatingActionButtonLocation] 中很有用，
-  /// 同时将其保持在 [MetroPage.appBar] 之下。
+  /// 同时将其保持在 [MetroPageScaffold.appBar] 之下。
   ///
-  /// [MetroPage.body] 已根据 [minInsets] 进行布局，这意味着 [FloatingActionButtonLocation]
+  /// [MetroPageScaffold.body] 已根据 [minInsets] 进行布局，这意味着 [FloatingActionButtonLocation]
   /// 在将 [FloatingActionButton] 对齐到 [contentTop] 时，无需考虑 [minInsets] 的 [EdgeInsets.top]。
   final double contentTop;
 
   /// 为了使 [FloatingActionButton] 保持可见，所需的最小内边距。
   ///
-  /// 这个值是通过在 [MetroPage] 的 [BuildContext] 中调用 [MediaQueryData.padding] 得到的，
+  /// 这个值是通过在 [MetroPageScaffold] 的 [BuildContext] 中调用 [MediaQueryData.padding] 得到的，
   /// 用于给 [FloatingActionButton] 添加内边距，以避免系统状态栏或键盘等元素。
   ///
-  /// 如果 [MetroPage.resizeToAvoidBottomInset] 设置为 false，
+  /// 如果 [MetroPageScaffold.resizeToAvoidBottomInset] 设置为 false，
   /// [minInsets] 的 [EdgeInsets.bottom] 将为 0.0。
   final EdgeInsets minInsets;
 
   /// 为了让交互元素位于安全、无遮挡的空间内，所需的最小内边距。
   ///
-  /// 当 [MetroPage.resizeToAvoidBottomInset] 为 false 或 [MediaQueryData.viewInsets] > 0.0 时，
-  /// 这个值反映了 [MetroPage] 的 [BuildContext] 的 [MediaQueryData.viewPadding]。
+  /// 当 [MetroPageScaffold.resizeToAvoidBottomInset] 为 false 或 [MediaQueryData.viewInsets] > 0.0 时，
+  /// 这个值反映了 [MetroPageScaffold] 的 [BuildContext] 的 [MediaQueryData.viewPadding]。
   /// 这有助于区分屏幕上不同类型的遮挡，例如软件键盘和设备的物理刘海。
   final EdgeInsets minViewPadding;
 
-  /// 整个 [MetroPage] 的尺寸。
+  /// 整个 [MetroPageScaffold] 的尺寸。
   ///
-  /// 如果 [MetroPage] 内容的尺寸由于像 [MetroPage.resizeToAvoidBottomInset] 或键盘弹出等因素而被修改，
+  /// 如果 [MetroPageScaffold] 内容的尺寸由于像 [MetroPageScaffold.resizeToAvoidBottomInset] 或键盘弹出等因素而被修改，
   /// 则 [scaffoldSize] 不会反映这些更改。
   ///
   /// 这意味着，设计用于根据键盘弹出等事件重新定位 [FloatingActionButton] 的 [FloatingActionButtonLocation]
@@ -265,7 +255,7 @@ class MetroPagePrelayoutGeometry {
   /// 有关应用适当内边距的更多信息，请参见 [minInsets] 和 [MediaQueryData.padding]。
   final Size scaffoldSize;
 
-  /// [MetroPage] 的 [BuildContext] 的文字方向。
+  /// [MetroPageScaffold] 的 [BuildContext] 的文字方向。
   final TextDirection textDirection;
 }
 
@@ -279,7 +269,7 @@ class _BodyBoxConstraints extends BoxConstraints {
     super.maxWidth,
     super.maxHeight,
     required this.bottomWidgetsHeight,
-  })  : assert(bottomWidgetsHeight >= 0);
+  }) : assert(bottomWidgetsHeight >= 0);
 
   final double bottomWidgetsHeight;
 
@@ -295,8 +285,7 @@ class _BodyBoxConstraints extends BoxConstraints {
   }
 
   @override
-  int get hashCode => Object.hash(
-      super.hashCode, bottomWidgetsHeight);
+  int get hashCode => Object.hash(super.hashCode, bottomWidgetsHeight);
 }
 
 // 当 Scaffold 的 extendBody 为 true 时，使用 MediaQuery 包裹 scaffold 的 body，
@@ -324,7 +313,7 @@ class _BodyBuilder extends StatelessWidget {
         final MediaQueryData metrics = MediaQuery.of(context);
 
         final double bottom = math.max(
-                metrics.padding.bottom, bodyConstraints.bottomWidgetsHeight);
+            metrics.padding.bottom, bodyConstraints.bottomWidgetsHeight);
 
         final double top = metrics.padding.top;
 
@@ -347,7 +336,6 @@ class _MetroPageLayout extends MultiChildLayoutDelegate {
     required this.minInsets,
     required this.minViewPadding,
     required this.textDirection,
-    required this.snackBarWidth,
     required this.extendBody,
   });
 
@@ -355,8 +343,6 @@ class _MetroPageLayout extends MultiChildLayoutDelegate {
   final EdgeInsets minInsets;
   final EdgeInsets minViewPadding;
   final TextDirection textDirection;
-
-  final double? snackBarWidth;
 
   @override
   void performLayout(Size size) {
@@ -369,19 +355,6 @@ class _MetroPageLayout extends MultiChildLayoutDelegate {
     final double bottom = size.height;
     double contentTop = 0.0;
     double bottomWidgetsHeight = 0.0;
-
-
-    if (hasChild(_MetroPageSlot.persistentFooter)) {
-      final BoxConstraints footerConstraints = BoxConstraints(
-        maxWidth: fullWidthConstraints.maxWidth,
-        maxHeight: math.max(0.0, bottom - bottomWidgetsHeight - contentTop),
-      );
-      final double persistentFooterHeight =
-          layoutChild(_MetroPageSlot.persistentFooter, footerConstraints).height;
-      bottomWidgetsHeight += persistentFooterHeight;
-      positionChild(_MetroPageSlot.persistentFooter,
-          Offset(0.0, math.max(0.0, bottom - bottomWidgetsHeight)));
-    }
 
     // 设置内容底部，考虑底部组件或键盘等系统UI的高度中较大的值。
     final double contentBottom =
@@ -405,27 +378,6 @@ class _MetroPageLayout extends MultiChildLayoutDelegate {
       );
       layoutChild(_MetroPageSlot.body, bodyConstraints);
       positionChild(_MetroPageSlot.body, Offset(0.0, contentTop));
-    }
-
-    // BottomSheet 和 SnackBar 都固定在父组件底部，
-    // 它们的宽度与父组件相同，并且有各自的高度。
-    // 唯一的区别是 SnackBar 出现在 BottomNavigationBar 的上方，
-    // 而 BottomSheet 堆叠在它的上面。
-    //
-    // 如果三个元素同时存在，那么 FAB 的中心要么跨越 BottomSheet 的顶部边缘，
-    // 要么 FAB 的底部比 SnackBar 高出 kFloatingActionButtonMargin，
-    // 取决于哪种方式使 FAB 离父组件底部更远。
-    // 如果只有 FAB 有非零高度，那么它会从父组件的右边和底部边缘内缩
-    // kFloatingActionButtonMargin。
-
-    //Size snackBarSize = Size.zero;
-    if (hasChild(_MetroPageSlot.bodyScrim)) {
-      final BoxConstraints bottomSheetScrimConstraints = BoxConstraints(
-        maxWidth: fullWidthConstraints.maxWidth,
-        maxHeight: contentBottom,
-      );
-      layoutChild(_MetroPageSlot.bodyScrim, bottomSheetScrimConstraints);
-      positionChild(_MetroPageSlot.bodyScrim, Offset.zero);
     }
 
     if (hasChild(_MetroPageSlot.statusBar)) {
@@ -453,7 +405,7 @@ class _MetroPageLayout extends MultiChildLayoutDelegate {
 /// 目前，[FloatingActionButton] 有两种类型的动画：
 ///
 /// * 进场/退场动画，当 [FloatingActionButton] 被添加、更新或移除时，此小部件会触发这些动画。
-/// * 运动动画，当其 [FloatingActionButtonLocation] 被更新时，[MetroPage] 会触发这些动画。
+/// * 运动动画，当其 [FloatingActionButtonLocation] 被更新时，[MetroPageScaffold] 会触发这些动画。
 class _FloatingActionButtonTransition extends StatefulWidget {
   const _FloatingActionButtonTransition({
     required this.child,
@@ -695,12 +647,12 @@ class _FloatingActionButtonTransitionState
 ///
 /// 此类提供显示抽屉和底部工作表的 API。
 ///
-/// 若要显示一个持久性的底部工作表，请通过 [MetroPage.of] 获取当前 [BuildContext] 的
-/// [MetroPageState]，并使用 [MetroPageState.showBottomSheet] 函数。
+/// 若要显示一个持久性的底部工作表，请通过 [MetroPageScaffold.of] 获取当前 [BuildContext] 的
+/// [MetroPageScaffoldState]，并使用 [MetroPageScaffoldState.showBottomSheet] 函数。
 ///
 /// {@tool dartpad}
-/// 此示例显示一个带有 [body] 和 [FloatingActionButton] 的 [MetroPage]。
-/// [body] 是一个放置在 [Center] 中的 [Text]，用于将文本居中在 [MetroPage] 内。
+/// 此示例显示一个带有 [body] 和 [FloatingActionButton] 的 [MetroPageScaffold]。
+/// [body] 是一个放置在 [Center] 中的 [Text]，用于将文本居中在 [MetroPageScaffold] 内。
 /// [FloatingActionButton] 连接到一个递增计数器的回调。
 ///
 /// ** 参见示例代码 examples/api/lib/material/scaffold/scaffold.0.dart **
@@ -708,8 +660,8 @@ class _FloatingActionButtonTransitionState
 ///
 /// {@tool dartpad}
 /// 此示例显示一个带有蓝灰色 [backgroundColor]、[body]
-/// 和 [FloatingActionButton] 的 [MetroPage]。 [body] 是一个放置在 [Center] 中的
-/// [Text]，用于将文本居中在 [MetroPage] 内。 [FloatingActionButton]
+/// 和 [FloatingActionButton] 的 [MetroPageScaffold]。 [body] 是一个放置在 [Center] 中的
+/// [Text]，用于将文本居中在 [MetroPageScaffold] 内。 [FloatingActionButton]
 /// 连接到一个递增计数器的回调。
 ///
 /// ![](https://flutter.github.io/assets-for-api-docs/assets/material/scaffold_background_color.png)
@@ -719,8 +671,8 @@ class _FloatingActionButtonTransitionState
 ///
 /// {@tool dartpad}
 /// 此示例显示一个带有 [AppBar]、[BottomAppBar] 和
-/// [FloatingActionButton] 的 [MetroPage]。 [body] 是一个放置在 [Center] 中的 [Text]，
-/// 用于将文本居中在 [MetroPage] 内。 [FloatingActionButton] 使用
+/// [FloatingActionButton] 的 [MetroPageScaffold]。 [body] 是一个放置在 [Center] 中的 [Text]，
+/// 用于将文本居中在 [MetroPageScaffold] 内。 [FloatingActionButton] 使用
 /// [FloatingActionButtonLocation.centerDocked] 在 [BottomAppBar] 中居中和停靠。
 /// [FloatingActionButton] 连接到一个递增计数器的回调。
 ///
@@ -746,15 +698,15 @@ class _FloatingActionButtonTransitionState
 ///
 /// ## 带有可拖动滚动底部工作表的浮动操作按钮
 ///
-/// 如果 [MetroPage.bottomSheet] 是一个 [DraggableScrollableSheet]，
-/// [MetroPage.floatingActionButton] 被设置，并且底部工作表被拖动以
+/// 如果 [MetroPageScaffold.bottomSheet] 是一个 [DraggableScrollableSheet]，
+/// [MetroPageScaffold.floatingActionButton] 被设置，并且底部工作表被拖动以
 /// 覆盖 Scaffold 高度的大于 70%，则会并行发生两件事情：
 ///
-///   * Scaffold 开始显示遮罩层（见 [MetroPageState.showBodyScrim]），
-///   * [MetroPage.floatingActionButton] 通过带有 [Curves.easeIn] 的动画缩放并在​///     底部工作表覆盖整个 Scaffold 时消失。
+///   * Scaffold 开始显示遮罩层（见 [MetroPageScaffoldState.showBodyScrim]），
+///   * [MetroPageScaffold.floatingActionButton] 通过带有 [Curves.easeIn] 的动画缩放并在​///     底部工作表覆盖整个 Scaffold 时消失。
 ///
 /// 当底部工作表被拖到底部覆盖 Scaffold 的高度小于 70% 时，遮罩层
-/// ​/// 消失，[MetroPage.floatingActionButton] 动画回到其正常大小。
+/// ​/// 消失，[MetroPageScaffold.floatingActionButton] 动画回到其正常大小。
 ///
 /// ## 故障排除
 ///
@@ -793,16 +745,14 @@ class _FloatingActionButtonTransitionState
 /// 另请参见：
 ///
 ///  * [AppBar]，通常在应用程序顶部显示的水平栏，使用 [appBar] 属性。
-///  * [MetroPageState]，与此小部件关联的状态。
+///  * [MetroPageScaffoldState]，与此小部件关联的状态。
 ///  * <https://material.io/design/layout/responsive-layout-grid.html>
 ///  * 教程：[为屏幕添加抽屉](https://docs.flutter.dev/cookbook/design/drawer)
-class MetroPage extends StatefulWidget {
+class MetroPageScaffold extends StatefulWidget {
   /// 创建 Material Design 小部件的视觉脚手架。
-  const MetroPage({
+  const MetroPageScaffold({
     super.key,
     this.body,
-    this.persistentFooterButtons,
-    this.persistentFooterAlignment = AlignmentDirectional.centerEnd,
     this.backgroundColor,
     this.resizeToAvoidBottomInset,
     this.primary = true,
@@ -822,20 +772,6 @@ class MetroPage extends StatefulWidget {
   /// 如果你有一列小部件，通常应该适合屏幕，但可能会溢出并在这种情况下需要滚动，
   /// 请考虑使用 [ListView] 作为 Scaffold 的主体。这也是你的主体是可滚动列表的一个好选择。
   final Widget? body;
-
-  /// 一组显示在脚手架底部的按钮。
-  ///
-  /// 通常这是一个 [TextButton] 小部件列表。这些按钮是持久可见的，即使脚手架的 [body] 滚动也是如此。
-  ///
-  /// 这些小部件将被包裹在一个 [OverflowBar] 中。
-  ///
-  /// [persistentFooterButtons] 渲染在 [bottomNavigationBar] 之上，但在 [body] 之下。
-  final List<Widget>? persistentFooterButtons;
-
-  /// The alignment of the [persistentFooterButtons] inside the [OverflowBar].
-  ///
-  /// Defaults to [AlignmentDirectional.centerEnd].
-  final AlignmentDirectional persistentFooterAlignment;
 
   /// [Material] 小部件的颜色，它在整个 Scaffold 下方。
   ///
@@ -858,8 +794,7 @@ class MetroPage extends StatefulWidget {
   /// 此属性的默认值与 [AppBar.primary] 的默认值一样，为 true。
   final bool primary;
 
-
-  /// 用于保存和恢复 [MetroPage] 状态的恢复 ID。
+  /// 用于保存和恢复 [MetroPageScaffold] 状态的恢复 ID。
   ///
   /// 如果它非空，scaffold 将持久化并恢复 [drawer] 和 [endDrawer] 的打开或关闭状态。
   ///
@@ -871,32 +806,32 @@ class MetroPage extends StatefulWidget {
   ///  * [RestorationManager]，它解释了 Flutter 中状态恢复的工作原理。
   final String? restorationId;
 
-  /// 从最接近的此类实例中查找 [MetroPageState]。
+  /// 从最接近的此类实例中查找 [MetroPageScaffoldState]。
   ///
   /// 如果没有此类实例包含给定的上下文，在调试模式下会导致断言，在发布模式下会抛出异常。
   ///
   /// 此方法可能会很耗时（它会遍历元素树）。
   ///
   /// {@tool dartpad}
-  /// [MetroPage.of] 函数的典型用法是在 [MetroPage] 子小部件的 `build` 方法中调用它。
+  /// [MetroPageScaffold.of] 函数的典型用法是在 [MetroPageScaffold] 子小部件的 `build` 方法中调用它。
   ///
   /// ** 请参阅 examples/api/lib/material/scaffold/scaffold.of.0.dart 中的代码 **
   /// {@end-tool}
   ///
   /// {@tool dartpad}
-  /// 当 [MetroPage] 实际上是在同一个 `build` 函数中创建时，`build` 函数的 `context` 参数不能用于查找 [MetroPage]（因为它在返回的小部件树中位于小部件的“上方”）。在这种情况下，可以使用以下技术与 [Builder] 提供一个新的作用域，其中包含“在”[MetroPage] 下的 [BuildContext]：
+  /// 当 [MetroPageScaffold] 实际上是在同一个 `build` 函数中创建时，`build` 函数的 `context` 参数不能用于查找 [MetroPageScaffold]（因为它在返回的小部件树中位于小部件的“上方”）。在这种情况下，可以使用以下技术与 [Builder] 提供一个新的作用域，其中包含“在”[MetroPageScaffold] 下的 [BuildContext]：
   ///
   /// ** 请参阅 examples/api/lib/material/scaffold/scaffold.of.1.dart 中的代码 **
   /// {@end-tool}
   ///
-  /// 更有效的解决方案是将你的构建函数拆分为几个小部件。这会引入一个新的上下文，你可以从中获取 [MetroPage]。在这种解决方案中，你会有一个外部小部件来创建由新内部小部件实例填充的 [MetroPage]，然后在这些内部小部件中使用 [MetroPage.of]。
+  /// 更有效的解决方案是将你的构建函数拆分为几个小部件。这会引入一个新的上下文，你可以从中获取 [MetroPageScaffold]。在这种解决方案中，你会有一个外部小部件来创建由新内部小部件实例填充的 [MetroPageScaffold]，然后在这些内部小部件中使用 [MetroPageScaffold.of]。
   ///
-  /// 一个不太优雅但更快捷的解决方案是为 [MetroPage] 分配一个 [GlobalKey]，然后使用 `key.currentState` 属性来获取 [MetroPageState]，而不是使用 [MetroPage.of] 函数。
+  /// 一个不太优雅但更快捷的解决方案是为 [MetroPageScaffold] 分配一个 [GlobalKey]，然后使用 `key.currentState` 属性来获取 [MetroPageScaffoldState]，而不是使用 [MetroPageScaffold.of] 函数。
   ///
-  /// 如果范围内没有 [MetroPage]，则会抛出异常。要在没有 [MetroPage] 时返回 null，请使用 [maybeOf]。
-  static MetroPageState of(BuildContext context) {
-    final MetroPageState? result =
-        context.findAncestorStateOfType<MetroPageState>();
+  /// 如果范围内没有 [MetroPageScaffold]，则会抛出异常。要在没有 [MetroPageScaffold] 时返回 null，请使用 [maybeOf]。
+  static MetroPageScaffoldState of(BuildContext context) {
+    final MetroPageScaffoldState? result =
+        context.findAncestorStateOfType<MetroPageScaffoldState>();
     if (result != null) {
       return result;
     }
@@ -928,7 +863,7 @@ class MetroPage extends StatefulWidget {
     ]);
   }
 
-  /// 从最接近的此类实例中查找 [MetroPageState]。
+  /// 从最接近的此类实例中查找 [MetroPageScaffoldState]。
   ///
   /// 如果没有此类实例包含给定的上下文，将返回 null。
   /// 要抛出异常，请使用 [of] 而不是此函数。
@@ -938,19 +873,18 @@ class MetroPage extends StatefulWidget {
   /// 另请参见:
   ///
   ///  * [of]，这是一个类似的函数，但如果没有实例包含给定的上下文，它会抛出异常。其文档中还包括一些示例代码。
-  static MetroPageState? maybeOf(BuildContext context) {
-    return context.findAncestorStateOfType<MetroPageState>();
+  static MetroPageScaffoldState? maybeOf(BuildContext context) {
+    return context.findAncestorStateOfType<MetroPageScaffoldState>();
   }
 
-
   @override
-  MetroPageState createState() => MetroPageState();
+  MetroPageScaffoldState createState() => MetroPageScaffoldState();
 }
 
-/// [MetroPage] 的状态。
+/// [MetroPageScaffold] 的状态。
 ///
-/// 可以显示 [BottomSheet]。使用 [MetroPage.of] 从当前的 [BuildContext] 中获取 [MetroPageState]。
-class MetroPageState extends State<MetroPage>
+/// 可以显示 [BottomSheet]。使用 [MetroPageScaffold.of] 从当前的 [BuildContext] 中获取 [MetroPageScaffoldState]。
+class MetroPageScaffoldState extends State<MetroPageScaffold>
     with TickerProviderStateMixin, RestorationMixin {
   @override
   String? get restorationId => widget.restorationId;
@@ -1100,20 +1034,6 @@ class MetroPageState extends State<MetroPage>
     }
   }
 
-  bool _showBodyScrim = false;
-  Color _bodyScrimColor = Colors.yellow;
-
-  /// Whether to show a [ModalBarrier] over the body of the scaffold.
-  void showBodyScrim(bool value, double opacity) {
-    if (_showBodyScrim == value && _bodyScrimColor.opacity == opacity) {
-      return;
-    }
-    setState(() {
-      _showBodyScrim = value;
-      _bodyScrimColor = Colors.black.withOpacity(opacity);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     assert(debugCheckHasMediaQuery(context));
@@ -1133,57 +1053,9 @@ class MetroPageState extends State<MetroPage>
       removeLeftPadding: false,
       removeTopPadding: true,
       removeRightPadding: false,
-      removeBottomPadding: widget.persistentFooterButtons != null,
+      removeBottomPadding: false,
       removeBottomInset: _resizeToAvoidBottomInset,
     );
-    if (_showBodyScrim) {
-      _addIfNonNull(
-        children,
-        ModalBarrier(
-          dismissible: false,
-          color: _bodyScrimColor,
-        ),
-        _MetroPageSlot.bodyScrim,
-        removeLeftPadding: true,
-        removeTopPadding: true,
-        removeRightPadding: true,
-        removeBottomPadding: true,
-      );
-    }
-    double? snackBarWidth;
-
-    if (widget.persistentFooterButtons != null) {
-      _addIfNonNull(
-        children,
-        Container(
-          decoration: BoxDecoration(
-            border: Border(
-              top: Divider.createBorderSide(context, width: 1.0),
-            ),
-          ),
-          child: SafeArea(
-            top: false,
-            child: IntrinsicHeight(
-              child: Container(
-                alignment: widget.persistentFooterAlignment,
-                padding: const EdgeInsets.all(8),
-                child: OverflowBar(
-                  spacing: 8,
-                  overflowAlignment: OverflowBarAlignment.end,
-                  children: widget.persistentFooterButtons!,
-                ),
-              ),
-            ),
-          ),
-        ),
-        _MetroPageSlot.persistentFooter,
-        removeLeftPadding: false,
-        removeTopPadding: true,
-        removeRightPadding: false,
-        removeBottomPadding: false,
-        maintainBottomViewPadding: !_resizeToAvoidBottomInset,
-      );
-    }
 
     switch (themeData.platform) {
       case TargetPlatform.iOS:
@@ -1227,11 +1099,12 @@ class MetroPageState extends State<MetroPage>
     );
 
     // extendBody locked when keyboard is open
-    final bool extendBody = minInsets.bottom <= 0 ;
+    final bool extendBody = minInsets.bottom <= 0;
 
     return ScrollNotificationObserver(
       child: Material(
         color: widget.backgroundColor ?? themeData.scaffoldBackgroundColor,
+
         child: CustomMultiChildLayout(
           delegate: _MetroPageLayout(
             extendBody: extendBody,
@@ -1239,7 +1112,7 @@ class MetroPageState extends State<MetroPage>
             minViewPadding: minViewPadding,
             //geometryNotifier: _geometryNotifier,
             textDirection: textDirection,
-            snackBarWidth: snackBarWidth,
+            //snackBarWidth: snackBarWidth,
           ),
           children: children,
         ),
@@ -1248,9 +1121,9 @@ class MetroPageState extends State<MetroPage>
   }
 }
 
-/// 控制 [MetroPage] 功能的接口。
+/// 控制 [MetroPageScaffold] 功能的接口。
 ///
-/// 通常从 [MetroPageMessengerState.showSnackBar] 或 [MetroPageState.showBottomSheet] 获取。
+/// 通常从 [MetroPageMessengerState.showSnackBar] 或 [MetroPageScaffoldState.showBottomSheet] 获取。
 class MetroPageFeatureController<T extends Widget, U> {
   const MetroPageFeatureController._(
       this._widget, this._completer, this.close, this.setState);

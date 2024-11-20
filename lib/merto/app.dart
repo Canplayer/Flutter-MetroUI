@@ -7,20 +7,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-//import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:metro_ui/merto/page.dart';
-
-// import 'arc.dart';
-// import 'colors.dart';
-// import 'floating_action_button.dart';
-// import 'icons.dart';
-// import 'material_localizations.dart';
-// import 'page.dart';
-// import 'scaffold.dart' show ScaffoldMessenger, ScaffoldMessengerState;
-// import 'scrollbar.dart';
-// import 'theme.dart';
-// import 'tooltip.dart';
+import 'package:metro_ui/merto/page_scaffold.dart';
 
 // 示例可以假设：
 // typedef GlobalWidgetsLocalizations = DefaultWidgetsLocalizations;
@@ -44,7 +32,7 @@ const TextStyle _errorTextStyle = TextStyle(
 );
 
 /// 描述 [MetroApp]能使用哪些主题.
-enum ThemeMode {
+enum MetroThemeMode {
   /// 使用亮色和暗色取决于系统设置.
   system,
 
@@ -61,7 +49,7 @@ enum ThemeMode {
 /// 它在 [WidgetsApp] 的基础上添加了特定于 Metro Design 的功能，例如 [AnimatedTheme] 和 [GridPaper]。
 ///
 /// [MetroApp]配置其 [WidgetsApp.textStyle] 为一个丑陋的红色/黄色文本样式，旨在警告开发者他们的
-/// 应用程序尚未定义默认文本样式。通常，应用程序的 [MetroPage] 构建一个 [Material] 小部件，
+/// 应用程序尚未定义默认文本样式。通常，应用程序的 [MetroPageScaffold] 构建一个 [Material] 小部件，
 /// 其默认 [Material.textStyle] 定义了整个脚手架的文本样式。
 ///
 /// [MetroApp] 配置顶层 [Navigator] 按以下顺序搜索路由：
@@ -156,7 +144,7 @@ enum ThemeMode {
 ///
 /// ![](https://flutter.github.io/assets-for-api-docs/assets/material/material_app_unspecified_textstyle.png)
 ///
-/// 典型的修复方法是为小部件提供一个 [MetroPage] 父级。[MetroPage] 创建一个 [Material] 小部件，定义其默认文本样式。
+/// 典型的修复方法是为小部件提供一个 [MetroPageScaffold] 父级。[MetroPageScaffold] 创建一个 [Material] 小部件，定义其默认文本样式。
 ///
 /// ```dart
 /// const MaterialApp(
@@ -171,7 +159,7 @@ enum ThemeMode {
 ///
 /// 另请参见：
 ///
-///  * [MetroPage]，提供标准的应用程序元素，如 [AppBar] 和 [Drawer]。
+///  * [MetroPageScaffold]，提供标准的应用程序元素，如 [AppBar] 和 [Drawer]。
 ///  * [Navigator]，用于管理应用程序的页面堆栈。
 ///  * [MaterialPageRoute]，定义以特定于Material的方式过渡的应用程序页面。
 ///  * [WidgetsApp]，定义基本的应用程序元素，但不依赖于材Material库。
@@ -202,11 +190,21 @@ class MetroApp extends StatefulWidget {
     this.title = '',
     this.onGenerateTitle,
     this.color,
+    this.metroColor,
+    this.metroHighContrastTheme,
+    @Deprecated(
+        '如果使用默认theme行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroColor+themeMode，这样做更接近与还原Windows Phone原版体验')
     this.theme,
+    @Deprecated(
+        '如果使用默认theme行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroColor+themeMode，这样做更接近与还原Windows Phone原版体验')
     this.darkTheme,
+    @Deprecated(
+        '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验')
     this.highContrastTheme,
+    @Deprecated(
+        '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验')
     this.highContrastDarkTheme,
-    this.themeMode = ThemeMode.system,
+    this.themeMode = MetroThemeMode.system,
     this.themeAnimationDuration = kThemeAnimationDuration,
     this.themeAnimationCurve = Curves.linear,
     this.locale,
@@ -252,11 +250,21 @@ class MetroApp extends StatefulWidget {
     this.onGenerateTitle,
     this.onNavigationNotification,
     this.color,
+    this.metroColor,
+    this.metroHighContrastTheme,
+    @Deprecated(
+        '如果使用默认theme行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroColor+themeMode，这样做更接近与还原Windows Phone原版体验')
     this.theme,
+    @Deprecated(
+        '如果使用默认theme行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroColor+themeMode，这样做更接近与还原Windows Phone原版体验')
     this.darkTheme,
+    @Deprecated(
+        '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验')
     this.highContrastTheme,
+    @Deprecated(
+        '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验')
     this.highContrastDarkTheme,
-    this.themeMode = ThemeMode.system,
+    this.themeMode = MetroThemeMode.system,
     this.themeAnimationDuration = kThemeAnimationDuration,
     this.themeAnimationCurve = Curves.linear,
     this.locale,
@@ -362,6 +370,12 @@ class MetroApp extends StatefulWidget {
   /// 这个值不会被修改，会直接传递给 [WidgetsApp.onGenerateTitle]。
   final GenerateAppTitle? onGenerateTitle;
 
+  /// Metro应用程序的主题颜色
+  final Color? metroColor;
+
+  /// 启用高度对比度的主题
+  final bool? metroHighContrastTheme;
+
   /// 默认的视觉属性，如颜色、字体和形状，适用于应用的材质组件。
   ///
   /// 可以指定一个额外的 [darkTheme] [ThemeData]，用于提供用户界面的暗色版本。
@@ -422,23 +436,23 @@ class MetroApp extends StatefulWidget {
 
   /// 决定当同时提供 [theme] 和 [darkTheme] 时，应用程序将使用哪种主题。
   ///
-  /// 如果设置为 [ThemeMode.system]，将根据用户的系统偏好来选择使用哪种主题。
+  /// 如果设置为 [MetroThemeMode.system]，将根据用户的系统偏好来选择使用哪种主题。
   /// 如果 [MediaQuery.platformBrightnessOf] 是 [Brightness.light]，将使用 [theme]。
   /// 如果是 [Brightness.dark]，将使用 [darkTheme]（除非它为 null，此时将使用 [theme]）。
   ///
-  /// 如果设置为 [ThemeMode.light]，无论用户的系统偏好如何，始终使用 [theme]。
+  /// 如果设置为 [MetroThemeMode.light]，无论用户的系统偏好如何，始终使用 [theme]。
   ///
-  /// 如果设置为 [ThemeMode.dark]，无论用户的系统偏好如何，始终使用 [darkTheme]。
+  /// 如果设置为 [MetroThemeMode.dark]，无论用户的系统偏好如何，始终使用 [darkTheme]。
   /// 如果 [darkTheme] 为 null，则会退回使用 [theme]。
   ///
-  /// 默认值是 [ThemeMode.system]。
+  /// 默认值是 [MetroThemeMode.system]。
   ///
   /// 另请参见：
   ///
   ///  * [theme]，当选择浅色模式时使用。
   ///  * [darkTheme]，当选择深色模式时使用。
   ///  * [ThemeData.brightness]，它指示系统的各个部分正在使用哪种类型的主题。
-  final ThemeMode? themeMode;
+  final MetroThemeMode? themeMode;
 
   /// 动画主题更改的持续时间。
   ///
@@ -571,17 +585,17 @@ class MetroApp extends StatefulWidget {
   ///  * Flutter 国际化教程，
   ///    <https://flutter.dev/to/internationalization/>.
   final Iterable<LocalizationsDelegate<dynamic>>? localizationsDelegates;
-  
+
   /// {@macro flutter.widgets.widgetsApp.localeListResolutionCallback}
   ///
   /// 此回调被传递到此小部件构建的 [WidgetsApp]。
   final LocaleListResolutionCallback? localeListResolutionCallback;
-  
+
   /// {@macro flutter.widgets.LocaleResolutionCallback}
   ///
   /// 此回调被传递到此小部件构建的 [WidgetsApp]。
   final LocaleResolutionCallback? localeResolutionCallback;
-  
+
   /// {@macro flutter.widgets.widgetsApp.supportedLocales}
   ///
   /// 它被原样传递到此小部件构建的 [WidgetsApp]。
@@ -871,22 +885,44 @@ class _MetroAppState extends State<MetroApp> {
 
   ThemeData _themeBuilder(BuildContext context) {
     ThemeData? theme;
-    // Resolve which theme to use based on brightness and high contrast.
-    final ThemeMode mode = widget.themeMode ?? ThemeMode.system;
-    final Brightness platformBrightness =
-        MediaQuery.platformBrightnessOf(context);
-    final bool useDarkTheme = mode == ThemeMode.dark ||
-        (mode == ThemeMode.system && platformBrightness == ui.Brightness.dark);
-    final bool highContrast = MediaQuery.highContrastOf(context);
-    if (useDarkTheme && highContrast && widget.highContrastDarkTheme != null) {
-      theme = widget.highContrastDarkTheme;
-    } else if (useDarkTheme && widget.darkTheme != null) {
-      theme = widget.darkTheme;
-    } else if (highContrast && widget.highContrastTheme != null) {
-      theme = widget.highContrastTheme;
+    //当使用原版主题时，调用原版主题处理逻辑
+    if (widget.theme != null ||
+        widget.darkTheme != null ||
+        widget.highContrastTheme != null ||
+        widget.highContrastDarkTheme != null) {
+      // 根据亮度和高对比度解析要使用的主题。
+      final MetroThemeMode mode = widget.themeMode ?? MetroThemeMode.system;
+      final Brightness platformBrightness =
+          MediaQuery.platformBrightnessOf(context);
+      final bool useDarkTheme = mode == MetroThemeMode.dark ||
+          (mode == MetroThemeMode.system &&
+              platformBrightness == ui.Brightness.dark);
+      final bool highContrast = MediaQuery.highContrastOf(context);
+      if (useDarkTheme &&
+          highContrast &&
+          widget.highContrastDarkTheme != null) {
+        theme = widget.highContrastDarkTheme;
+      } else if (useDarkTheme && widget.darkTheme != null) {
+        theme = widget.darkTheme;
+      } else if (highContrast && widget.highContrastTheme != null) {
+        theme = widget.highContrastTheme;
+      }
+      theme ??= widget.theme ?? ThemeData.light();
+      return theme;
     }
-    theme ??= widget.theme ?? ThemeData.light();
-    return theme;
+
+    //获取MertoApp的颜色，并通过该颜色创建一个主题
+    final ThemeData defaultTheme = ThemeData(
+      colorSchemeSeed: widget.metroColor??const Color.fromARGB(255, 27, 161, 226),
+    );
+
+    
+
+
+
+
+
+    return widget.theme ?? ThemeData.light();
   }
 
   Widget _materialBuilder(BuildContext context, Widget? child) {
