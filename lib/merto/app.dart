@@ -204,7 +204,7 @@ class MetroApp extends StatefulWidget {
     @Deprecated(
         '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验')
     this.highContrastDarkTheme,
-    this.themeMode = MetroThemeMode.system,
+    this.themeMode = MetroThemeMode.dark,
     this.themeAnimationDuration = kThemeAnimationDuration,
     this.themeAnimationCurve = Curves.linear,
     this.locale,
@@ -264,7 +264,7 @@ class MetroApp extends StatefulWidget {
     @Deprecated(
         '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验')
     this.highContrastDarkTheme,
-    this.themeMode = MetroThemeMode.system,
+    this.themeMode = MetroThemeMode.dark,
     this.themeAnimationDuration = kThemeAnimationDuration,
     this.themeAnimationCurve = Curves.linear,
     this.locale,
@@ -911,18 +911,41 @@ class _MetroAppState extends State<MetroApp> {
       return theme;
     }
 
-    //获取MertoApp的颜色，并通过该颜色创建一个主题
-    final ThemeData defaultTheme = ThemeData(
-      colorSchemeSeed: widget.metroColor??const Color.fromARGB(255, 27, 161, 226),
+    //是否使用白色主题，条件：当不指定时默认为黑色主题，只有当使用白色主题或者指定了跟随系统且系统为白色主题时才会使用白色主题
+    final bool useWhiteTheme = widget.themeMode == MetroThemeMode.light ||
+        (widget.themeMode == MetroThemeMode.system &&
+            MediaQuery.platformBrightnessOf(context) == ui.Brightness.light);
+
+    //定义白色和黑色色值：
+    const Color whiteColor = Color.fromARGB(255, 255, 255, 255);
+    const Color blackColor = Color.fromARGB(255, 0, 0, 0);
+    Color metroColor =
+        widget.metroColor ?? const Color.fromARGB(255, 27, 161, 226);
+
+    //获取MertoApp的颜色，并通过该颜色创建一个系列兼容Material的主题色
+    final ThemeData metroTheme = ThemeData(colorSchemeSeed: metroColor);
+
+    //修改主题的colorScheme.primary颜色
+    return metroTheme.copyWith(
+      //colorScheme和primaryColor分别修改新旧方案的主题颜色
+      colorScheme: metroTheme.colorScheme.copyWith(
+        //主题色
+        primary: metroColor,
+        //原版OutLineButton外边框的颜色，将用于描述按钮、选择框、输入框等的边框颜色
+        onSurface: useWhiteTheme ? blackColor : whiteColor,
+      ),
+      primaryColor: metroColor,
+
+      //页面默认背景色
+      scaffoldBackgroundColor: useWhiteTheme ? whiteColor : blackColor,
     );
 
-    
 
-
-
-
-
-    return widget.theme ?? ThemeData.light();
+    //修改主题的primaryColor颜色
+    // return metroTheme.copyWith(
+    //   primaryColor: metroColor,
+    //   scaffoldBackgroundColor: useWhiteTheme ? whiteColor : blackColor,
+    // );
   }
 
   Widget _materialBuilder(BuildContext context, Widget? child) {

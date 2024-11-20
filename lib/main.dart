@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:metro_ui/merto/app.dart';
 import 'package:metro_ui/merto/page_scaffold.dart';
-import 'package:metro_ui/tile.dart';
+import 'package:metro_ui/merto/tile.dart';
 
 
 void main() {
@@ -14,15 +14,9 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MetroApp(
+    return const MetroApp(
       title: 'Flutter Demo',
-      themeMode: MetroThemeMode.light,
-      theme: ThemeData(
-        primaryColor: const Color.fromARGB(255, 86, 182, 255),
-        //scaffoldBackgroundColor: const Color.fromARGB(255, 0, 0, 0),
-      ),
-      
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
@@ -240,7 +234,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                             ));
                           },
                           child: Container(
-                            color: Theme.of(context).primaryColor,
+                            color: Theme.of(context).colorScheme.primary,
                             child:
                                 //分层布局
                                 Stack(
@@ -268,7 +262,12 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                                 Positioned(
                                   right: 10,
                                   bottom: 10,
-                                  child: ElevatedButton(
+                                  child: OutlinedButton(
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                     onPressed: () {
                                      
                                     },
