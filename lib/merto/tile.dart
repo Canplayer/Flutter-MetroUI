@@ -25,7 +25,7 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
   final double _maxRotation = 10.0; // 最大旋转角度
   //final double _perspective = 0.001; //透视系数
   //bool _isAddPostFrame = false; //渲染完成回调
-  final double _pressedElevation = 20; //当被按下Z轴下沉的距离数值
+  final double _pressedElevation = 10; //当被按下Z轴下沉的距离数值
   final double _pi = 3.1416; //圆周率
 
   //是否按下

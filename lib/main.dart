@@ -159,11 +159,15 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     //   await Future.delayed(const Duration(milliseconds: 80));
     //   controller.forward();
     // }
-    //播放完动画后，重置动画
+    //结束await后执行动画重置
     await Future.delayed(const Duration(milliseconds: 500));
-    for (var controller in _controllers) {
-      controller.reset();
-    }
+
+
+    Future.delayed(const Duration(milliseconds: 50), () {
+      for (var controller in _controllers) {
+        controller.reset();
+      }
+    });
   }
 
   //获取相对于屏幕左中心的偏移量
@@ -176,7 +180,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     //获取屏幕大小
     final screenSize = MediaQuery.of(context).size;
     //获取屏幕左侧中心点
-    final screenCenter = Offset( - 37.5, screenSize.height / 2);
+    final screenCenter = Offset(0, screenSize.height / 2);
     //返回位置相比屏幕中心的偏移量
     //return screenCenter - position;
     return Offset(-position.dx, position.dy);
@@ -237,9 +241,14 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                                 //等待两秒
                                 await _startAnimations(_keys[index]);
                                 //跳转到新页面
-                                Navigator.of(context).push(MaterialPageRoute(
-                                  builder: (context) {
-                                    return const HelloWorldPage();
+                                Navigator.of(context).push(PageRouteBuilder(
+                                  pageBuilder:
+                                      (context, animation, secondaryAnimation) {
+                                    return const PanoramaPage();
+                                  },
+                                  transitionsBuilder: (context, animation,
+                                      secondaryAnimation, child) {
+                                    return child; // 直接返回子页面，无过渡动画
                                   },
                                 ));
                               },

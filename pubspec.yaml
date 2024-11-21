@@ -92,5 +92,4 @@ flutter:
   #素材文件
   assets:
     - assets/1.png
-    - assets/in.png
-    - assets/out.png
+    - assets/background.jpg
