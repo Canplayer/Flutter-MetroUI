@@ -1,8 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:metro_ui/merto/app.dart';
 import 'package:metro_ui/merto/button.dart';
 import 'package:metro_ui/merto/page_scaffold.dart';
 import 'package:metro_ui/merto/tile.dart';
+import 'package:metro_ui/page2.dart';
 
 void main() {
   runApp(const MyApp());
@@ -16,6 +18,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MetroApp(
       title: 'Flutter Demo',
+      color: Colors.red,
       home: MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
@@ -173,10 +176,9 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     //获取屏幕大小
     final screenSize = MediaQuery.of(context).size;
     //获取屏幕左侧中心点
-    final screenCenter = Offset(0, screenSize.height / 2);
+    final screenCenter = Offset( - 37.5, screenSize.height / 2);
     //返回位置相比屏幕中心的偏移量
     //return screenCenter - position;
-
     return Offset(-position.dx, position.dy);
   }
 
@@ -185,124 +187,102 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     return MetroPageScaffold(
       // backgroundColor: const Color.fromARGB(0, 0, 0, 0),
 
-      body: Transform(
-        alignment: FractionalOffset.center,
-        transform: Matrix4.identity()..setEntry(3, 2, 0.001) // 设置Z轴偏移
-        ,
-        child: Column(
-          children: [
-            // SizedBox(
-            //   height: 100,
-            //   width: 400,
-            //   child: MetroButton(
-            //     child: Text('Hello',
-            //         style: const TextStyle(fontSize: 30, color: Colors.white)),
-            //   ),
-            // ),
+      body: Column(
+        children: [
+          // SizedBox(
+          //   height: 100,
+          //   width: 400,
+          //   child: MetroButton(
+          //     child: Text('Hello',
+          //         style: const TextStyle(fontSize: 30, color: Colors.white)),
+          //   ),
+          // ),
 
-            MetroButton(
-                child: Text('Hello',
-                    style: const TextStyle(fontSize: 30, color: Colors.white)),
-            ),
+          MetroButton(
+            child: Text('Hello',
+                style: TextStyle(fontSize: 30, color: Colors.white)),
+            onTap: () {
+              //打印屏幕尺寸
+              print(MediaQuery.of(context).size);
+            },
+          ),
 
-
-            //TextButton(onPressed: (){}, child: Text('123')),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.only(top: 80),
-                clipBehavior: Clip.none,
-                child: Center(
-                  //padding: const EdgeInsets.all(20),
-                  child: Wrap(
-                    spacing: 15,
-                    runSpacing: 15,
-                    clipBehavior: Clip.none,
-                    children: iconMap.keys.map((String key) {
-                      int index = iconMap.keys.toList().indexOf(key);
-                      return AnimatedBuilder(
-                        animation: _animations[index],
-                        builder: (context, child) {
-                          return Transform(
-                            origin: Offset(_edgeOffset[index], 0),
-                            transform: Matrix4.identity()
-                              ..rotateY(_animations[index].value),
-                            child: SizedBox(
-                              key: _keys[index],
-                              width: 200,
-                              height: 200,
-                              child: Tile(
-                                allowBack: true,
-                                onTap: () async {
-                                  //等待两秒
-                                  await _startAnimations(_keys[index]);
-                                  //跳转到新页面
-                                  Navigator.of(context).push(MaterialPageRoute(
-                                    builder: (context) {
-                                      return Scaffold(
-                                        appBar: AppBar(
-                                          title: Text(key),
-                                        ),
-                                        body: Center(
-                                          child: Text('This is the $key page'),
-                                        ),
-                                      );
-                                    },
-                                  ));
-                                },
-                                child: Container(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  child:
-                                      //分层布局
-                                      Stack(
-                                    children: [
-                                      //图标：居中
-                                      Center(
-                                        child: Icon(
-                                          iconMap[key],
-                                          size: 100,
+          //TextButton(onPressed: (){}, child: Text('123')),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(top: 80),
+              clipBehavior: Clip.none,
+              child: Center(
+                //padding: const EdgeInsets.all(20),
+                child: Wrap(
+                  spacing: 9,
+                  runSpacing: 9,
+                  clipBehavior: Clip.none,
+                  children: iconMap.keys.map((String key) {
+                    int index = iconMap.keys.toList().indexOf(key);
+                    return AnimatedBuilder(
+                      animation: _animations[index],
+                      builder: (context, child) {
+                        return Transform(
+                          origin: Offset(_edgeOffset[index] - 37.5, 0),
+                          transform: Matrix4.identity()
+                            ..rotateY(_animations[index].value),
+                          child: SizedBox(
+                            key: _keys[index],
+                            width: 168,
+                            height: 168,
+                            child: Tile(
+                              allowBack: true,
+                              onTap: () async {
+                                //等待两秒
+                                await _startAnimations(_keys[index]);
+                                //跳转到新页面
+                                Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (context) {
+                                    return const HelloWorldPage();
+                                  },
+                                ));
+                              },
+                              child: Container(
+                                color: Theme.of(context).colorScheme.primary,
+                                child:
+                                    //分层布局
+                                    Stack(
+                                  children: [
+                                    //图标：居中
+                                    Center(
+                                      child: Icon(
+                                        iconMap[key],
+                                        size: 100,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    //文字：左下角
+                                    Positioned(
+                                      left: 10,
+                                      bottom: 10,
+                                      child: Text(
+                                        key,
+                                        style: const TextStyle(
                                           color: Colors.white,
+                                          fontSize: 20,
                                         ),
                                       ),
-                                      //文字：左下角
-                                      Positioned(
-                                        left: 10,
-                                        bottom: 10,
-                                        child: Text(
-                                          key,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 20,
-                                          ),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        right: 10,
-                                        bottom: 10,
-                                        child: OutlinedButton(
-                                          style: OutlinedButton.styleFrom(
-                                            side: const BorderSide(
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          onPressed: () {},
-                                          child: const Text('Go'),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                          );
-                        },
-                      );
-                    }).toList(),
-                  ),
+                          ),
+                        );
+                      },
+                    );
+                  }).toList(),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

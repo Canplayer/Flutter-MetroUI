@@ -88,3 +88,9 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+  #素材文件
+  assets:
+    - assets/1.png
+    - assets/in.png
+    - assets/out.png

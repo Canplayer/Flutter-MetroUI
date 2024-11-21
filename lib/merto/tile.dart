@@ -152,8 +152,6 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
         child: GestureDetector(
           //触碰即按下
           onPanDown: (details) {
-            //打印高宽
-            print(_widgetSize);
             _isTouch = true;
             _handlePanDown(details, _widgetSize.width, _widgetSize.height);
           },

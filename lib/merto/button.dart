@@ -54,8 +54,7 @@ class MetroButtoState extends State<MetroButton> {
             width: 4.0, // 边框宽度
           ),
         ),
-        child: const Text("12312312355555",
-            style: TextStyle(fontSize: 20.0, color: Colors.white)),
+        child: widget.child,
       ),
     );
   }

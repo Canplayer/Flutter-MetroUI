@@ -324,7 +324,15 @@ class _BodyBuilder extends StatelessWidget {
               bottom: bottom,
             ),
           ),
-          child: body,
+
+          //全局3D坐标观察点固定到屏幕中心
+          //不要问我为什么是0.00078，我一点一点调出来的，我也不知道这个该怎么换算和为什么是这个值
+          child: Transform(
+            alignment: FractionalOffset.center,
+            transform: Matrix4.identity()..setEntry(3, 2, 0.00078) // 设置Z轴偏移
+            ,
+            child: body,
+          ),
         );
       },
     );
@@ -1104,7 +1112,6 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
     return ScrollNotificationObserver(
       child: Material(
         color: widget.backgroundColor ?? themeData.scaffoldBackgroundColor,
-
         child: CustomMultiChildLayout(
           delegate: _MetroPageLayout(
             extendBody: extendBody,
