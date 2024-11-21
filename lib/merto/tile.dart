@@ -17,6 +17,9 @@ class Tile extends StatefulWidget {
 }
 
 class TileState extends State<Tile> with SingleTickerProviderStateMixin {
+  final GlobalKey _key = GlobalKey();
+  Size _widgetSize = const Size(0, 0);
+
   late AnimationController _controller;
   late Animation<double> _animation;
   final double _maxRotation = 10.0; // 最大旋转角度
@@ -49,11 +52,11 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
           translateZ *= _animation.value;
         });
       });
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   setState(() {
-    //     _isAddPostFrame = true;
-    //   });
-    // });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setState(() {
+        _widgetSize = _getCardSize();
+      });
+    });
   }
 
   @override
@@ -120,89 +123,84 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
     _controller.forward(from: 0.0);
   }
 
+  //获取组件的高宽
+  Size _getCardSize() {
+    final RenderBox renderBox =
+        _key.currentContext!.findRenderObject() as RenderBox;
+    return renderBox.size;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cardWidth = constraints.maxWidth;
-        final cardHeight = constraints.maxHeight;
-        return Transform(
-          alignment: FractionalOffset.center,
-          // origin: Offset(
-          //     (_isAddPostFrame ? _getAbsolutePosition().dx : 0) - cardWidth / 2,
-          //     (_isAddPostFrame ? _getAbsolutePosition().dy : 0) -
-          //         cardHeight / 2),
-          //origin: _isAddPostFrame ? _getAbsolutePosition() : null,
-          transform: Matrix4.identity()
+    return LayoutBuilder(builder: (context, constraints) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _widgetSize = _getCardSize();
+      });
+      return Transform(
+        alignment: FractionalOffset.center,
+        transform: Matrix4.identity()
           //..setEntry(3, 2, _perspective) // 设置透视投影参数
-          //..setEntry(0, 3, (_isAddPostFrame ? _getAbsolutePosition().dx : 0) - cardWidth / 2)
-          //..setEntry(1, 3, (_isAddPostFrame ? _getAbsolutePosition().dy : 0) - cardHeight / 2)
-          ,
-          child: Transform(
-            alignment: FractionalOffset.center,
-            transform: Matrix4.identity()
-              //..setEntry(3, 2, _perspective) // 设置透视投影参数
-              //移动到屏幕中心
-              //..setEntry(0, 3, -((_isAddPostFrame ? _getAbsolutePosition().dx : 0) - cardWidth / 2))
-              //..setEntry(1, 3, -((_isAddPostFrame ? _getAbsolutePosition().dy : 0) - cardHeight / 2))
-              //..setEntry(2, 3, _isTap?_pressedElevation:0) // 设置Z轴偏移
-              ..setEntry(2, 3, translateZ) // 设置Z轴偏移
-              ..rotateX(rotateY) // 调整倾斜系数
-              ..rotateY(rotateX), // 调整倾斜系数
-            //按下缩小,
+          //移动到屏幕中心
+          //..setEntry(0, 3, -((_isAddPostFrame ? _getAbsolutePosition().dx : 0) - cardWidth / 2))
+          //..setEntry(1, 3, -((_isAddPostFrame ? _getAbsolutePosition().dy : 0) - cardHeight / 2))
+          //..setEntry(2, 3, _isTap?_pressedElevation:0) // 设置Z轴偏移
+          ..setEntry(2, 3, translateZ) // 设置Z轴偏移
+          ..rotateX(rotateY) // 调整倾斜系数
+          ..rotateY(rotateX), // 调整倾斜系数
+        //按下缩小,
 
-            child: GestureDetector(
-              //触碰即按下
-              onPanDown: (details) {
-                _isTouch = true;
-                _handlePanDown(details, cardWidth, cardHeight);
-              },
-              //手指移动触发
-              onPanUpdate: (details) {
-                if (_isTouch) _handlePanUpdate(details, cardWidth, cardHeight);
-              },
-              onTap: () async {
-                //此处会被onPanCancel优先执行，但是动画会等待我们一段时间，在等待的时间内，如果_isTouch状态被改变，那么onPanCancel的动画就不会执行
-                _isTouch = true;
-                await widget.onTap?.call();
-                _handleTapUp();
-              },
-              //移动操作离开屏幕（松手了）
-              onPanEnd: (details) async {
-                final localPosition = details.localPosition;
-                if (_isTouch &&
-                    (localPosition.dx >= 0 &&
-                        localPosition.dx <= cardWidth &&
-                        localPosition.dy >= 0 &&
-                        localPosition.dy <= cardHeight)) {
-                  await widget.onTap?.call();
-                }
-                _isTouch = false;
-                _handleTapUp();
-              },
-              //移动取消（例如被打断、触发点击事件）
-              onPanCancel: () async {
-                if (_isTouch) {
-                  _isTouch = false;
-                  _handleTapUp();
-                }
-              },
+        child: GestureDetector(
+          //触碰即按下
+          onPanDown: (details) {
+            //打印高宽
+            print(_widgetSize);
+            _isTouch = true;
+            _handlePanDown(details, _widgetSize.width, _widgetSize.height);
+          },
+          //手指移动触发
+          onPanUpdate: (details) {
+            if (_isTouch)
+              _handlePanUpdate(details, _widgetSize.width, _widgetSize.height);
+          },
+          onTap: () async {
+            //此处会被onPanCancel优先执行，但是动画会等待我们一段时间，在等待的时间内，如果_isTouch状态被改变，那么onPanCancel的动画就不会执行
+            _isTouch = true;
+            await widget.onTap?.call();
+            _handleTapUp();
+          },
+          //移动操作离开屏幕（松手了）
+          onPanEnd: (details) async {
+            final localPosition = details.localPosition;
+            if (_isTouch &&
+                (localPosition.dx >= 0 &&
+                    localPosition.dx <= _widgetSize.width &&
+                    localPosition.dy >= 0 &&
+                    localPosition.dy <= _widgetSize.height)) {
+              await widget.onTap?.call();
+            }
+            _isTouch = false;
+            _handleTapUp();
+          },
+          //移动取消（例如被打断、触发点击事件）
+          onPanCancel: () async {
+            if (_isTouch) {
+              _isTouch = false;
+              _handleTapUp();
+            }
+          },
 
-              //按住移动一点点就判定
-              // onTapCancel: () {
-              //   print('onTapCancel');
-              //   //_handleTapUp();
-              // },
+          //按住移动一点点就判定
+          // onTapCancel: () {
+          //   print('onTapCancel');
+          //   //_handleTapUp();
+          // },
 
-              child: SizedBox(
-                width: cardWidth,
-                height: cardHeight,
-                child: widget.child,
-              ),
-            ),
+          child: SizedBox(
+            key: _key,
+            child: widget.child,
           ),
-        );
-      },
-    );
+        ),
+      );
+    });
   }
 }

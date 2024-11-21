@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:metro_ui/merto/app.dart';
+import 'package:metro_ui/merto/button.dart';
 import 'package:metro_ui/merto/page_scaffold.dart';
 import 'package:metro_ui/merto/tile.dart';
-
 
 void main() {
   runApp(const MyApp());
@@ -152,7 +152,6 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
     _controllers[thisIndex].forward();
 
-
     // for (var controller in _controllers) {
     //   await Future.delayed(const Duration(milliseconds: 80));
     //   controller.forward();
@@ -183,111 +182,128 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return
-     MetroPageScaffold(
+    return MetroPageScaffold(
       // backgroundColor: const Color.fromARGB(0, 0, 0, 0),
-      
+
       body: Transform(
         alignment: FractionalOffset.center,
         transform: Matrix4.identity()..setEntry(3, 2, 0.001) // 设置Z轴偏移
         ,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.only(top: 80),
-          clipBehavior: Clip.none,
-          child: Center(
-            //padding: const EdgeInsets.all(20),
-            child: Wrap(
-              spacing: 15,
-              runSpacing: 15,
-              clipBehavior: Clip.none,
-              children: iconMap.keys.map((String key) {
-                int index = iconMap.keys.toList().indexOf(key);
-                return AnimatedBuilder(
-                  animation: _animations[index],
-                  builder: (context, child) {
-                    return Transform(
-                      origin: Offset(_edgeOffset[index], 0),
-                      transform: Matrix4.identity()
-                        ..rotateY(_animations[index].value),
-                      child: SizedBox(
-                        key: _keys[index],
-                        width: 200,
-                        height: 200,
-                        child: Tile(
-                          allowBack: true,
-                          onTap: () async {
-                            
-                            //等待两秒
-                            await _startAnimations(_keys[index]);
-                            //跳转到新页面
-                            Navigator.of(context).push(MaterialPageRoute(
-                              builder: (context) {
-                                return Scaffold(
-                                  appBar: AppBar(
-                                    title: Text(key),
-                                  ),
-                                  body: Center(
-                                    child: Text('This is the $key page'),
-                                  ),
-                                );
-                              },
-                            ));
-                          },
-                          child: Container(
-                            color: Theme.of(context).colorScheme.primary,
-                            child:
-                                //分层布局
-                                Stack(
-                              children: [
-                                //图标：居中
-                                Center(
-                                  child: Icon(
-                                    iconMap[key],
-                                    size: 100,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                //文字：左下角
-                                Positioned(
-                                  left: 10,
-                                  bottom: 10,
-                                  child: Text(
-                                    key,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  right: 10,
-                                  bottom: 10,
-                                  child: OutlinedButton(
-                                    style: OutlinedButton.styleFrom(
-                                      side: const BorderSide(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    onPressed: () {
-                                     
-                                    },
-                                    child: const Text('Go'),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              }).toList(),
+        child: Column(
+          children: [
+            // SizedBox(
+            //   height: 100,
+            //   width: 400,
+            //   child: MetroButton(
+            //     child: Text('Hello',
+            //         style: const TextStyle(fontSize: 30, color: Colors.white)),
+            //   ),
+            // ),
+
+            MetroButton(
+                child: Text('Hello',
+                    style: const TextStyle(fontSize: 30, color: Colors.white)),
             ),
-          ),
+
+
+            //TextButton(onPressed: (){}, child: Text('123')),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(top: 80),
+                clipBehavior: Clip.none,
+                child: Center(
+                  //padding: const EdgeInsets.all(20),
+                  child: Wrap(
+                    spacing: 15,
+                    runSpacing: 15,
+                    clipBehavior: Clip.none,
+                    children: iconMap.keys.map((String key) {
+                      int index = iconMap.keys.toList().indexOf(key);
+                      return AnimatedBuilder(
+                        animation: _animations[index],
+                        builder: (context, child) {
+                          return Transform(
+                            origin: Offset(_edgeOffset[index], 0),
+                            transform: Matrix4.identity()
+                              ..rotateY(_animations[index].value),
+                            child: SizedBox(
+                              key: _keys[index],
+                              width: 200,
+                              height: 200,
+                              child: Tile(
+                                allowBack: true,
+                                onTap: () async {
+                                  //等待两秒
+                                  await _startAnimations(_keys[index]);
+                                  //跳转到新页面
+                                  Navigator.of(context).push(MaterialPageRoute(
+                                    builder: (context) {
+                                      return Scaffold(
+                                        appBar: AppBar(
+                                          title: Text(key),
+                                        ),
+                                        body: Center(
+                                          child: Text('This is the $key page'),
+                                        ),
+                                      );
+                                    },
+                                  ));
+                                },
+                                child: Container(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  child:
+                                      //分层布局
+                                      Stack(
+                                    children: [
+                                      //图标：居中
+                                      Center(
+                                        child: Icon(
+                                          iconMap[key],
+                                          size: 100,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      //文字：左下角
+                                      Positioned(
+                                        left: 10,
+                                        bottom: 10,
+                                        child: Text(
+                                          key,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 20,
+                                          ),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        right: 10,
+                                        bottom: 10,
+                                        child: OutlinedButton(
+                                          style: OutlinedButton.styleFrom(
+                                            side: const BorderSide(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          onPressed: () {},
+                                          child: const Text('Go'),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-    
     );
   }
 }
