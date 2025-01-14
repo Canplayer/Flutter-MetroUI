@@ -21,6 +21,8 @@ class _PanoramaPageState extends State<PanoramaPage>
   double _contentLeft = 0;
   //背景距离左边的距离
   double _backgroundLeft = 0;
+  //翻转动画原点距离
+  double _pivot = 0;
 
   //旋转动画控制器
   late AnimationController _rotationController;
@@ -49,7 +51,7 @@ class _PanoramaPageState extends State<PanoramaPage>
     //旋转动画
     _rotationAnimation = Tween<double>(
       //-90度到0
-      begin: -3.1415*0.5,
+      begin: -3.1415 * 0.5,
       end: 0,
     ).animate(CurvedAnimation(
       parent: _rotationController,
@@ -69,6 +71,8 @@ class _PanoramaPageState extends State<PanoramaPage>
           _backgroundLeft = _translationAnimation.value * 1200;
           _titleLeft = _translationAnimation.value * 2400;
           _contentLeft = _translationAnimation.value * 1800;
+          //_pivot的数值由320到0
+          _pivot = _translationAnimation.value * 320;
         });
       });
 
@@ -79,12 +83,20 @@ class _PanoramaPageState extends State<PanoramaPage>
   }
 
   @override
+  void dispose() {
+    _rotationController.dispose();
+    _translationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MetroPageScaffold(
       body: Center(
         child: Transform(
           transform: Matrix4.rotationY(_rotationAnimation.value),
-          origin: const Offset(-37.5, 0),
+          //origin: const Offset(-37.5, 0),
+          origin: Offset(-_pivot, 0),
           child: LayoutBuilder(
             builder: (context, constraints) {
               double containerWidth;
@@ -188,6 +200,13 @@ class _PanoramaPageState extends State<PanoramaPage>
                               await _translationController.reverse();
                               _rotationController.forward();
                               _translationController.forward();
+                            },
+                            child: const Text('replay'),
+                          ),
+                          MetroButton(
+                            onTap: () async {
+                              //返回页面
+                              Navigator.pop(context);
                             },
                             child: const Text('Back'),
                           ),

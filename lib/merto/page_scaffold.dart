@@ -111,12 +111,9 @@ class MetroPageMessengerState extends State<MetroPageMessenger>
   final LinkedHashSet<MetroPageScaffoldState> _scaffolds =
       LinkedHashSet<MetroPageScaffoldState>();
 
-  bool? _accessibleNavigation;
-
   @override
   void didChangeDependencies() {
-    final bool accessibleNavigation =
-        MediaQuery.accessibleNavigationOf(context);
+    MediaQuery.accessibleNavigationOf(context);
     // 如果我们从无障碍导航过渡到非无障碍导航
     // 并且有一个 SnackBar 本应超时但已经
     // 完成了它的计时器，则关闭该 SnackBar。如果计时器尚未完成
@@ -125,7 +122,6 @@ class MetroPageMessengerState extends State<MetroPageMessenger>
     //     !accessibleNavigation) {
     //   hideCurrentSnackBar(reason: SnackBarClosedReason.timeout);
     // }
-    _accessibleNavigation = accessibleNavigation;
     super.didChangeDependencies();
   }
 
@@ -168,7 +164,6 @@ class MetroPageMessengerState extends State<MetroPageMessenger>
   @override
   Widget build(BuildContext context) {
     assert(debugCheckHasMediaQuery(context));
-    _accessibleNavigation = MediaQuery.accessibleNavigationOf(context);
 
     return _MetroPageMessengerScope(
       scaffoldMessengerState: this,
@@ -649,6 +644,15 @@ class _FloatingActionButtonTransitionState
   }
 }
 
+///一个提供Metro换页动画的基类
+///当路由发生时，会调用对于的方法
+mixin MetroPageScaffoldDelegate {
+  Future<void> onPush() async {}
+  Future<void> onPop() async {}
+  Future<void> onPushNext() async {}
+  Future<void> onPopNext() async {}
+}
+
 /// 实现基本的 Material Design 视觉布局结构。
 ///
 /// 注：Windows Phone的底部菜单和这个逻辑不一样所以需要进行移除改造
@@ -765,6 +769,10 @@ class MetroPageScaffold extends StatefulWidget {
     this.resizeToAvoidBottomInset,
     this.primary = true,
     this.restorationId,
+    this.onPush,
+    this.onPop,
+    this.onPushNext,
+    this.onPopNext,
   });
 
   /// Scaffold 的主要内容。
@@ -813,6 +821,16 @@ class MetroPageScaffold extends StatefulWidget {
   ///
   ///  * [RestorationManager]，它解释了 Flutter 中状态恢复的工作原理。
   final String? restorationId;
+
+  ///当路由发生时，会调用对于的方法，此处的方法建议不要产生任何业务逻辑而是纯粹的UI操作，否则会导致业务逻辑和UI耦合
+  //当页面进入时调用
+  final Future<void> Function()? onPush;
+  //当页面退出时调用
+  final Future<void> Function()? onPop;
+  //当页面进入下一个页面时调用
+  final Future<void> Function()? onPushNext;
+  //当页面从下一个页面退出时调用
+  final Future<void> Function()? onPopNext;
 
   /// 从最接近的此类实例中查找 [MetroPageScaffoldState]。
   ///
@@ -893,7 +911,7 @@ class MetroPageScaffold extends StatefulWidget {
 ///
 /// 可以显示 [BottomSheet]。使用 [MetroPageScaffold.of] 从当前的 [BuildContext] 中获取 [MetroPageScaffoldState]。
 class MetroPageScaffoldState extends State<MetroPageScaffold>
-    with TickerProviderStateMixin, RestorationMixin {
+    with MetroPageScaffoldDelegate, TickerProviderStateMixin, RestorationMixin {
   @override
   String? get restorationId => widget.restorationId;
 
@@ -1133,8 +1151,7 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
 /// 通常从 [MetroPageMessengerState.showSnackBar] 或 [MetroPageScaffoldState.showBottomSheet] 获取。
 class MetroPageFeatureController<T extends Widget, U> {
   const MetroPageFeatureController._(
-      this._widget, this._completer, this.close, this.setState);
-  final T _widget;
+      this._completer, this.close, this.setState);
   final Completer<U> _completer;
 
   /// 当此对象控制的功能不再可见时完成。

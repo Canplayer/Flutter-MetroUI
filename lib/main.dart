@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:metro_ui/merto/app.dart';
 import 'package:metro_ui/merto/button.dart';
+import 'package:metro_ui/merto/page.dart';
 import 'package:metro_ui/merto/page_scaffold.dart';
 import 'package:metro_ui/merto/tile.dart';
 import 'package:metro_ui/page2.dart';
@@ -17,6 +18,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const MetroApp(
+      navigatorObservers: [],
       title: 'Flutter Demo',
       color: Colors.red,
       home: MyHomePage(title: 'Flutter Demo Home Page'),
@@ -162,7 +164,6 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     //结束await后执行动画重置
     await Future.delayed(const Duration(milliseconds: 500));
 
-
     Future.delayed(const Duration(milliseconds: 50), () {
       for (var controller in _controllers) {
         controller.reset();
@@ -172,7 +173,6 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   //获取相对于屏幕左中心的偏移量
   Offset _getAbsolutePosition(GlobalKey key) {
-    print("调用记录");
     //获取当前组件的渲染对象的位置
     final RenderBox renderBox =
         key.currentContext!.findRenderObject() as RenderBox;
@@ -188,7 +188,26 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return MetroPageScaffold(
+    return 
+    
+    
+    MetroPageScaffold(
+      onPop: () async {
+        print('返回');
+        return;
+      },
+      onPopNext: () async {
+        print('前进');
+        return;
+      },
+      onPush: () async {
+        print('跳转');
+        return;
+      },
+      onPushNext: () async {
+        print('前进跳转');
+        return;
+      },
       // backgroundColor: const Color.fromARGB(0, 0, 0, 0),
 
       body: Column(
@@ -241,14 +260,20 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                                 //等待两秒
                                 await _startAnimations(_keys[index]);
                                 //跳转到新页面
-                                Navigator.of(context).push(PageRouteBuilder(
-                                  pageBuilder:
-                                      (context, animation, secondaryAnimation) {
+                                // Navigator.of(context).push(PageRouteBuilder(
+                                //   pageBuilder:
+                                //       (context, animation, secondaryAnimation) {
+                                //     return const PanoramaPage();
+                                //   },
+                                //   transitionsBuilder: (context, animation,
+                                //       secondaryAnimation, child) {
+                                //     return child; // 直接返回子页面，无过渡动画
+                                //   },
+                                // ));
+
+                                Navigator.of(context).push(MetroPageRoute(
+                                  builder: (context) {
                                     return const PanoramaPage();
-                                  },
-                                  transitionsBuilder: (context, animation,
-                                      secondaryAnimation, child) {
-                                    return child; // 直接返回子页面，无过渡动画
                                   },
                                 ));
                               },

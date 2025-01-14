@@ -119,7 +119,7 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
     //储存当前的touch状态
     final isTouch = _isTouch;
     await Future.delayed(Duration(milliseconds: _springTime));
-    if (isTouch != _isTouch) return;
+    if (isTouch != _isTouch||!mounted) return;
     _controller.forward(from: 0.0);
   }
 
