@@ -1,6 +1,7 @@
 //import 'package:flutter/material.dart';
 import 'package:flutter/material.dart';
 import 'package:metro_ui/merto/button.dart';
+import 'package:metro_ui/merto/page.dart';
 import 'package:metro_ui/merto/page_scaffold.dart';
 
 //Panorama和Pivot控件
@@ -80,6 +81,10 @@ class _PanoramaPageState extends State<PanoramaPage>
     _rotationController.forward();
     //开始平移动画
     _translationController.forward();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 替换当前路由的动画
+    });
   }
 
   @override
@@ -206,7 +211,16 @@ class _PanoramaPageState extends State<PanoramaPage>
                           MetroButton(
                             onTap: () async {
                               //返回页面
-                              Navigator.pop(context);
+                              Navigator.maybePop(context);
+
+                              // Navigator.of(context).replaceRouteBelow(
+                              //   anchorRoute: ModalRoute.of(context)!,
+                              //   newRoute: MetroSlideRoute(
+                              //     builder: (context) => widget,
+                              //     isVertical: false,
+                              //   ),
+                              // );
+                              //Navigator.of(context).pop();
                             },
                             child: const Text('Back'),
                           ),
@@ -223,3 +237,72 @@ class _PanoramaPageState extends State<PanoramaPage>
     );
   }
 }
+
+class DelegatedTransition {
+  // 定义委托的过渡动画构建器
+  final Widget Function(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) transitionBuilder;
+
+  const DelegatedTransition({required this.transitionBuilder});
+}
+
+class CustomRoute<T> extends PageRoute<T> {
+  final Widget child;
+  final DelegatedTransition? delegatedTransition;
+
+  CustomRoute({
+    required this.child,
+    this.delegatedTransition,
+  });
+
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    // 1. 如果有委托的过渡动画，使用委托的构建器
+    if (delegatedTransition != null) {
+      return delegatedTransition!.transitionBuilder(
+        context,
+        animation,
+        secondaryAnimation,
+        child,
+      );
+    }
+
+    // 2. 否则使用默认过渡动画
+    return FadeTransition(
+      opacity: animation,
+      child: child,
+    );
+  }
+
+  @override
+  Widget buildPage(BuildContext context, Animation<double> animation,
+          Animation<double> secondaryAnimation) =>
+      child;
+
+  @override
+  // TODO: implement barrierColor
+  Color? get barrierColor => throw UnimplementedError();
+
+  @override
+  // TODO: implement barrierLabel
+  String? get barrierLabel => throw UnimplementedError();
+
+  @override
+  // TODO: implement maintainState
+  bool get maintainState => throw UnimplementedError();
+
+  @override
+  // TODO: implement transitionDuration
+  Duration get transitionDuration => throw UnimplementedError();
+}
+
+

@@ -68,7 +68,7 @@ mixin MetroRouteTransitionMixin<T> on PageRoute<T> {
   Widget buildContent(BuildContext context);
 
   @override
-  Duration get transitionDuration => const Duration(milliseconds: 300);
+  Duration get transitionDuration => const Duration(milliseconds: 0);
 
   @override
   Color? get barrierColor => null;
@@ -101,24 +101,7 @@ mixin MetroRouteTransitionMixin<T> on PageRoute<T> {
   Widget buildTransitions(BuildContext context, Animation<double> animation,
       Animation<double> secondaryAnimation, Widget child) {
     // 这里的动画行为还是直接切吧，如果尝试使用任何的动画行为，可能第一帧会删一下我也不知道什么原因反正这样写硬切才是我发现的最佳方案。
-    // return FadeTransition(
-    //   opacity: animation.drive(Tween(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.linear))),
-    //   child: child,
-    // );
-    //延迟固定秒数再进动画
-
-    // 在整个 transitionDuration (动画 0.0~<1.0) 阶段隐藏，只有到 1.0 时才显示
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, _) {
-        // 如果动画没走完，先渲染空白，直到动画 value == 1.0 时再一次性显示
-        if (animation.value < 1.0) {
-          return const SizedBox.shrink(); // 或者 Container()
-        } else {
-          return child;
-        }
-      },
-    );
+    return child;
   }
 }
 
@@ -180,14 +163,12 @@ class _PageBasedMetroPageRoute<T> extends PageRoute<T>
 
   MetroPage<T> get _page => settings as MetroPage<T>;
 
-    @override
+  @override
   bool didPop(T? result) {
     // 在这里插入需要的逻辑
     print('Pop event from _PageBasedMetroPageRoute');
     return super.didPop(result);
   }
-
-  
 
   @override
   Widget buildContent(BuildContext context) {

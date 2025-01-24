@@ -166,7 +166,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
     Future.delayed(const Duration(milliseconds: 50), () {
       for (var controller in _controllers) {
-        controller.reset();
+        //controller.reset();
+        controller.reverse();
       }
     });
   }
@@ -188,10 +189,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return 
-    
-    
-    MetroPageScaffold(
+    return MetroPageScaffold(
       onPop: () async {
         print('返回');
         return;
@@ -259,23 +257,17 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                               onTap: () async {
                                 //等待两秒
                                 await _startAnimations(_keys[index]);
-                                //跳转到新页面
-                                // Navigator.of(context).push(PageRouteBuilder(
-                                //   pageBuilder:
-                                //       (context, animation, secondaryAnimation) {
-                                //     return const PanoramaPage();
-                                //   },
-                                //   transitionsBuilder: (context, animation,
-                                //       secondaryAnimation, child) {
-                                //     return child; // 直接返回子页面，无过渡动画
-                                //   },
-                                // ));
-
-                                Navigator.of(context).push(MetroPageRoute(
-                                  builder: (context) {
+                                await Navigator.of(context).push(
+                                  // MetroPageRoute(
+                                  //   builder: (context) {
+                                  //     return const PanoramaPage();
+                                  //   },
+                                  // ),
+                                  MaterialPageRoute(builder: (context) {
                                     return const PanoramaPage();
-                                  },
-                                ));
+                                  }),
+                                );
+                                print('跳转完成');
                               },
                               child: Container(
                                 color: Theme.of(context).colorScheme.primary,

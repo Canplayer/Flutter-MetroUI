@@ -326,7 +326,15 @@ class _BodyBuilder extends StatelessWidget {
             alignment: FractionalOffset.center,
             transform: Matrix4.identity()..setEntry(3, 2, 0.00078) // 设置Z轴偏移
             ,
-            child: body,
+            child: 
+            PopScope(
+              onPopInvokedWithResult: (didPop, result) {
+                if (didPop) {
+                  //TODO:返回
+                  return;
+                }
+              },
+              child:body,),
           ),
         );
       },
