@@ -1,6 +1,7 @@
-# metro_ui
+# Flutter MetroUI
 
-A new Flutter project.
+An open source library that aspires to implement the standard UI of Windows Phone on the Flutter platform.
+I am not a professional developer, so I may not be able to guarantee the quality of the code. orz
 
 ## Getting Started
 
