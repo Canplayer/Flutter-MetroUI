@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:metro_ui/page_scaffold.dart';
+import './route_aware_provider.dart';
 
 // 示例可以假设：
 // typedef GlobalWidgetsLocalizations = DefaultWidgetsLocalizations;
@@ -931,7 +932,6 @@ class _MetroAppState extends State<MetroApp> {
       scaffoldBackgroundColor: useWhiteTheme ? whiteColor : blackColor,
     );
 
-
     //修改主题的primaryColor颜色
     // return metroTheme.copyWith(
     //   primaryColor: metroColor,
@@ -1030,7 +1030,7 @@ class _MetroAppState extends State<MetroApp> {
     return WidgetsApp(
       key: GlobalObjectKey(this),
       navigatorKey: widget.navigatorKey,
-      navigatorObservers: widget.navigatorObservers!,
+      navigatorObservers: [routeObserver, ...widget.navigatorObservers!],
       pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) {
         return MaterialPageRoute<T>(settings: settings, builder: builder);
       },

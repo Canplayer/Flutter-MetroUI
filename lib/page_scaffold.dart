@@ -9,6 +9,8 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'route_aware_provider.dart';
+
 enum _MetroPageSlot {
   body, //主体
   statusBar, //状态栏
@@ -291,9 +293,13 @@ class _BodyBoxConstraints extends BoxConstraints {
 class _BodyBuilder extends StatelessWidget {
   const _BodyBuilder({
     required this.body,
+    this.onWillPop,
+    this.onDidPop,
   });
 
   final Widget body;
+  final Future<bool> Function()? onWillPop;
+  final Future<void> Function()? onDidPop;
 
   @override
   Widget build(BuildContext context) {
@@ -326,15 +332,32 @@ class _BodyBuilder extends StatelessWidget {
             alignment: FractionalOffset.center,
             transform: Matrix4.identity()..setEntry(3, 2, 0.00078) // 设置Z轴偏移
             ,
-            child: 
-            PopScope(
-              onPopInvokedWithResult: (didPop, result) {
+            child: PopScope(
+              canPop: onWillPop == null,
+              onPopInvokedWithResult: (didPop, result) async {
                 if (didPop) {
-                  //TODO:返回
-                  return;
+                  return; // Pop 已发生，我们不做任何事
+                }
+
+                // 拦截返回事件
+                final bool shouldPop =
+                    onWillPop != null ? await onWillPop!() : true;
+
+                if (shouldPop) {
+                  // 如果允许退出，则播放退出动画
+                  if (onDidPop != null) {
+                    //print('MetroPageScaffold 正在执行退出动画...');
+                    await onDidPop!();
+                  }
+
+                  // 动画完成后，手动退出页面
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
                 }
               },
-              child:body,),
+              child: body,
+            ),
           ),
         );
       },
@@ -409,256 +432,6 @@ class _MetroPageLayout extends MultiChildLayoutDelegate {
         oldDelegate.textDirection != textDirection ||
         oldDelegate.extendBody != extendBody;
   }
-}
-
-/// 处理 [FloatingActionButton] 的缩放和旋转动画。
-///
-/// 目前，[FloatingActionButton] 有两种类型的动画：
-///
-/// * 进场/退场动画，当 [FloatingActionButton] 被添加、更新或移除时，此小部件会触发这些动画。
-/// * 运动动画，当其 [FloatingActionButtonLocation] 被更新时，[MetroPageScaffold] 会触发这些动画。
-class _FloatingActionButtonTransition extends StatefulWidget {
-  const _FloatingActionButtonTransition({
-    required this.child,
-    required this.fabMoveAnimation,
-    required this.fabMotionAnimator,
-    required this.currentController,
-  });
-
-  final Widget? child;
-  final Animation<double> fabMoveAnimation;
-  final FloatingActionButtonAnimator fabMotionAnimator;
-
-  /// Controls the current child widget.child as it exits.
-  final AnimationController currentController;
-
-  @override
-  _FloatingActionButtonTransitionState createState() =>
-      _FloatingActionButtonTransitionState();
-}
-
-class _FloatingActionButtonTransitionState
-    extends State<_FloatingActionButtonTransition>
-    with TickerProviderStateMixin {
-  // The animations applied to the Floating Action Button when it is entering or exiting.
-  // Controls the previous widget.child as it exits.
-  late AnimationController _previousController;
-  CurvedAnimation? _previousExitScaleAnimation;
-  CurvedAnimation? _previousExitRotationCurvedAnimation;
-  CurvedAnimation? _currentEntranceScaleAnimation;
-  late Animation<double> _previousScaleAnimation;
-  late TrainHoppingAnimation _previousRotationAnimation;
-  // The animations to run, considering the widget's fabMoveAnimation and the current/previous entrance/exit animations.
-  late Animation<double> _currentScaleAnimation;
-  late Animation<double> _extendedCurrentScaleAnimation;
-  late TrainHoppingAnimation _currentRotationAnimation;
-  Widget? _previousChild;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _previousController = AnimationController(
-      duration: kFloatingActionButtonSegue,
-      vsync: this,
-    )..addStatusListener(_handlePreviousAnimationStatusChanged);
-    _updateAnimations();
-
-    if (widget.child != null) {
-      // If we start out with a child, have the child appear fully visible instead
-      // of animating in.
-      widget.currentController.value = 1.0;
-    } else {
-      // If we start without a child we update the geometry object with a
-      // floating action button scale of 0, as it is not showing on the screen.
-      _updateGeometryScale(0.0);
-    }
-  }
-
-  @override
-  void dispose() {
-    _previousController.dispose();
-    _previousExitScaleAnimation?.dispose();
-    _previousExitRotationCurvedAnimation?.dispose();
-    _currentEntranceScaleAnimation?.dispose();
-    _disposeAnimations();
-    super.dispose();
-  }
-
-  @override
-  void didUpdateWidget(_FloatingActionButtonTransition oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.fabMotionAnimator != widget.fabMotionAnimator ||
-        oldWidget.fabMoveAnimation != widget.fabMoveAnimation) {
-      _disposeAnimations();
-      // Get the right scale and rotation animations to use for this widget.
-      _updateAnimations();
-    }
-    final bool oldChildIsNull = oldWidget.child == null;
-    final bool newChildIsNull = widget.child == null;
-    if (oldChildIsNull == newChildIsNull &&
-        oldWidget.child?.key == widget.child?.key) {
-      return;
-    }
-    if (_previousController.isDismissed) {
-      final double currentValue = widget.currentController.value;
-      if (currentValue == 0.0 || oldWidget.child == null) {
-        // The current child hasn't started its entrance animation yet. We can
-        // just skip directly to the new child's entrance.
-        _previousChild = null;
-        if (widget.child != null) {
-          widget.currentController.forward();
-        }
-      } else {
-        // Otherwise, we need to copy the state from the current controller to
-        // the previous controller and run an exit animation for the previous
-        // widget before running the entrance animation for the new child.
-        _previousChild = oldWidget.child;
-        _previousController
-          ..value = currentValue
-          ..reverse();
-        widget.currentController.value = 0.0;
-      }
-    }
-  }
-
-  static final Animatable<double> _entranceTurnTween = Tween<double>(
-    begin: 1.0 - kFloatingActionButtonTurnInterval,
-    end: 1.0,
-  ).chain(CurveTween(curve: Curves.easeIn));
-
-  void _disposeAnimations() {
-    _previousRotationAnimation.dispose();
-    _currentRotationAnimation.dispose();
-  }
-
-  void _updateAnimations() {
-    _previousExitScaleAnimation?.dispose();
-    // Get the animations for exit and entrance.
-    _previousExitScaleAnimation = CurvedAnimation(
-      parent: _previousController,
-      curve: Curves.easeIn,
-    );
-    _previousExitRotationCurvedAnimation?.dispose();
-    _previousExitRotationCurvedAnimation = CurvedAnimation(
-      parent: _previousController,
-      curve: Curves.easeIn,
-    );
-
-    final Animation<double> previousExitRotationAnimation =
-        Tween<double>(begin: 1.0, end: 1.0)
-            .animate(_previousExitRotationCurvedAnimation!);
-
-    _currentEntranceScaleAnimation?.dispose();
-    _currentEntranceScaleAnimation = CurvedAnimation(
-      parent: widget.currentController,
-      curve: Curves.easeIn,
-    );
-    final Animation<double> currentEntranceRotationAnimation =
-        widget.currentController.drive(_entranceTurnTween);
-
-    // Get the animations for when the FAB is moving.
-    final Animation<double> moveScaleAnimation = widget.fabMotionAnimator
-        .getScaleAnimation(parent: widget.fabMoveAnimation);
-    final Animation<double> moveRotationAnimation = widget.fabMotionAnimator
-        .getRotationAnimation(parent: widget.fabMoveAnimation);
-
-    // Aggregate the animations.
-    if (widget.fabMotionAnimator == FloatingActionButtonAnimator.noAnimation) {
-      _previousScaleAnimation = moveScaleAnimation;
-      _currentScaleAnimation = moveScaleAnimation;
-      _previousRotationAnimation =
-          TrainHoppingAnimation(moveRotationAnimation, null);
-      _currentRotationAnimation =
-          TrainHoppingAnimation(moveRotationAnimation, null);
-    } else {
-      _previousScaleAnimation = AnimationMin<double>(
-          moveScaleAnimation, _previousExitScaleAnimation!);
-      _currentScaleAnimation = AnimationMin<double>(
-          moveScaleAnimation, _currentEntranceScaleAnimation!);
-      _previousRotationAnimation = TrainHoppingAnimation(
-          previousExitRotationAnimation, moveRotationAnimation);
-      _currentRotationAnimation = TrainHoppingAnimation(
-          currentEntranceRotationAnimation, moveRotationAnimation);
-    }
-
-    _extendedCurrentScaleAnimation = _currentScaleAnimation
-        .drive(CurveTween(curve: const Interval(0.0, 0.1)));
-    _currentScaleAnimation.addListener(_onProgressChanged);
-    _previousScaleAnimation.addListener(_onProgressChanged);
-  }
-
-  void _handlePreviousAnimationStatusChanged(AnimationStatus status) {
-    setState(() {
-      if (widget.child != null && status.isDismissed) {
-        assert(widget.currentController.isDismissed);
-        widget.currentController.forward();
-      }
-    });
-  }
-
-  bool _isExtendedFloatingActionButton(Widget? widget) {
-    return widget is FloatingActionButton && widget.isExtended;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.centerRight,
-      children: <Widget>[
-        if (!_previousController.isDismissed)
-          if (_isExtendedFloatingActionButton(_previousChild))
-            FadeTransition(
-              opacity: _previousScaleAnimation,
-              child: _previousChild,
-            )
-          else
-            ScaleTransition(
-              scale: _previousScaleAnimation,
-              child: RotationTransition(
-                turns: _previousRotationAnimation,
-                child: _previousChild,
-              ),
-            ),
-        if (_isExtendedFloatingActionButton(widget.child))
-          ScaleTransition(
-            scale: _extendedCurrentScaleAnimation,
-            child: FadeTransition(
-              opacity: _currentScaleAnimation,
-              child: widget.child,
-            ),
-          )
-        else
-          ScaleTransition(
-            scale: _currentScaleAnimation,
-            child: RotationTransition(
-              turns: _currentRotationAnimation,
-              child: widget.child,
-            ),
-          ),
-      ],
-    );
-  }
-
-  void _onProgressChanged() {
-    _updateGeometryScale(
-        math.max(_previousScaleAnimation.value, _currentScaleAnimation.value));
-  }
-
-  void _updateGeometryScale(double scale) {
-    // widget.geometryNotifier._updateWith(
-    //     //floatingActionButtonScale: scale,
-    //     );
-  }
-}
-
-///一个提供Metro换页动画的基类
-///当路由发生时，会调用对于的方法
-mixin MetroPageScaffoldDelegate {
-  Future<void> onPush() async {}
-  Future<void> onPop() async {}
-  Future<void> onPushNext() async {}
-  Future<void> onPopNext() async {}
 }
 
 /// 实现基本的 Material Design 视觉布局结构。
@@ -770,18 +543,18 @@ mixin MetroPageScaffoldDelegate {
 ///  * 教程：[为屏幕添加抽屉](https://docs.flutter.dev/cookbook/design/drawer)
 class MetroPageScaffold extends StatefulWidget {
   /// 创建 Material Design 小部件的视觉脚手架。
-  const MetroPageScaffold({
-    super.key,
-    this.body,
-    this.backgroundColor,
-    this.resizeToAvoidBottomInset,
-    this.primary = true,
-    this.restorationId,
-    this.onPush,
-    this.onPop,
-    this.onPushNext,
-    this.onPopNext,
-  });
+  const MetroPageScaffold(
+      {super.key,
+      this.body,
+      this.backgroundColor,
+      this.resizeToAvoidBottomInset,
+      this.primary = true,
+      this.restorationId,
+      this.onWillPop,
+      this.onDidPop,
+      this.onDidPush,
+      this.onDidPushNext,
+      this.onDidPopNext});
 
   /// Scaffold 的主要内容。
   ///
@@ -830,15 +603,19 @@ class MetroPageScaffold extends StatefulWidget {
   ///  * [RestorationManager]，它解释了 Flutter 中状态恢复的工作原理。
   final String? restorationId;
 
+  /// 当页面即将退出时调用，允许开发者执行自定义逻辑。
+  /// 返回 true 表示允许退出，返回 false 表示阻止退出。
+  final Future<bool> Function()? onWillPop;
+
   ///当路由发生时，会调用对于的方法，此处的方法建议不要产生任何业务逻辑而是纯粹的UI操作，否则会导致业务逻辑和UI耦合
   //当页面进入时调用
-  final Future<void> Function()? onPush;
+  final VoidCallback? onDidPush;
   //当页面退出时调用
-  final Future<void> Function()? onPop;
+  final Future<void> Function()? onDidPop;
   //当页面进入下一个页面时调用
-  final Future<void> Function()? onPushNext;
+  final Future<void> Function()? onDidPushNext;
   //当页面从下一个页面退出时调用
-  final Future<void> Function()? onPopNext;
+  final VoidCallback? onDidPopNext;
 
   /// 从最接近的此类实例中查找 [MetroPageScaffoldState]。
   ///
@@ -919,7 +696,7 @@ class MetroPageScaffold extends StatefulWidget {
 ///
 /// 可以显示 [BottomSheet]。使用 [MetroPageScaffold.of] 从当前的 [BuildContext] 中获取 [MetroPageScaffoldState]。
 class MetroPageScaffoldState extends State<MetroPageScaffold>
-    with MetroPageScaffoldDelegate, TickerProviderStateMixin, RestorationMixin {
+    with TickerProviderStateMixin, RestorationMixin, RouteAware {
   @override
   String? get restorationId => widget.restorationId;
 
@@ -933,62 +710,6 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
 
   // Used for both the snackbar and material banner APIs
   MetroPageMessengerState? _metroPageMessenger;
-
-  // // SNACKBAR API
-  // MetroPageFeatureController<SnackBar, SnackBarClosedReason>?
-  //     _messengerSnackBar;
-  //
-  // // This is used to update the _messengerSnackBar by the MetroPageMessenger.
-  // void _updateSnackBar() {
-  //   final MetroPageFeatureController<SnackBar, SnackBarClosedReason>?
-  //       messengerSnackBar = _metroPageMessenger!._snackBars.isNotEmpty
-  //           ? _metroPageMessenger!._snackBars.first
-  //           : null;
-  //
-  //   if (_messengerSnackBar != messengerSnackBar) {
-  //     setState(() {
-  //       _messengerSnackBar = messengerSnackBar;
-  //     });
-  //   }
-  // }
-  //
-  // // MATERIAL BANNER API
-  //
-  // // The _messengerMetroBanner represents the current MetroBanner being managed by
-  // // the MetroPageMessenger, instead of the Scaffold.
-  // MetroPageFeatureController<MetroBanner, MetroBannerClosedReason>?
-  //     _messengerMetroBanner;
-  //
-  // // This is used to update the _messengerMetroBanner by the MetroPageMessenger.
-  // void _updateMetroBanner() {
-  //   final MetroPageFeatureController<MetroBanner,
-  //           MetroBannerClosedReason>? messengerMetroBanner =
-  //       _metroPageMessenger!._metroBanners.isNotEmpty
-  //           ? _metroPageMessenger!._metroBanners.first
-  //           : null;
-  //
-  //   if (_messengerMetroBanner != messengerMetroBanner) {
-  //     setState(() {
-  //       _messengerMetroBanner = messengerMetroBanner;
-  //     });
-  //   }
-  // }
-
-  // iOS 特性 - 状态栏点击，返回手势
-
-  // 在 iOS 上，点击状态栏会将应用的主要可滚动内容滚动到顶部。
-  // 我们通过查找主要滚动控制器并在点击时将其滚动到顶部来实现这一点。
-  void _handleStatusBarTap() {
-    final ScrollController? primaryScrollController =
-        PrimaryScrollController.maybeOf(context);
-    if (primaryScrollController != null && primaryScrollController.hasClients) {
-      primaryScrollController.animateTo(
-        0.0,
-        duration: const Duration(milliseconds: 1000),
-        curve: Curves.easeOutCirc,
-      );
-    }
-  }
 
   // 内部方法
 
@@ -1022,13 +743,47 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
     _metroPageMessenger?._register(this);
 
     super.didChangeDependencies();
+    // 订阅路由变化
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
   }
 
   @override
   void dispose() {
     //_geometryNotifier.dispose();
     _metroPageMessenger?._unregister(this);
+    routeObserver.unsubscribe(this);
     super.dispose();
+  }
+
+  @override
+  void didPush() {
+    // 页面被推入，调用外部传入的回调
+    widget.onDidPush?.call();
+    super.didPush();
+  }
+
+  @override
+  void didPop() {
+    // 页面被弹出，调用外部传入的回调
+    widget.onDidPop?.call();
+    super.didPop();
+  }
+
+  @override
+  void didPushNext() {
+    // 新页面覆盖上来，调用外部传入的回调
+    widget.onDidPushNext?.call();
+    super.didPushNext();
+  }
+
+  @override
+  void didPopNext() {
+    // 从下一页返回到本页，调用外部传入的回调
+    widget.onDidPopNext?.call();
+    super.didPopNext();
   }
 
   void _addIfNonNull(
@@ -1082,6 +837,8 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
           ? null
           : _BodyBuilder(
               body: KeyedSubtree(key: _bodyKey, child: widget.body!),
+              onWillPop: widget.onWillPop,
+              onDidPop: widget.onDidPop,
             ),
       _MetroPageSlot.body,
       removeLeftPadding: false,
@@ -1090,30 +847,6 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
       removeBottomPadding: false,
       removeBottomInset: _resizeToAvoidBottomInset,
     );
-
-    switch (themeData.platform) {
-      case TargetPlatform.iOS:
-      case TargetPlatform.macOS:
-        _addIfNonNull(
-          children,
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: _handleStatusBarTap,
-            // iOS accessibility automatically adds scroll-to-top to the clock in the status bar
-            excludeFromSemantics: true,
-          ),
-          _MetroPageSlot.statusBar,
-          removeLeftPadding: false,
-          removeTopPadding: true,
-          removeRightPadding: false,
-          removeBottomPadding: true,
-        );
-      case TargetPlatform.android:
-      case TargetPlatform.fuchsia:
-      case TargetPlatform.linux:
-      case TargetPlatform.windows:
-        break;
-    }
 
     // The minimum insets for contents of the Scaffold to keep visible.
     final EdgeInsets minInsets = MediaQuery.paddingOf(context).copyWith(
