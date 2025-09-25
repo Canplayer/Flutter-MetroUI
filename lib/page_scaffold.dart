@@ -8,6 +8,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:metro_ui/animations.dart';
 
 import 'route_aware_provider.dart';
 
@@ -295,11 +296,13 @@ class _BodyBuilder extends StatelessWidget {
     required this.body,
     this.onWillPop,
     this.onDidPop,
+    required this.animatedPageKey,
   });
 
   final Widget body;
   final Future<bool> Function()? onWillPop;
   final Future<void> Function()? onDidPop;
+  final GlobalKey<MetroAnimatedPageState> animatedPageKey;
 
   @override
   Widget build(BuildContext context) {
@@ -333,21 +336,21 @@ class _BodyBuilder extends StatelessWidget {
             transform: Matrix4.identity()..setEntry(3, 2, 0.00078) // 设置Z轴偏移
             ,
             child: PopScope(
-              canPop: onWillPop == null,
+              canPop: onWillPop != null,
               onPopInvokedWithResult: (didPop, result) async {
                 if (didPop) {
                   return; // Pop 已发生，我们不做任何事
                 }
-
                 // 拦截返回事件
                 final bool shouldPop =
                     onWillPop != null ? await onWillPop!() : true;
-
                 if (shouldPop) {
                   // 如果允许退出，则播放退出动画
                   if (onDidPop != null) {
-                    //print('MetroPageScaffold 正在执行退出动画...');
+                    print('开始退出动画');
                     await onDidPop!();
+                  } else {
+                    await animatedPageKey.currentState?.didPop();
                   }
 
                   // 动画完成后，手动退出页面
@@ -356,7 +359,10 @@ class _BodyBuilder extends StatelessWidget {
                   }
                 }
               },
-              child: body,
+              child: MetroAnimatedPage(
+                key: animatedPageKey,
+                child: body,
+              ),
             ),
           ),
         );
@@ -612,8 +618,13 @@ class MetroPageScaffold extends StatefulWidget {
   final VoidCallback? onDidPush;
   //当页面退出时调用
   final Future<void> Function()? onDidPop;
-  //当页面进入下一个页面时调用
-  final Future<void> Function()? onDidPushNext;
+
+  /// 当页面进入下一个页面时调用
+  /// 设计目的是为了播放一段动画然后再进入下一个页面。不建议在这个方法中进行任何业务逻辑处理
+  /// 你可以在[metroPagePush]中使用[dataToPass]参数传递泛型数据到此处
+  /// 详细使用案例请参考demo
+  final Future<void> Function<T>(T)? onDidPushNext;
+
   //当页面从下一个页面退出时调用
   final VoidCallback? onDidPopNext;
 
@@ -711,12 +722,20 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
   // Used for both the snackbar and material banner APIs
   MetroPageMessengerState? _metroPageMessenger;
 
-  // 内部方法
+  // 用于控制 MetroAnimatedPage 的动画
+  final GlobalKey<MetroAnimatedPageState> _metroAnimatedPageKey =
+      GlobalKey<MetroAnimatedPageState>();
 
+  // 内部方法
   //late _ScaffoldGeometryNotifier _geometryNotifier;
 
   bool get _resizeToAvoidBottomInset {
     return widget.resizeToAvoidBottomInset ?? true;
+  }
+
+  /// 播放 MetroAnimatedPage 的默认退出动画。
+  Future<void> playDefaultPushNextAnimation() async {
+    await _metroAnimatedPageKey.currentState?.didPop();
   }
 
   @override
@@ -762,27 +781,29 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
   void didPush() {
     // 页面被推入，调用外部传入的回调
     widget.onDidPush?.call();
+    _metroAnimatedPageKey.currentState?.didPush();
     super.didPush();
   }
 
-  @override
-  void didPop() {
-    // 页面被弹出，调用外部传入的回调
-    widget.onDidPop?.call();
-    super.didPop();
-  }
+  // @override
+  // void didPop() {
+  //   // 页面被弹出，调用外部传入的回调
+  //   widget.onDidPop?.call();
+  //   //super.didPop();
+  // }
 
-  @override
-  void didPushNext() {
-    // 新页面覆盖上来，调用外部传入的回调
-    widget.onDidPushNext?.call();
-    super.didPushNext();
-  }
+  // @override
+  // void didPushNext() {
+  //   // 新页面覆盖上来，调用外部传入的回调
+  //   widget.onDidPushNext?.call(null);
+  //   super.didPushNext();
+  // }
 
   @override
   void didPopNext() {
     // 从下一页返回到本页，调用外部传入的回调
     widget.onDidPopNext?.call();
+    _metroAnimatedPageKey.currentState?.didPopNext();
     super.didPopNext();
   }
 
@@ -839,6 +860,7 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
               body: KeyedSubtree(key: _bodyKey, child: widget.body!),
               onWillPop: widget.onWillPop,
               onDidPop: widget.onDidPop,
+              animatedPageKey: _metroAnimatedPageKey,
             ),
       _MetroPageSlot.body,
       removeLeftPadding: false,

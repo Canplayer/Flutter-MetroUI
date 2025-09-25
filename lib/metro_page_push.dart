@@ -12,15 +12,23 @@ Future<T?> metroPagePush<T extends Object?>(
   BuildContext context,
   Route<T> route, {
   Duration prePushDelay = Duration.zero,
+  dynamic? dataToPass,
 }) async {
   // 尝试获取当前页面的 MetroPageScaffoldState
   final MetroPageScaffoldState? currentScaffoldState = MetroPageScaffold.maybeOf(context);
 
   // 如果当前页面有 MetroPageScaffold 并且设置了 onDidPushNext 回调
-  if (currentScaffoldState != null && currentScaffoldState.widget.onDidPushNext != null) {
-    // 调用当前页面的 onDidPushNext 回调，并等待其完成
+  if (currentScaffoldState != null) {
+    if (currentScaffoldState.widget.onDidPushNext != null) {
+      // 调用当前页面的 onDidPushNext 回调，并等待其完成
     // 在这里，您可以启动一个预设动画，并在动画完成后返回Future
-    await currentScaffoldState.widget.onDidPushNext!();
+    await currentScaffoldState.widget.onDidPushNext!(dataToPass);
+    }
+    else {
+      //播放默认动画
+      await currentScaffoldState.playDefaultPushNextAnimation();
+    }
+    
   }
 
   // 在执行实际页面跳转之前，可以添加一个额外的固定延迟
