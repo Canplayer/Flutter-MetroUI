@@ -22,18 +22,14 @@ class MetroAnimatedPage extends StatefulWidget {
 
 class MetroAnimatedPageState extends State<MetroAnimatedPage>
     with TickerProviderStateMixin {
-  //翻转动画原点距离。windows phone翻页动画不是单纯的绕y轴旋转，而是有一个平移的过程。这个数值在7/8.0/8.1系统中并不一致，此处按照8.0系统来做
-  late double _pivot;
+  // 翻转动画原点距离
+  double _pivot = 0;
+  static const double _pivotMax = 320; // magic number常量化
 
-  //旋转动画控制器
-  late AnimationController _rotationController;
-  //平移动画控制器
-  late AnimationController _translationController;
-  //旋转动画
+  late final AnimationController _rotationController;
+  late final AnimationController _translationController;
   late Animation<double> _rotationAnimation;
-  //平移动画
   late Animation<double> _translationAnimation;
-  // 当前动画类型
   MetroAnimationType _currentAnimationType = MetroAnimationType.didPush;
 
   @override
@@ -41,35 +37,17 @@ class MetroAnimatedPageState extends State<MetroAnimatedPage>
     super.initState();
     _rotationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 450),
+      duration: const Duration(milliseconds: 0),
     );
     _translationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 850),
+      duration: const Duration(milliseconds: 0),
     );
-
-    _rotationAnimation = Tween<double>(
-      begin: 0,
-      end: 3.1415 * 0.5,
-    ).animate(CurvedAnimation(
-      parent: _rotationController,
-      curve: Curves.easeOut,
-    ));
-    _translationAnimation = Tween<double>(
-      begin: 0,
-      end: -1,
-    ).animate(CurvedAnimation(
-      parent: _translationController,
-      curve: Curves.easeInCirc,
-    ))
-      ..addListener(() {
-        setState(() {
-          //_pivot的数值由320到0
-          _pivot = _translationAnimation.value * 320;
-        });
-      });
-
-    didPush();
+    // 初始化为静止状态，防止LateInitializationError
+    _rotationAnimation = Tween<double>(begin: -3.1415926, end: -3.1415926 * 0.5).animate(_rotationController);
+    _translationAnimation = Tween<double>(begin: -100, end: -100).animate(_translationController);
+    //新页面会调用这个方法，也就是说如果传入的widget默认行为将会直接播放push动画
+    // didPush();
   }
 
   /// 设置旋转动画的角度范围
@@ -85,36 +63,17 @@ class MetroAnimatedPageState extends State<MetroAnimatedPage>
 
   /// didPush动画：从-90度旋转到0度（页面进入）
   Future<void> didPush() async {
-    _rotationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 450),
+    print('didPush animation start');
+    _setupAnimation(
+      rotationBegin: -3.1415926 * 0.5,
+      rotationEnd: 0,
+      translationBegin: 1,
+      translationEnd: 0,
+      rotationDuration: const Duration(milliseconds: 450),
+      translationDuration: const Duration(milliseconds: 850),
+      rotationCurve: Curves.easeOut,
+      translationCurve: Curves.easeOutCirc,
     );
-    _translationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 850),
-    );
-
-    _rotationAnimation = Tween<double>(
-      begin: -3.1415 * 0.5,
-      end: 0,
-    ).animate(CurvedAnimation(
-      parent: _rotationController,
-      curve: Curves.easeOut,
-    ));
-    _translationAnimation = Tween<double>(
-      begin: 1,
-      end: 0,
-    ).animate(CurvedAnimation(
-      parent: _translationController,
-      curve: Curves.easeOutCirc,
-    ))
-      ..addListener(() {
-        setState(() {
-          //_pivot的数值由320到0
-          _pivot = _translationAnimation.value * 320;
-        });
-      });
-
     _rotationController.reset();
     _translationController.reset();
     _rotationController.forward();
@@ -123,36 +82,16 @@ class MetroAnimatedPageState extends State<MetroAnimatedPage>
 
   /// didPop动画：从0度旋转到-90度（页面退出）
   Future<void> didPop() async {
-    _rotationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
+    _setupAnimation(
+      rotationBegin: 0,
+      rotationEnd: -3.1415926 * 0.5,
+      translationBegin: 0,
+      translationEnd: 1,
+      rotationDuration: const Duration(milliseconds: 200),
+      translationDuration: const Duration(milliseconds: 200),
+      rotationCurve: Curves.easeOut,
+      translationCurve: Curves.easeOutCirc,
     );
-    _translationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-
-    _rotationAnimation = Tween<double>(
-      begin: 0,
-      end: -3.1415 * 0.5,
-    ).animate(CurvedAnimation(
-      parent: _rotationController,
-      curve: Curves.easeOut,
-    ));
-    _translationAnimation = Tween<double>(
-      begin: 0,
-      end: 1,
-    ).animate(CurvedAnimation(
-      parent: _translationController,
-      curve: Curves.easeOutCirc,
-    ))
-      ..addListener(() {
-        setState(() {
-          //_pivot的数值由320到0
-          _pivot = _translationAnimation.value * 320;
-        });
-      });
-
     _rotationController.reset();
     _translationController.reset();
     _rotationController.forward();
@@ -161,92 +100,71 @@ class MetroAnimatedPageState extends State<MetroAnimatedPage>
 
   /// didPushNext动画：从0度旋转到90度（下一页进入）
   Future<void> didPushNext() async {
-    _rotationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 450),
+    _setupAnimation(
+      rotationBegin: 0,
+      rotationEnd: 3.1415926 * 0.5,
+      translationBegin: 0,
+      translationEnd: 1,
+      rotationDuration: const Duration(milliseconds: 200),
+      translationDuration: const Duration(milliseconds: 200),
+      rotationCurve: Curves.easeOut,
+      translationCurve: Curves.easeInCirc,
     );
-    _translationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 850),
-    );
-
-    _rotationAnimation = Tween<double>(
-      begin: 0,
-      end: 3.1415 * 0.5,
-    ).animate(CurvedAnimation(
-      parent: _rotationController,
-      curve: Curves.easeOut,
-    ));
-    _translationAnimation = Tween<double>(
-      begin: 0,
-      end: -1,
-    ).animate(CurvedAnimation(
-      parent: _translationController,
-      curve: Curves.easeInCirc,
-    ))
-      ..addListener(() {
-        setState(() {
-          //_pivot的数值由320到0
-          _pivot = _translationAnimation.value * 320;
-        });
-      });
-
     _rotationController.reset();
     _translationController.reset();
     _rotationController.forward();
     await _translationController.forward();
-
-    
-
-
-
   }
 
   /// didPopNext动画：从90度旋转到0度（下一页退出）
   Future<void> didPopNext() async {
-    _rotationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 450),
+    _setupAnimation(
+      rotationBegin: 3.1415926 * 0.5,
+      rotationEnd: 0,
+      translationBegin: 1,
+      translationEnd: 0,
+      rotationDuration: const Duration(milliseconds: 450),
+      translationDuration: const Duration(milliseconds: 850),
+      rotationCurve: Curves.easeOut,
+      translationCurve: Curves.easeInCirc,
     );
-    _translationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 850),
-    );
-
-    _rotationAnimation = Tween<double>(
-      begin: 3.1415 * 0.5,
-      end: 0,
-    ).animate(CurvedAnimation(
-      parent: _rotationController,
-      curve: Curves.easeOut,
-    ));
-    _translationAnimation = Tween<double>(
-      begin: 1,
-      end: 0,
-    ).animate(CurvedAnimation(
-      parent: _translationController,
-      curve: Curves.easeInCirc,
-    ))
-      ..addListener(() {
-        setState(() {
-          //_pivot的数值由320到0
-          _pivot = _translationAnimation.value * 320;
-        });
-      });
-
     _rotationController.reset();
     _translationController.reset();
     _rotationController.forward();
     await _translationController.forward();
-
-
-
-    // _currentAnimationType = MetroAnimationType.didPopNext;
-    // _setupRotationAnimation(3.1415 * 0.5, 0); // 90° → 0°
-    // _rotationController.reset();
-    // _translationController.reset();
-    // _rotationController.forward();
-    // await _translationController.forward();
+  }
+  /// 动画参数统一设置
+  void _setupAnimation({
+    required double rotationBegin,
+    required double rotationEnd,
+    required double translationBegin,
+    required double translationEnd,
+    required Duration rotationDuration,
+    required Duration translationDuration,
+    required Curve rotationCurve,
+    required Curve translationCurve,
+  }) {
+    _rotationController.duration = rotationDuration;
+    _translationController.duration = translationDuration;
+    _rotationAnimation = Tween<double>(
+      begin: rotationBegin,
+      end: rotationEnd,
+    ).animate(CurvedAnimation(
+      parent: _rotationController,
+      curve: rotationCurve,
+    ));
+    _translationAnimation = Tween<double>(
+      begin: translationBegin,
+      end: translationEnd,
+    ).animate(CurvedAnimation(
+      parent: _translationController,
+      curve: translationCurve,
+    ))
+      ..addListener(() {
+        setState(() {
+          _pivot = _translationAnimation.value * _pivotMax;
+        });
+      });
   }
 
   /// 播放当前动画类型的动画
@@ -276,11 +194,9 @@ class MetroAnimatedPageState extends State<MetroAnimatedPage>
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _rotationAnimation,
+      animation: Listenable.merge([_rotationAnimation, _translationAnimation]),
       builder: (context, child) {
-        // 根据动画类型调整pivot点
         double pivotX = _getPivotX();
-
         return Transform(
           transform: Matrix4.rotationY(_rotationAnimation.value),
           origin: Offset(pivotX, 0),

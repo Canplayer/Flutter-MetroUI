@@ -735,7 +735,12 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
 
   /// 播放 MetroAnimatedPage 的默认退出动画。
   Future<void> playDefaultPushNextAnimation() async {
-    await _metroAnimatedPageKey.currentState?.didPop();
+    await _metroAnimatedPageKey.currentState?.didPushNext();
+  }
+
+  /// 播放 MetroAnimatedPage 的默认进入动画。
+  Future<void> playDefaultPushAnimation() async {
+    await _metroAnimatedPageKey.currentState?.didPush();
   }
 
   @override
@@ -743,6 +748,15 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
     super.initState();
     // _geometryNotifier =
     //     _ScaffoldGeometryNotifier(const MetroPageGeometry(), context);
+    //下一帧
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.onDidPush != null) {
+        widget.onDidPush?.call();
+      } else {
+        // 播放默认的进入动画
+        playDefaultPushAnimation();
+      }
+    });
   }
 
   @override
@@ -777,13 +791,12 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
     super.dispose();
   }
 
-  @override
-  void didPush() {
-    // 页面被推入，调用外部传入的回调
-    widget.onDidPush?.call();
-    _metroAnimatedPageKey.currentState?.didPush();
-    super.didPush();
-  }
+  // @override
+  // void didPush() {
+  //   // 页面被推入，调用外部传入的回调
+  //   //widget.onDidPush?.call();
+  //   super.didPush();
+  // }
 
   // @override
   // void didPop() {

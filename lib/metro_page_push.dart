@@ -16,7 +16,7 @@ Future<T?> metroPagePush<T extends Object?>(
 }) async {
   // 尝试获取当前页面的 MetroPageScaffoldState
   final MetroPageScaffoldState? currentScaffoldState = MetroPageScaffold.maybeOf(context);
-
+  
   // 如果当前页面有 MetroPageScaffold 并且设置了 onDidPushNext 回调
   if (currentScaffoldState != null) {
     if (currentScaffoldState.widget.onDidPushNext != null) {

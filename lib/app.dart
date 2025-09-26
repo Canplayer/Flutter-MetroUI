@@ -223,11 +223,6 @@ class MetroApp extends StatefulWidget {
     this.actions,
     this.restorationScopeId,
     this.scrollBehavior,
-    //移除此参数，因为它现在被忽略。MaterialApp 永远不会引入自己的 MediaQuery；View 小部件会处理它。
-    @Deprecated('Remove this parameter as it is now ignored. '
-        'MaterialApp never introduces its own MediaQuery; the View widget takes care of that. '
-        'This feature was deprecated after v3.7.0-29.0.pre.')
-    this.useInheritedMediaQuery = false,
     this.themeAnimationStyle,
   })  : routeInformationProvider = null,
         routeInformationParser = null,
@@ -283,10 +278,6 @@ class MetroApp extends StatefulWidget {
     this.actions,
     this.restorationScopeId,
     this.scrollBehavior,
-    @Deprecated('Remove this parameter as it is now ignored. '
-        'MaterialApp never introduces its own MediaQuery; the View widget takes care of that. '
-        'This feature was deprecated after v3.7.0-29.0.pre.')
-    this.useInheritedMediaQuery = false,
     this.themeAnimationStyle,
   })  : assert(routerDelegate != null || routerConfig != null),
         navigatorObservers = null,
@@ -715,14 +706,6 @@ class MetroApp extends StatefulWidget {
   ///  * <https://material.io/design/layout/spacing-methods.html>
   final bool debugShowMaterialGrid;
 
-  /// {@macro flutter.widgets.widgetsApp.useInheritedMediaQuery}
-  /// 此参数现在已被忽略。[MaterialApp] 永远不会引入自己的 [MediaQuery]；
-  /// [View] 小部件会处理这个。此功能在 v3.7.0-29.0.pre 之后被弃用。
-  @Deprecated('This setting is now ignored. '
-      'MaterialApp never introduces its own MediaQuery; the View widget takes care of that. '
-      'This feature was deprecated after v3.7.0-29.0.pre.')
-  final bool useInheritedMediaQuery;
-
   /// 用于覆盖主题动画曲线和持续时间。
   ///
   /// 如果提供了 [AnimationStyle.duration]，它将用于覆盖底层 [AnimatedTheme] 小部件中的主题动画持续时间。
@@ -903,7 +886,8 @@ class _MetroAppState extends State<MetroApp> {
       return theme;
     }
 
-    //是否使用白色主题，条件：当不指定时默认为黑色主题，只有当使用白色主题或者指定了跟随系统且系统为白色主题时才会使用白色主题
+    // Metro主题逻辑
+    // 是否使用白色主题，条件：当不指定时默认为黑色主题，只有当使用白色主题或者指定了跟随系统且系统为白色主题时才会使用白色主题
     final bool useWhiteTheme = widget.themeMode == MetroThemeMode.light ||
         (widget.themeMode == MetroThemeMode.system &&
             MediaQuery.platformBrightnessOf(context) == ui.Brightness.light);
