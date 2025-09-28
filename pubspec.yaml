@@ -52,3 +52,36 @@ flutter:
   #
   # For details regarding fonts in packages, see
   # https://flutter.dev/to/font-from-package
+
+  fonts:
+    - family: Segoe UI
+      fonts:
+
+        - asset: fonts/SEGOEUISL.TTF
+          weight: 300
+          style: normal
+        - asset: fonts/SEGUISLI.TTF
+          weight: 300
+          style: italic
+
+        - asset: fonts/SEGOEUI.TTF
+          weight: 400
+          style: normal
+        - asset: fonts/SEGOEUII.TTF
+          weight: 400
+          style: italic
+
+
+        - asset: fonts/SEGOEUIB.TTF
+          weight: 700
+          style: normal
+        - asset: fonts/SEGOEUIZ.TTF
+          weight: 700
+          style: italic
+
+        - asset: fonts/SEGUIBL.TTF
+          weight: 900
+          style: normal
+        - asset: fonts/SEGUIBLI.TTF
+          weight: 900
+          style: italic
