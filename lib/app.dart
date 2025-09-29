@@ -953,13 +953,14 @@ ThemeData _themeBuilder(BuildContext context) {
     colorScheme: metroTheme.colorScheme.copyWith(
       primary: metroColor,
       onSurface: useWhiteTheme ? blackColor : whiteColor,
+      //surface: useWhiteTheme ? whiteColor : blackColor,
     ),
     textTheme: metroTheme.textTheme.apply(
       fontFamily: widget.fontFamily ?? 'Segoe UI',
       package: widget.fontFamily != null ? null : 'metro_ui',
-      bodyColor: whiteColor,
-      displayColor: whiteColor,
-      decorationColor: whiteColor,
+      bodyColor: useWhiteTheme ? blackColor : whiteColor,
+      displayColor: useWhiteTheme ? blackColor : whiteColor,
+      decorationColor: useWhiteTheme ? blackColor : whiteColor,
     ),
     primaryColor: metroColor,
     scaffoldBackgroundColor: useWhiteTheme ? whiteColor : blackColor,

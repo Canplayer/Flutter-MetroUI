@@ -30,7 +30,7 @@ class MetroAnimatedPageState extends State<MetroAnimatedPage>
   late final AnimationController _translationController;
   late Animation<double> _rotationAnimation;
   late Animation<double> _translationAnimation;
-  MetroAnimationType _currentAnimationType = MetroAnimationType.didPush;
+  final MetroAnimationType _currentAnimationType = MetroAnimationType.didPush;
 
   @override
   void initState() {

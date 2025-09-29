@@ -4,12 +4,33 @@ import 'package:metro_ui/tile.dart';
 //Windows Phone 核心风格的按钮设计组件
 
 class MetroButton extends StatefulWidget {
-  //传入子组件
+  /// 传入子组件
   final Widget? child;
-  //按下后发生的事件
+  
+  /// 按下后发生的事件
   final Function()? onTap;
+  
+  /// 边框内边距
+  final EdgeInsetsGeometry padding;
+  
+  /// 边框颜色，为null时使用主题主色调
+  final Color? borderColor;
+  
+  /// 文字颜色，为null时使用主题主色调
+  final Color? textColor;
+  
+  /// 边框宽度
+  final double borderWidth;
 
-  const MetroButton({super.key, this.child, this.onTap});
+  const MetroButton({
+    super.key, 
+    this.child, 
+    this.onTap,
+    this.padding = const EdgeInsets.all(4.6),
+    this.borderColor,
+    this.textColor,
+    this.borderWidth = 2.5,
+  });
 
   @override
   MetroButtoState createState() => MetroButtoState();
@@ -18,43 +39,28 @@ class MetroButton extends StatefulWidget {
 class MetroButtoState extends State<MetroButton> {
   @override
   Widget build(BuildContext context) {
-    // return ConstrainedBox(
-    //   constraints: const BoxConstraints(
-    //     minWidth: 10,
-    //     minHeight: 10,
-    //   ),
-    //   child: Container(
-    //     decoration: BoxDecoration(
-    //       //color: Colors.red, // 填充颜色
-    //       border: Border.all(
-    //         color: Colors.white, // 边框颜色
-    //         width: 4.0, // 边框宽度
-    //       ),
-    //     ),
-    //     child: LayoutBuilder(
-    //       builder: (context, constraints) {
-    //         return Transform(
-    //           transform: Matrix4.identity(),
-    //           child: const Text("1231231235555555555555",
-    //               style: TextStyle(fontSize: 20.0, color: Colors.white)),
-    //         );
-    //       },
-    //     ),
-    //   ),
-    //   //onTap: widget.onTap,
-    // );
-
+    // 获取主题颜色作为默认值
+    final primaryColor = Theme.of(context).colorScheme.onSurface;
+    final effectiveBorderColor = widget.borderColor ?? primaryColor;
+    final effectiveTextColor = widget.textColor ?? primaryColor;
+    
     return Tile(
       onTap: widget.onTap,
       child: Container(
+        padding: widget.padding,
         decoration: BoxDecoration(
-          //color: Colors.red, // 填充颜色
           border: Border.all(
-            color: Colors.white, // 边框颜色
-            width: 4.0, // 边框宽度
+            color: effectiveBorderColor,
+            width: widget.borderWidth,
           ),
         ),
-        child: widget.child,
+        child: DefaultTextStyle(
+          style: TextStyle(
+            fontSize: 19.5,
+            color: effectiveTextColor,
+          ), 
+          child: widget.child!,
+        ),
       ),
     );
   }
