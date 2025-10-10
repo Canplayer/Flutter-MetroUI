@@ -227,3 +227,27 @@ class MetroAnimatedPageState extends State<MetroAnimatedPage>
     super.dispose();
   }
 }
+
+abstract final class MetroCurves {
+  /// 一个三点立方动画曲线，起始缓慢，随后加速，最后再次缓慢结束。
+  /// 这个曲线可以被看作是 [easeInOutCubic] 的更陡峭版本。
+  ///
+  /// 当选择一个初始和结束位置都在视口内的小部件动画曲线时，这个曲线会带来更强调的缓动效果。
+  ///
+  /// 与 [MetroCurves.easeInOutCubic] 相比，这个曲线略微更陡峭。
+  ///
+  /// {@animation 464 192 https://flutter.github.io/assets-for-api-docs/assets/animation/curve_ease_in_out_cubic_emphasized.mp4}
+  static const ThreePointCubic easeInOutCubicEmphasized = ThreePointCubic(
+    Offset(0.05, 0),
+    Offset(0.133333, 0.06),
+    Offset(0.166666, 0.4),
+    Offset(0.208333, 0.82),
+    Offset(0.25, 1),
+  );
+
+  /// 一个用于panorama页面进入时候的旋转的动画曲线
+  static const Cubic panoramaRotateIn = Cubic(0.0, 0.0, 0.31, 0.91);
+
+  /// 一个用于panorama页面进入时候的平移的动画曲线
+  static const Cubic panoramaTranslateIn = Cubic(0.167, 1.1, 0.667, 0.98);
+}
