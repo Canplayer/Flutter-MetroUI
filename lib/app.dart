@@ -225,6 +225,7 @@ class MetroApp extends StatefulWidget {
     this.restorationScopeId,
     this.scrollBehavior,
     this.themeAnimationStyle,
+    this.useWVGAMode = false,
   })  : routeInformationProvider = null,
         routeInformationParser = null,
         routerDelegate = null,
@@ -281,6 +282,7 @@ class MetroApp extends StatefulWidget {
     this.restorationScopeId,
     this.scrollBehavior,
     this.themeAnimationStyle,
+    this.useWVGAMode = false,
   })  : assert(routerDelegate != null || routerConfig != null),
         navigatorObservers = null,
         navigatorKey = null,
@@ -729,6 +731,14 @@ class MetroApp extends StatefulWidget {
   /// {@end-tool}
   final AnimationStyle? themeAnimationStyle;
 
+  /// 启用 WVGA 模式（480px 设计稿缩放）
+  ///
+  /// 当设置为 true 时，UI 将按照 480px 宽度的设计稿进行缩放，
+  /// 以适配不同尺寸的设备屏幕。这对于还原 Windows Phone 原版体验很有帮助。
+  ///
+  /// 默认为 false。
+  final bool useWVGAMode;
+
   @override
   State<MetroApp> createState() => _MetroAppState();
 
@@ -1019,6 +1029,67 @@ ThemeData _themeBuilder(BuildContext context) {
     );
   }
 
+  /// 构建 WVGA 模式的 DPI 转换层
+  ///
+  /// 使用 FractionallySizedBox + Transform.scale 实现全局 UI 缩放，
+  /// 并修正 MediaQuery 中的系统边距参数（如软键盘高度）。
+  Widget _buildMetroUIDPIConversion(BuildContext context, Widget child) {
+    // 如果未启用 WVGA 模式，直接返回原始 widget
+    if (!widget.useWVGAMode) {
+      return child;
+    }
+
+    // WVGA 标准宽度为 480px
+    const double targetDesignWidth = 480.0;
+
+    final originalData = MediaQuery.of(context);
+    final double deviceWidth = originalData.size.width;
+
+    if (deviceWidth == 0) {
+      return child;
+    }
+
+    // 计算缩放因子 (SF)
+    // SF = 实际设备逻辑宽度 / 目标设计宽度
+    // 例如: 320 / 480 = 0.6667 (内容需要缩小到 0.6667 倍)
+    final double scaleFactor = deviceWidth / targetDesignWidth;
+
+    // 计算 FractionallySizedBox 的因子 (layoutFactor)
+    // layoutFactor = 1 / SF = W_target / W_device
+    // 例如: 480 / 320 = 1.5 (内容将在 1.5 倍于屏幕宽度的空间内布局)
+    final double layoutFactor = 1.0 / scaleFactor;
+
+    // --- 修正 MediaQueryData ---
+    // 将系统报告的边距（如软键盘高度）按比例缩放
+    // 缩放后的值 = 原始值 * scaleFactor
+    final double inverseLayoutFactor = scaleFactor;
+
+    final MediaQueryData fixedData = originalData.copyWith(
+      // 修正 viewInsets (软键盘遮挡)
+      viewInsets: originalData.viewInsets * inverseLayoutFactor,
+      // 修正 viewPadding (系统刘海/手势条)
+      viewPadding: originalData.viewPadding * inverseLayoutFactor,
+      // 修正 padding (物理屏幕边距)
+      padding: originalData.padding * inverseLayoutFactor,
+    );
+
+    return MediaQuery(
+      data: fixedData, // 使用修正后的 MediaQueryData
+      child: FractionallySizedBox(
+        // 放大可用空间，让 480 宽度的内容可以在其中布局
+        widthFactor: layoutFactor,
+        heightFactor: layoutFactor,
+        alignment: Alignment.topLeft, // 确保内容从左上角开始布局
+        child: Transform.scale(
+          // 缩小内容，将其放回屏幕实际可见范围
+          scale: scaleFactor,
+          alignment: Alignment.topLeft, // 确保从左上角开始缩放
+          child: child,
+        ),
+      ),
+    );
+  }
+
   Widget _buildWidgetApp(BuildContext context) {
     // color 属性总是从浅色主题中获取，即使启用了深色模式。
     // 这样做是为了简化切换主题的技术细节，并且被认为是可接受的，
@@ -1091,7 +1162,14 @@ ThemeData _themeBuilder(BuildContext context) {
 
   @override
   Widget build(BuildContext context) {
+    // 1. 构建 WidgetsApp (获取基础 Context 和原始 MediaQueryData)
     Widget result = _buildWidgetApp(context);
+
+    // 2. 将 WidgetsApp 的结果包裹在 DPI 转换组件中
+    // 这一步实现了全局缩放和软键盘/系统边距的修正
+    result = _buildMetroUIDPIConversion(context, result);
+
+    // 3. 后续的 Focus、GridPaper 和 ScrollConfiguration 等全局包裹
     result = Focus(
       canRequestFocus: false,
       onKeyEvent: (FocusNode node, KeyEvent event) {
