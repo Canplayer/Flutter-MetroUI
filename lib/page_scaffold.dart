@@ -743,6 +743,11 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
     await _metroAnimatedPageKey.currentState?.didPush();
   }
 
+  /// 没有动画的时候的播放内容
+    Future<void> playNonePushAnimation() async {
+    await _metroAnimatedPageKey.currentState?.didFinish();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -751,6 +756,7 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
     //下一帧
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.onDidPush != null) {
+        playNonePushAnimation();
         widget.onDidPush?.call();
       } else {
         // 播放默认的进入动画

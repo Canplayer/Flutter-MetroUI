@@ -47,6 +47,7 @@ class MetroButtoState extends State<MetroButton> {
     return Tile(
       onTap: widget.onTap,
       child: Container(
+        margin: const EdgeInsets.all(8.0),
         padding: widget.padding,
         decoration: BoxDecoration(
           border: Border.all(

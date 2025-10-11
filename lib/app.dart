@@ -1040,7 +1040,7 @@ ThemeData _themeBuilder(BuildContext context) {
     }
 
     // WVGA 标准宽度为 480px
-    const double targetDesignWidth = 480.0;
+    const double targetDesignWidth = 480.0 * 0.8;
 
     final originalData = MediaQuery.of(context);
     final double deviceWidth = originalData.size.width;
