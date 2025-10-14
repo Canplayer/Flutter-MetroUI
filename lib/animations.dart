@@ -80,8 +80,8 @@ class MetroAnimatedPageState extends State<MetroAnimatedPage>
       translationEnd: 0,
       rotationDuration: const Duration(milliseconds: 350),
       translationDuration: const Duration(milliseconds: 350),
-      rotationCurve: MetroCurves.normalPageTranslateIn,
-      translationCurve: MetroCurves.normalPageTranslateIn,
+      rotationCurve: MetroCurves.normalPageRotateIn,
+      translationCurve: MetroCurves.normalPageRotateIn,
     );
     _rotationController.reset();
     _translationController.reset();
@@ -134,8 +134,8 @@ class MetroAnimatedPageState extends State<MetroAnimatedPage>
       translationEnd: 0,
       rotationDuration: const Duration(milliseconds: 250),
       translationDuration: const Duration(milliseconds: 250),
-      rotationCurve: MetroCurves.normalPageTranslateIn,
-      translationCurve: MetroCurves.normalPageTranslateIn
+      rotationCurve: MetroCurves.normalPageRotateIn,
+      translationCurve: MetroCurves.normalPageRotateIn
     );
     _rotationController.reset();
     _translationController.reset();
@@ -275,12 +275,12 @@ abstract final class MetroCurves {
   /// 一个用于panorama页面进入时候的旋转的动画曲线
   static const Cubic panoramaRotateIn = Cubic(0.0, 0.0, 0.31, 0.91);
 
-  /// 一个用于panorama页面进入时候的平移的动画曲线
+  /// 一个用于panorama页面进入时候的内容物平移的动画曲线
   static const Cubic panoramaTranslateIn = Cubic(0.197, 0.893, 0.41, 0.99);
 
   /// 普通页面退出旋转的动画曲线
   static const Cubic normalPageRotateOut = Cubic(0.6, 0.1, 0.81, 0.0);
 
-  /// 普通页面进入平移的动画曲线
-  static const Cubic normalPageTranslateIn = Cubic(0.2, 0.6, 0.21, 1);
+  /// 普通页面进入旋转的动画曲线
+  static const Cubic normalPageRotateIn = Cubic(0.2, 0.6, 0.21, 1);
 }
