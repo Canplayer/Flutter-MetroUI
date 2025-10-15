@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 /// Metro风格页面动画状态枚举
@@ -72,7 +71,6 @@ class MetroAnimatedPageState extends State<MetroAnimatedPage>
 
   /// didPush动画：从-90度旋转到0度（页面进入）
   Future<void> didPush() async {
-    print('didPush animation start');
     _setupAnimation(
       rotationBegin: _toRadians(-63.5),
       rotationEnd: _toRadians(0),
@@ -202,7 +200,6 @@ class MetroAnimatedPageState extends State<MetroAnimatedPage>
   }
 
   Future<void> didFinish() async {
-    print('reset Animate Finish');
     _setupAnimation(
       rotationBegin: _toRadians(0),
       rotationEnd: _toRadians(0),

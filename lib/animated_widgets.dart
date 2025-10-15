@@ -41,9 +41,9 @@ class _LeftEdgeRotateAnimationState extends State<LeftEdgeRotateAnimation> {
   void didUpdateWidget(LeftEdgeRotateAnimation oldWidget) {
     super.didUpdateWidget(oldWidget);
     // 只在 rotation 变化时重新计算位置
-    if (oldWidget.rotation == widget.rotation) {
+    //if (oldWidget.rotation == widget.rotation) {
       _calculateEdgeOffset();
-    }
+    //}
   }
 
   /// 计算组件相对于屏幕左侧的偏移量

@@ -294,12 +294,14 @@ class _BodyBoxConstraints extends BoxConstraints {
 class _BodyBuilder extends StatelessWidget {
   const _BodyBuilder({
     required this.body,
+    this.stackPanel,
     this.onWillPop,
     this.onDidPop,
     required this.animatedPageKey,
   });
 
   final Widget body;
+  final Widget? stackPanel;
   final Future<bool> Function()? onWillPop;
   final Future<void> Function()? onDidPop;
   final GlobalKey<MetroAnimatedPageState> animatedPageKey;
@@ -320,6 +322,18 @@ class _BodyBuilder extends StatelessWidget {
             metrics.padding.bottom, bodyConstraints.bottomWidgetsHeight);
 
         final double top = metrics.padding.top;
+
+        // 构建实际内容：如果有 stackPanel，则使用 Column 布局
+        Widget content = body;
+        if (stackPanel != null) {
+          content = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              stackPanel!,
+              Expanded(child: body),
+            ],
+          );
+        }
 
         return MediaQuery(
           data: metrics.copyWith(
@@ -361,7 +375,7 @@ class _BodyBuilder extends StatelessWidget {
               },
               child: MetroAnimatedPage(
                 key: animatedPageKey,
-                child: body,
+                child: content,
               ),
             ),
           ),
@@ -552,6 +566,7 @@ class MetroPageScaffold extends StatefulWidget {
   const MetroPageScaffold(
       {super.key,
       this.body,
+      this.stackPanel,
       this.backgroundColor,
       this.resizeToAvoidBottomInset,
       this.primary = true,
@@ -575,6 +590,11 @@ class MetroPageScaffold extends StatefulWidget {
   /// 如果你有一列小部件，通常应该适合屏幕，但可能会溢出并在这种情况下需要滚动，
   /// 请考虑使用 [ListView] 作为 Scaffold 的主体。这也是你的主体是可滚动列表的一个好选择。
   final Widget? body;
+
+  /// 显示在页面顶部的 StackPanel 组件。
+  /// 
+  /// 如果提供，将显示在 [body] 上方。通常用于显示页面标题和主要内容区域。
+  final Widget? stackPanel;
 
   /// [Material] 小部件的颜色，它在整个 Scaffold 下方。
   ///
@@ -877,6 +897,7 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
           ? null
           : _BodyBuilder(
               body: KeyedSubtree(key: _bodyKey, child: widget.body!),
+              stackPanel: widget.stackPanel,
               onWillPop: widget.onWillPop,
               onDidPop: widget.onDidPop,
               animatedPageKey: _metroAnimatedPageKey,
