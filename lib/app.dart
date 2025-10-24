@@ -8,6 +8,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:metro_ui/metro_scroll_behavior.dart';
 import 'package:metro_ui/page_scaffold.dart';
 import './route_aware_provider.dart';
 
@@ -223,7 +224,7 @@ class MetroApp extends StatefulWidget {
     this.shortcuts,
     this.actions,
     this.restorationScopeId,
-    this.scrollBehavior,
+    this.scrollBehavior = const MetroScrollBehavior(),
     this.themeAnimationStyle,
     this.useWVGAMode = false,
   })  : routeInformationProvider = null,
