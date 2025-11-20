@@ -37,6 +37,8 @@ class MetroButton extends StatefulWidget {
 }
 
 class MetroButtoState extends State<MetroButton> {
+  bool _isPressed = false;
+
   @override
   Widget build(BuildContext context) {
     // 获取主题颜色作为默认值
@@ -44,23 +46,43 @@ class MetroButtoState extends State<MetroButton> {
     final effectiveBorderColor = widget.borderColor ?? primaryColor;
     final effectiveTextColor = widget.textColor ?? primaryColor;
     
-    return Tile(
-      onTap: widget.onTap,
-      child: Container(
-        margin: const EdgeInsets.all(8.0),
-        padding: widget.padding,
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: effectiveBorderColor,
-            width: widget.borderWidth,
+    return GestureDetector(
+      onTapDown: (_) {
+        setState(() {
+          _isPressed = true;
+        });
+      },
+      onTapUp: (_) {
+        setState(() {
+          _isPressed = false;
+        });
+      },
+      onTapCancel: () {
+        setState(() {
+          _isPressed = false;
+        });
+      },
+      child: Tile(
+        onTap: widget.onTap,
+        child: Container(
+          margin: const EdgeInsets.all(8.0),
+          padding: widget.padding,
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: effectiveBorderColor,
+              width: widget.borderWidth,
+            ),
           ),
-        ),
-        child: DefaultTextStyle(
-          style: TextStyle(
-            fontSize: 19.5,
-            color: effectiveTextColor,
-          ), 
-          child: widget.child!,
+          //居中
+          //alignment:Alignment.center,
+          
+          child: DefaultTextStyle(
+            style: TextStyle(
+              fontSize: 19.5,
+              color: effectiveTextColor,
+            ), 
+            child: widget.child!,
+          ),
         ),
       ),
     );

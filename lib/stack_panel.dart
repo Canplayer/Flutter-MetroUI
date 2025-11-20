@@ -37,6 +37,7 @@ class StackPanel extends StatelessWidget {
           child: DefaultTextStyle(
             style: TextStyle(
               fontSize: 18,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
               fontWeight: FontWeight.normal,
               fontFamily: Theme.of(context).textTheme.bodyLarge?.fontFamily,
             ),
@@ -54,6 +55,7 @@ class StackPanel extends StatelessWidget {
               height: 1,
               fontWeight: FontWeight.w300,
               overflow: TextOverflow.visible,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
               fontFamily: Theme.of(context).textTheme.bodyLarge?.fontFamily,
             ),
             child: bottom,
