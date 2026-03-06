@@ -70,7 +70,7 @@ class _BodyBuilder extends StatelessWidget {
             if (shouldPop) {
               // 如果允许退出，则播放退出动画
               if (onDidPop != null) {
-                print('开始退出动画');
+                debugPrint('开始退出动画');
                 await onDidPop!();
               } else {
                 await animatedPageKey.currentState?.didPop();
@@ -240,6 +240,7 @@ class MetroPageScaffold extends StatefulWidget {
 class MetroPageScaffoldState extends State<MetroPageScaffold>
     with TickerProviderStateMixin, RouteAware {
   final GlobalKey _bodyKey = GlobalKey();
+  bool _hasPanorama = false;
 
   // 用于控制 MetroAnimatedPage 的动画
   final GlobalKey<MetroAnimatedPageState> _metroAnimatedPageKey =
@@ -338,13 +339,23 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
 
     Widget? body = widget.body == null
         ? null
-        : _BodyBuilder(
+        : NotificationListener<MetroPanoramaDetectNotification>(
+              onNotification: (notification) {
+                // 如果发现内部含有一个 Panorama！我们取消默认动画
+                if (!_hasPanorama) {
+                   _hasPanorama = true;
+                   // 你可以在这里静默停止动画，或者将其重置
+                   _metroAnimatedPageKey.currentState?.didFinish(); // 停止推场动画
+                }
+                return true; // 拦截阻止冒泡
+              },
+              child: _BodyBuilder(
             body: KeyedSubtree(key: _bodyKey, child: widget.body!),
             stackPanel: widget.stackPanel,
             onWillPop: widget.onWillPop,
             onDidPop: widget.onDidPop,
             animatedPageKey: _metroAnimatedPageKey,
-          );
+          ),);
 
     if (body != null) {
       MediaQueryData data = MediaQuery.of(context).removePadding(
@@ -373,4 +384,10 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
       ),
     );
   }
+}
+
+// 用于特殊字组件通知父组件无需播放动画，直接完成页面切换
+// 例如panorama页面自带了自己的动画，所以在进入panorama页面时不需要MetroPageScaffold再播放一段动画了
+class MetroPanoramaDetectNotification extends Notification {
+  const MetroPanoramaDetectNotification();
 }

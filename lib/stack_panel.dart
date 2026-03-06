@@ -31,7 +31,7 @@ class StackPanel extends StatelessWidget {
         Container(
           height: 25,
         ),
-        SizedBox(height: 13),
+        const SizedBox(height: 13),
         Transform.translate(
           offset: const Offset(18, 0),
           child: DefaultTextStyle(
@@ -44,7 +44,7 @@ class StackPanel extends StatelessWidget {
             child: top,
           ),
         ),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         Transform.translate(
           offset: const Offset(15, 0),
           child: DefaultTextStyle(

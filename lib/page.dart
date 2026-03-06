@@ -166,7 +166,7 @@ class _PageBasedMetroPageRoute<T> extends PageRoute<T>
   @override
   bool didPop(T? result) {
     // 在这里插入需要的逻辑
-    print('Pop event from _PageBasedMetroPageRoute');
+    debugPrint('Pop event from _PageBasedMetroPageRoute');
     return super.didPop(result);
   }
 

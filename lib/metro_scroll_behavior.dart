@@ -47,7 +47,7 @@ class MetroScrollBehavior extends ScrollBehavior {
   ) {
     return RawScrollbar(
       controller: details.controller,
-      thumbColor: Colors.grey.withOpacity(0.5),
+      thumbColor: Colors.grey.withAlpha(150), // 半透明灰色滚动条
       thickness: 2.0,
       radius: const Radius.circular(0), // 矩形滚动条
       padding: const EdgeInsets.all(1.0), // 距离边缘1单位
@@ -65,7 +65,7 @@ class MetroScrollBehavior extends ScrollBehavior {
     // 从 details.clipBehavior 获取滚动组件设置的裁切行为
     return MetroOverscrollIndicator(
       axisDirection: details.direction,
-      clipBehavior: details.clipBehavior ?? Clip.hardEdge, // 使用滚动组件的 clipBehavior
+      clipBehavior: details.decorationClipBehavior ?? Clip.hardEdge, // 使用滚动组件的 clipBehavior
       child: child,
     );
   }
@@ -96,7 +96,7 @@ class MetroBouncingScrollPhysics extends BouncingScrollPhysics {
         (position.minScrollExtent - position.pixels).clamp(0.0, double.infinity);
     final double overscrollPastEnd =
         (position.pixels - position.maxScrollExtent).clamp(0.0, double.infinity);
-    final double maxOverscroll = 100.0;
+    const double maxOverscroll = 100.0;
 
     // 检查是否超出顶部边界（向下拉，超出顶部）
     if (overscrollPastStart > 0) {
