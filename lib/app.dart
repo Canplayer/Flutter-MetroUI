@@ -178,7 +178,6 @@ class MetroApp extends StatefulWidget {
   const MetroApp({
     super.key,
     this.navigatorKey,
-    this.metroScaffoldMessengerKey,
     this.home,
     Map<String, WidgetBuilder> this.routes = const <String, WidgetBuilder>{},
     this.initialRoute,
@@ -238,7 +237,6 @@ class MetroApp extends StatefulWidget {
   /// {@macro flutter.widgets.WidgetsApp.router}
   const MetroApp.router({
     super.key,
-    this.metroScaffoldMessengerKey,
     this.routeInformationProvider,
     this.routeInformationParser,
     this.routerDelegate,
@@ -296,13 +294,6 @@ class MetroApp extends StatefulWidget {
 
   /// {@macro flutter.widgets.widgetsApp.navigatorKey}
   final GlobalKey<NavigatorState>? navigatorKey;
-
-  /// 一个用于构建 [PageMessenger] 的键。
-  ///
-
-  /// 如果指定了 [metroScaffoldMessengerKey]，则可以直接操作 [PageMessenger]，
-  /// 而无需通过 [BuildContext] 从 [PageMessenger.of] 获取：从 [metroScaffoldMessengerKey] 使用 [GlobalKey.currentState] getter。
-  final GlobalKey<MetroPageMessengerState>? metroScaffoldMessengerKey;
 
   /// {@macro flutter.widgets.widgetsApp.home}
   final Widget? home;
@@ -690,16 +681,13 @@ class MetroApp extends StatefulWidget {
   /// {@macro flutter.widgets.widgetsApp.restorationScopeId}
   final String? restorationScopeId;
 
-  /// {@template flutter.material.materialApp.scrollBehavior}
   /// 应用程序的默认 [ScrollBehavior]。
   ///
   /// [ScrollBehavior] 描述了 [Scrollable] 小部件的行为。提供
   /// 一个 [ScrollBehavior] 可以设置整个应用的默认 [ScrollPhysics]，
-  /// 并管理像 [Scrollbar] 和 [GlowingOverscrollIndicator] 这样的
-  /// [Scrollable] 装饰。
-  /// {@endtemplate}
+  /// 并管理像 [Scrollbar] 这样的 [Scrollable] 装饰。
   ///
-  /// 当为 null 时，默认为 [MaterialScrollBehavior]。
+  /// 默认使用 [MetroScrollBehavior]。
   ///
   /// 另请参见：
   ///
@@ -751,96 +739,6 @@ class MetroApp extends StatefulWidget {
       createRectTween: (Rect? begin, Rect? end) {
         return MaterialRectArcTween(begin: begin, end: end);
       },
-    );
-  }
-}
-
-/// 描述 [MetroApp] 中 [Scrollable] 小部件的行为。
-///
-/// {@macro flutter.widgets.scrollBehavior}
-///
-/// 设置 [MaterialScrollBehavior] 将在
-/// [TargetPlatform.android] 和 [TargetPlatform.fuchsia] 上执行时，向 [Scrollable] 的后代应用 [GlowingOverscrollIndicator]。
-///
-/// 在使用桌面平台时，如果 [Scrollable] 小部件在 [Axis.vertical] 上滚动，则会应用 [Scrollbar]。
-///
-/// 如果滚动方向是 [Axis.horizontal]，滚动视图的可发现性较低，因此在这些情况下考虑添加滚动条，可以直接添加或通过 [buildScrollbar] 方法添加。
-///
-/// [ThemeData.useMaterial3] 指定在 [TargetPlatform.android] 上使用的
-/// overscroll indicator，默认为 true，导致使用 [StretchingOverscrollIndicator]。将
-/// [ThemeData.useMaterial3] 设置为 false 则改为使用 [GlowingOverscrollIndicator]。
-///
-/// 另请参见：
-///
-///  * [ScrollBehavior]，此类扩展的默认滚动行为。
-class MaterialScrollBehavior extends ScrollBehavior {
-  /// 创建一个 MaterialScrollBehavior，该行为根据当前平台和提供的 [ScrollableDetails] 使用 [StretchingOverscrollIndicator] 和 [Scrollbar] 装饰 [Scrollable]。
-  ///
-  /// [ThemeData.useMaterial3] 指定在 [TargetPlatform.android] 上使用的 overscroll 指示器，默认为 true，这将导致使用 [StretchingOverscrollIndicator]。将 [ThemeData.useMaterial3] 设置为 false 将使用 [GlowingOverscrollIndicator]。
-  const MaterialScrollBehavior();
-
-  @override
-  TargetPlatform getPlatform(BuildContext context) =>
-      Theme.of(context).platform;
-
-  @override
-  Widget buildScrollbar(
-      BuildContext context, Widget child, ScrollableDetails details) {
-    // When modifying this function, consider modifying the implementation in
-    // the base class ScrollBehavior as well.
-    switch (axisDirectionToAxis(details.direction)) {
-      case Axis.horizontal:
-        return child;
-      case Axis.vertical:
-        switch (getPlatform(context)) {
-          case TargetPlatform.linux:
-          case TargetPlatform.macOS:
-          case TargetPlatform.windows:
-            assert(details.controller != null);
-            return Scrollbar(
-              controller: details.controller,
-              child: child,
-            );
-          case TargetPlatform.android:
-          case TargetPlatform.fuchsia:
-          case TargetPlatform.iOS:
-            return child;
-        }
-    }
-  }
-
-  @override
-  Widget buildOverscrollIndicator(
-      BuildContext context, Widget child, ScrollableDetails details) {
-    // When modifying this function, consider modifying the implementation in
-    // the base class ScrollBehavior as well.
-    final AndroidOverscrollIndicator indicator = Theme.of(context).useMaterial3
-        ? AndroidOverscrollIndicator.stretch
-        : AndroidOverscrollIndicator.glow;
-    switch (getPlatform(context)) {
-      case TargetPlatform.iOS:
-      case TargetPlatform.linux:
-      case TargetPlatform.macOS:
-      case TargetPlatform.windows:
-        return child;
-      case TargetPlatform.android:
-        switch (indicator) {
-          case AndroidOverscrollIndicator.stretch:
-            return StretchingOverscrollIndicator(
-              axisDirection: details.direction,
-              clipBehavior: details.decorationClipBehavior ?? Clip.hardEdge,
-              child: child,
-            );
-          case AndroidOverscrollIndicator.glow:
-            break;
-        }
-      case TargetPlatform.fuchsia:
-        break;
-    }
-    return GlowingOverscrollIndicator(
-      axisDirection: details.direction,
-      color: Theme.of(context).colorScheme.secondary,
-      child: child,
     );
   }
 }
@@ -983,7 +881,7 @@ ThemeData _themeBuilder(BuildContext context) {
     final ThemeData theme = _themeBuilder(context);
     final Color effectiveSelectionColor =
         theme.textSelectionTheme.selectionColor ??
-            theme.colorScheme.primary.withOpacity(0.40);
+            theme.colorScheme.primary.withValues(alpha: 0.40);
     final Color effectiveCursorColor =
         theme.textSelectionTheme.cursorColor ?? theme.colorScheme.primary;
 
@@ -1020,13 +918,10 @@ ThemeData _themeBuilder(BuildContext context) {
       );
     }
 
-    return MetroPageMessenger(
-      key: widget.metroScaffoldMessengerKey,
-      child: DefaultSelectionStyle(
-        selectionColor: effectiveSelectionColor,
-        cursorColor: effectiveCursorColor,
-        child: childWidget,
-      ),
+    return DefaultSelectionStyle(
+      selectionColor: effectiveSelectionColor,
+      cursorColor: effectiveCursorColor,
+      child: childWidget,
     );
   }
 
@@ -1133,7 +1028,13 @@ ThemeData _themeBuilder(BuildContext context) {
       navigatorKey: widget.navigatorKey,
       navigatorObservers: [routeObserver, ...widget.navigatorObservers!],
       pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) {
-        return MaterialPageRoute<T>(settings: settings, builder: builder);
+        return PageRouteBuilder<T>(
+          settings: settings,
+          pageBuilder: (BuildContext context, Animation<double> animation,
+              Animation<double> secondaryAnimation) {
+            return builder(context);
+          },
+        );
       },
       home: widget.home,
       routes: widget.routes!,
@@ -1197,7 +1098,7 @@ ThemeData _themeBuilder(BuildContext context) {
     }());
 
     return ScrollConfiguration(
-      behavior: widget.scrollBehavior ?? const MaterialScrollBehavior(),
+      behavior: widget.scrollBehavior ?? const MetroScrollBehavior(),
       child: HeroControllerScope(
         controller: _heroController,
         child: result,

@@ -50,7 +50,7 @@ class MetroAnimatedPageState extends State<MetroAnimatedPage>
       duration: const Duration(milliseconds: 0),
     );
     // 初始化为静止状态，防止LateInitializationError
-    _rotationAnimation = Tween<double>(begin: _toRadians(-180), end: _toRadians(-90))
+    _rotationAnimation = Tween<double>(begin: _toRadians(-180), end: _toRadians(-180))
         .animate(_rotationController);
     _translationAnimation =
         Tween<double>(begin: -100, end: -100).animate(_translationController);
@@ -274,13 +274,13 @@ abstract final class MetroCurves {
   static final KeyframeInterpolatedCurve panoramaRotateIn = KeyframeInterpolatedCurve(
     KeyframeBuilder.normalize(
       points: const [
-        Offset(1, 95), Offset(2, 86.4), Offset(3, 79.2), Offset(4, 72.5),
-        Offset(5, 66.2), Offset(6, 60.6), Offset(7, 55.2), Offset(8, 50.3),
-        Offset(9, 45.7), Offset(10, 41.5), Offset(11, 37.5), Offset(12, 33.8),
-        Offset(13, 30.4), Offset(14, 27.2), Offset(15, 24.3), Offset(16, 21.8),
-        Offset(17, 19.2), Offset(18, 17), Offset(19, 14.8), Offset(20, 12.8),
-        Offset(22, 9.2), Offset(23, 7.7), Offset(24, 6.3), Offset(25, 4.8),
-        Offset(26, 3.6), Offset(27, 1.3), Offset(28, 0.3), Offset(29, 0), Offset(30, 0),
+        Offset(0, 95), Offset(1, 86.4), Offset(2, 79.2), Offset(3, 72.5),
+        Offset(4, 66.2), Offset(5, 60.6), Offset(6, 55.2), Offset(7, 50.3),
+        Offset(8, 45.7), Offset(9, 41.5), Offset(10, 37.5), Offset(11, 33.8),
+        Offset(12, 30.4), Offset(13, 27.2), Offset(14, 24.3), Offset(15, 21.8),
+        Offset(16, 19.2), Offset(17, 17), Offset(18, 14.8), Offset(19, 12.8),
+        Offset(21, 9.2), Offset(22, 7.7), Offset(23, 6.3), Offset(24, 4.8),
+        Offset(25, 3.6), Offset(26, 1.3), Offset(27, 0.3), Offset(28, 0), Offset(29, 0),
       ],
       maxTime: 30,
       maxValue: 95,
@@ -293,15 +293,15 @@ abstract final class MetroCurves {
   static final KeyframeInterpolatedCurve panoramaTranslateIn = KeyframeInterpolatedCurve(
     KeyframeBuilder.normalize(
       points: const [
-        Offset(1, 1000), Offset(2, 923.3), Offset(3, 859.7), Offset(4, 790.2),
-        Offset(5, 728.7), Offset(6, 677), Offset(7, 623.1), Offset(8, 575.6),
-        Offset(9, 532.6), Offset(10, 492.2), Offset(11, 452.8), Offset(12, 417.2),
-        Offset(13,385.9), Offset(14, 354.7), Offset(15, 327.7), Offset(16, 302.9),
-        Offset(17, 279.2), Offset(18, 257.3), Offset(19, 237.2), Offset(21, 200.8),
-        Offset(22, 185.6), Offset(24, 157.6), Offset(25, 144.5), Offset(26, 133.7),
-        Offset(27, 112.1), Offset(28, 103.5), Offset(29, 94.9), Offset(30, 87.3),
-        Offset(32, 73.3), Offset(33, 66.8), Offset(34, 61.6), Offset(37, 47.6),
-        Offset(40, 35.6), Offset(46, 19.4), Offset(51, 10.8), Offset(56, 4.3), Offset(60, 0)
+        Offset(0, 1000), Offset(1, 923.3), Offset(2, 859.7), Offset(3, 790.2),
+        Offset(4, 728.7), Offset(5, 677), Offset(6, 623.1), Offset(7, 575.6),
+        Offset(8, 532.6), Offset(9, 492.2), Offset(10, 452.8), Offset(11, 417.2),
+        Offset(12,385.9), Offset(13, 354.7), Offset(14, 327.7), Offset(15, 302.9),
+        Offset(16, 279.2), Offset(17, 257.3), Offset(18, 237.2), Offset(20, 200.8),
+        Offset(21, 185.6), Offset(23, 157.6), Offset(24, 144.5), Offset(25, 133.7),
+        Offset(26, 112.1), Offset(27, 103.5), Offset(28, 94.9), Offset(29, 87.3),
+        Offset(31, 73.3), Offset(32, 66.8), Offset(33, 61.6), Offset(36, 47.6),
+        Offset(39, 35.6), Offset(45, 19.4), Offset(50, 10.8), Offset(55, 4.3), Offset(59, 0)
       ],
       maxTime: 60,
       maxValue: 1000,
