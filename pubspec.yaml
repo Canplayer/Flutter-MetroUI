@@ -56,7 +56,7 @@ flutter:
   fonts:
     - family: Segoe UI
       fonts:
-
+          # 实际上SEGOEUISL和SEGUISLI的设定字重是350，但Flutter不支持350，所以只能设定为300
         - asset: fonts/SEGOEUISL.TTF
           weight: 300
           style: normal
@@ -84,4 +84,14 @@ flutter:
           style: normal
         - asset: fonts/SEGUIBLI.TTF
           weight: 900
+          style: italic
+
+    #因Flutter不支持350字重，所以只能拆分字体家族
+    - family: Segoe UI Light
+      fonts:
+        - asset: fonts/SEGOEUIL.TTF
+          weight: 300
+          style: normal
+        - asset: fonts/SEGUILI.TTF
+          weight: 300
           style: italic

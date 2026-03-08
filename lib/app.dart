@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:metro_ui/metro_scroll_behavior.dart';
 import 'package:metro_ui/page_scaffold.dart';
 import './route_aware_provider.dart';
+import './metro_theme_extensions.dart';
 
 // 示例可以假设：
 // typedef GlobalWidgetsLocalizations = DefaultWidgetsLocalizations;
@@ -830,6 +831,23 @@ ThemeData _themeBuilder(BuildContext context) {
       );
     }
 
+    // 注入 MetroTitleTextTheme 扩展
+    final Color textColor = theme.textTheme.bodyMedium?.color ?? Colors.black;
+    theme = theme.copyWith(
+      extensions: [
+        ...theme.extensions.values,
+        MetroTitleTextTheme(
+          titleTextStyle: TextStyle(
+            fontFamily: 'Segoe UI Light',
+            package: 'metro_ui',
+            fontSize: 135,
+            letterSpacing: -4,
+            color: textColor,
+          ),
+        ),
+      ],
+    );
+
     return theme;
   }
 
@@ -873,6 +891,17 @@ ThemeData _themeBuilder(BuildContext context) {
     ),
     primaryColor: metroColor,
     scaffoldBackgroundColor: useWhiteTheme ? whiteColor : blackColor,
+    extensions: <ThemeExtension<dynamic>>[
+      MetroTitleTextTheme(
+        titleTextStyle: TextStyle(
+            fontFamily: 'Segoe UI Light',
+            package: 'metro_ui',
+            fontSize: 135,
+            letterSpacing: -4,
+          color: useWhiteTheme ? blackColor : whiteColor,
+        ),
+      ),
+    ],
   );
 }
 
