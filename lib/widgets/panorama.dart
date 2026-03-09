@@ -163,7 +163,7 @@ class PanoramaConfig {
     this.bgDragSpeedDivisor = 0.333,
     this.subtitleForwardSpeed = 0.8,
     this.subtitleBackwardSpeed = 0.5,
-    this.subtitleInterruptSpeed = 0.1,
+    this.subtitleInterruptSpeed = 0.7,
     this.subtitleFontSize = 66.0 * 0.8,
   });
 }
@@ -495,6 +495,11 @@ class _MetroPanoramaState extends State<MetroPanorama>
   double _releaseB = 0.0;
   Map<int, double> _releaseItemDx = {};
 
+  /// 小标题归位补间动画控制器。
+  late AnimationController _subtitleSnapController;
+  Map<int, double> _subtitleSnapFrom = {};
+  Map<int, double> _subtitleSnapTo = {};
+
   double get _titleContainerWidth => widget.config.titleContainerWidth;
   double get _bgPatternWidth => widget.config.bgPatternWidth;
   double _titleSpacing = 1500.0;
@@ -613,6 +618,12 @@ class _MetroPanoramaState extends State<MetroPanorama>
 
     _scrollController = ScrollController(initialScrollOffset: 0.0);
 
+    _subtitleSnapController = AnimationController(
+      vsync: this,
+      duration: widget.config.snapDuration,
+    );
+    _subtitleSnapController.addListener(_onSubtitleSnapTick);
+
     _rotationController = AnimationController(
       vsync: this,
       duration: widget.config.rotationDuration,
@@ -668,9 +679,24 @@ class _MetroPanoramaState extends State<MetroPanorama>
     }
   }
 
+  void _onSubtitleSnapTick() {
+    final double raw = _subtitleSnapController.value;
+    final double t = widget.config.snapCurve != null
+        ? widget.config.snapCurve!.transform(raw)
+        : raw;
+    Map<int, double> newMap = {};
+    for (int i = 0; i < widget.items.length; i++) {
+      double from = _subtitleSnapFrom[i] ?? 0.0;
+      double to = _subtitleSnapTo[i] ?? 0.0;
+      newMap[i] = from + t * (to - from);
+    }
+    _itemDxNotifier.value = newMap;
+  }
+
   @override
   void dispose() {
     _ballisticInterruptTimer?.cancel();
+    _subtitleSnapController.dispose();
     _rotationController.dispose();
     _translationController.dispose();
     _scrollController.dispose();
@@ -877,6 +903,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
               onNotification: (ScrollNotification notification) {
                 if (notification is ScrollStartNotification) {
                   if (notification.dragDetails != null) {
+                    _subtitleSnapController.stop();
                     _dragStartPixels = notification.metrics.pixels;
                     // 计时器仍在运行 → 在归位动画期间被手指打断
                     if (_ballisticInterruptTimer != null) {
@@ -919,12 +946,13 @@ class _MetroPanoramaState extends State<MetroPanorama>
                       _getIdealB(S, parentWidth),
                     );
                   }
-                  // 小标题：始终重置到规则 1/2 的理想位置
-                  Map<int, double> newMap = {};
-                  for (int i = 0; i < widget.items.length; i++) {
-                    newMap[i] = _getIdealItemDx(i, S);
-                  }
-                  _itemDxNotifier.value = newMap;
+                  // 小标题：使用补间动画归位到规则 1/2 的理想位置
+                  _subtitleSnapFrom = Map.from(_itemDxNotifier.value);
+                  _subtitleSnapTo = {
+                    for (int i = 0; i < widget.items.length; i++)
+                      i: _getIdealItemDx(i, S)
+                  };
+                  _subtitleSnapController.forward(from: 0.0);
                 } else if (notification is ScrollUpdateNotification) {
                   double dx = notification.scrollDelta ?? 0.0;
                   if (_isDragging && !_isBallistic) {
