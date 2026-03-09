@@ -40,27 +40,31 @@ class _LeftEdgeRotateAnimationState extends State<LeftEdgeRotateAnimation> {
   @override
   void didUpdateWidget(LeftEdgeRotateAnimation oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 只在 rotation 变化时重新计算位置
-    //if (oldWidget.rotation == widget.rotation) {
-      _calculateEdgeOffset();
-    //}
+    // 使用 addPostFrameCallback 确保在当前帧布局完成后再计算，避免 RenderBox not laid out 错误
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _calculateEdgeOffset();
+      }
+    });
   }
 
   /// 计算组件相对于屏幕左侧的偏移量
   void _calculateEdgeOffset() {
-    if (_wrapperKey.currentContext == null) return;
+    final context = _wrapperKey.currentContext;
+    if (context == null) return;
 
-    final RenderBox? renderBox =
-        _wrapperKey.currentContext!.findRenderObject() as RenderBox?;
+    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
 
-    if (renderBox == null) return;
+    if (renderBox == null || !renderBox.hasSize) return;
 
     // 获取未经变换的位置
     final position = renderBox.localToGlobal(Offset.zero);
 
-    setState(() {
-      _edgeOffset = position.dx;
-    });
+    if (_edgeOffset != position.dx) {
+      setState(() {
+        _edgeOffset = position.dx;
+      });
+    }
   }
     double _getPivotX() {
     return -50 * 0.8;
