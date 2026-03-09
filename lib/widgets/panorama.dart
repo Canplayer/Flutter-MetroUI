@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
@@ -485,6 +486,9 @@ class _MetroPanoramaState extends State<MetroPanorama>
   bool _isBallistic = false;
   bool _isInterruptingBallistic = false;
   double? _dragStartPixels;
+  /// 归位动画期间持有的计时器。
+  /// 手指抬起 → 归位动画开始时启动，若在计时器超时前再次按下则视为"打断惯性"。
+  Timer? _ballisticInterruptTimer;
   double _targetS = 0.0;
   double _releaseS = 0.0;
   double _releaseT = 0.0;
@@ -666,6 +670,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
 
   @override
   void dispose() {
+    _ballisticInterruptTimer?.cancel();
     _rotationController.dispose();
     _translationController.dispose();
     _scrollController.dispose();
@@ -873,8 +878,12 @@ class _MetroPanoramaState extends State<MetroPanorama>
                 if (notification is ScrollStartNotification) {
                   if (notification.dragDetails != null) {
                     _dragStartPixels = notification.metrics.pixels;
-                    if (_isBallistic) {
+                    // 计时器仍在运行 → 在归位动画期间被手指打断
+                    if (_ballisticInterruptTimer != null) {
+                      debugPrint('Ballistic Interrupted');
                       _isInterruptingBallistic = true;
+                      _ballisticInterruptTimer!.cancel();
+                      _ballisticInterruptTimer = null;
                     }
                     _isDragging = true;
                     _isBallistic = false;
@@ -1025,6 +1034,12 @@ class _MetroPanoramaState extends State<MetroPanorama>
                           _releaseB = _parallaxNotifier.value.bOffset;
                           _releaseItemDx = Map.from(_itemDxNotifier.value);
                           _isBallistic = true;
+                          // 启动计时器：归位动画时长内若手指再次按下，视为打断惯性
+                          _ballisticInterruptTimer?.cancel();
+                          _ballisticInterruptTimer = Timer(
+                            widget.config.snapDuration,
+                            () => _ballisticInterruptTimer = null,
+                          );
                           // 手指抬起时立即通知页面变化，无需等动画结束
                           _firePageChangeIfNeeded(
                               _pageIndexFromPosition(target));
