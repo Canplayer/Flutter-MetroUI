@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:metro_ui/metro_scroll_behavior.dart';
 import 'package:metro_ui/page_scaffold.dart';
+import './application_bar.dart';
 import './route_aware_provider.dart';
 import './metro_theme_extensions.dart';
 
@@ -67,8 +68,6 @@ enum MetroThemeMode {
 ///
 /// 如果创建了一个 [Navigator]，则必须由以下一种选项处理 `/` 路由，因为它在启动时使用无效的 [initialRoute] 指定时会被使用
 /// （例如通过其他应用程序在 Android 上启动此应用程序的意图；请参见 [dart:ui.PlatformDispatcher.defaultRouteName]）。
-///
-/// 此小部件还配置顶级 [Navigator]（如果有）的观察者以执行 [Hero] 动画。
 ///
 /// {@template flutter.material.MaterialApp.defaultSelectionStyle}
 /// [MetroApp] 自动创建一个 [DefaultSelectionStyle]。如果 [ThemeData.textSelectionTheme] 中的颜色不为 null，则使用它们；
@@ -303,7 +302,7 @@ class MetroApp extends StatefulWidget {
   ///
   /// 当使用 [Navigator.pushNamed] 推送一个命名路由时，路由名称会在此映射中查找。如果名称存在，
   /// 关联的 [widgets.WidgetBuilder] 将用于构造一个 [MaterialPageRoute]，该路由会执行适当的过渡，
-  /// 包括 [Hero] 动画，切换到新路由。
+  /// 切换到新路由。
   ///
   /// {@macro flutter.widgets.widgetsApp.routes}
   final Map<String, WidgetBuilder>? routes;
@@ -731,36 +730,19 @@ class MetroApp extends StatefulWidget {
 
   @override
   State<MetroApp> createState() => _MetroAppState();
-
-  ///  [HeroController] 用于 Material 页面过渡。
-  ///
-  /// 被 [MetroApp] 使用。
-  static HeroController createMaterialHeroController() {
-    return HeroController(
-      createRectTween: (Rect? begin, Rect? end) {
-        return MaterialRectArcTween(begin: begin, end: end);
-      },
-    );
-  }
 }
 
 class _MetroAppState extends State<MetroApp> {
-  late HeroController _heroController;
-
-  bool get _usesRouter =>
-      widget.routerDelegate != null || widget.routerConfig != null;
-
-  @override
-  void initState() {
-    super.initState();
-    _heroController = MetroApp.createMaterialHeroController();
-  }
+  final MetroAppBarController _appBarController = MetroAppBarController();
 
   @override
   void dispose() {
-    _heroController.dispose();
+    _appBarController.dispose();
     super.dispose();
   }
+
+  bool get _usesRouter =>
+      widget.routerDelegate != null || widget.routerConfig != null;
 
   // 将 Material 的本地化与 localizationsDelegates 参数中提供的本地化合并。
   // 某个特定 LocalizationsDelegate.type 的第一个委托将被加载，所以
@@ -950,7 +932,27 @@ ThemeData _themeBuilder(BuildContext context) {
     return DefaultSelectionStyle(
       selectionColor: effectiveSelectionColor,
       cursorColor: effectiveCursorColor,
-      child: childWidget,
+      child: 
+      Stack(
+        children: [
+          _buildMetroUIDPIConversion(context, childWidget),
+          Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+            child: MetroApplicationBarOverlay(controller: _appBarController),
+            ),
+        ],
+      ),
+      
+      
+      // Column(
+      //   crossAxisAlignment: CrossAxisAlignment.stretch,
+      //   children: [
+      //     Expanded(child: childWidget),
+      //     MetroApplicationBarOverlay(controller: _appBarController),
+      //   ],
+      // ),
     );
   }
 
@@ -1126,10 +1128,10 @@ ThemeData _themeBuilder(BuildContext context) {
       return true;
     }());
 
-    return ScrollConfiguration(
-      behavior: widget.scrollBehavior ?? const MetroScrollBehavior(),
-      child: HeroControllerScope(
-        controller: _heroController,
+    return MetroAppBarScope(
+      controller: _appBarController,
+      child: ScrollConfiguration(
+        behavior: widget.scrollBehavior ?? const MetroScrollBehavior(),
         child: result,
       ),
     );

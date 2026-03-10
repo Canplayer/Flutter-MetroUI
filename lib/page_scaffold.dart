@@ -6,7 +6,9 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:metro_ui/animations.dart';
+import 'package:metro_ui/application_bar.dart';
 
 import 'route_aware_provider.dart';
 
@@ -17,6 +19,7 @@ class _BodyBuilder extends StatelessWidget {
     this.onWillPop,
     this.onDidPop,
     required this.animatedPageKey,
+    required this.backButtonAlignment,
   });
 
   final Widget body;
@@ -24,6 +27,7 @@ class _BodyBuilder extends StatelessWidget {
   final Future<bool> Function()? onWillPop;
   final Future<void> Function()? onDidPop;
   final GlobalKey<MetroAnimatedPageState> animatedPageKey;
+  final AlignmentGeometry backButtonAlignment;
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +44,47 @@ class _BodyBuilder extends StatelessWidget {
         children: [
           stackPanel!,
           Expanded(child: body),
+        ],
+      );
+    }
+
+    // 添加返回按钮逻辑
+    final ModalRoute<dynamic>? route = ModalRoute.of(context);
+    final bool canPop = route?.canPop ?? false;
+    final bool isAndroid = Theme.of(context).platform == TargetPlatform.android;
+
+    if (canPop && !isAndroid) {
+      content = Stack(
+        fit: StackFit.loose,
+        children: [
+          content,
+          Align(
+            alignment: backButtonAlignment,
+            child: Transform.translate(
+              offset: const Offset(-20, 20),
+              child: Opacity(
+                opacity: 0.7,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    Navigator.maybePop(context);
+                  },
+                  child: SizedBox(
+                    width: 100,
+                    height: 100,
+                    child: Center(
+                      child: SvgPicture.asset(
+                        'assets/ic_back.svg',
+                        package: 'metro_ui',
+                        width: 100,
+                        height: 100,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       );
     }
@@ -103,18 +148,26 @@ class _BodyBuilder extends StatelessWidget {
 ///  * [MetroPageScaffoldState]，与此组件关联的状态类。
 class MetroPageScaffold extends StatefulWidget {
   /// 创建 Metro Design 小部件的视觉脚手架。
-  const MetroPageScaffold(
-      {super.key,
-      this.body,
-      this.stackPanel,
-      this.backgroundColor,
-      this.resizeToAvoidBottomInset,
-      this.primary = true,
-      this.onWillPop,
-      this.onDidPop,
-      this.onDidPush,
-      this.onDidPushNext,
-      this.onDidPopNext});
+  const MetroPageScaffold({
+    super.key,
+    this.body,
+    this.stackPanel,
+    this.backgroundColor,
+    this.resizeToAvoidBottomInset,
+    this.primary = true,
+    this.onWillPop,
+    this.onDidPop,
+    this.onDidPush,
+    this.onDidPushNext,
+    this.onDidPopNext,
+    this.backButtonAlignment = Alignment.bottomLeft,
+    this.applicationBar,
+  });
+
+  /// 返回按钮的对齐方式，当页面被推入导航栈具有上层页面时，会自动显示返回按钮。
+  ///
+  /// 默认显示在左下角 [Alignment.bottomLeft]。
+  final AlignmentGeometry backButtonAlignment;
 
   /// 整个页面的主要内容。
   ///
@@ -158,6 +211,12 @@ class MetroPageScaffold extends StatefulWidget {
 
   //当页面从下一个页面退出时调用
   final VoidCallback? onDidPopNext;
+
+  /// Windows Phone 风格的底部 Application Bar 配置。
+  ///
+  /// 当页面成为顶层路由时，此菜单会自动显示并渐变淘入。
+  /// 切换到其他页面时，该菜单会渐变消失，新页面的菜单在动画完成后显示。
+  final MetroApplicationBar? applicationBar;
 
   /// 从最接近的此类实例中查找 [MetroPageScaffoldState]。
   ///
@@ -271,10 +330,10 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
   @override
   void initState() {
     super.initState();
-    // _geometryNotifier =
-    //     _ScaffoldGeometryNotifier(const MetroPageGeometry(), context);
-    //下一帧
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 登记当前页面的 Application Bar
+      _updateApplicationBar();
+
       if (widget.onDidPush != null) {
         playNonePushAnimation();
         widget.onDidPush?.call();
@@ -325,10 +384,17 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
 
   @override
   void didPopNext() {
-    // 从下一页返回到本页，调用外部传入的回调
+    // 从下一页返回到本页，把本页的 Application Bar 重新显示
+    _updateApplicationBar();
     widget.onDidPopNext?.call();
     _metroAnimatedPageKey.currentState?.didPopNext();
     super.didPopNext();
+  }
+
+  /// 将当前页面的 Application Bar 注册到全局控制器。
+  void _updateApplicationBar() {
+    if (!mounted) return;
+    MetroAppBarScope.controllerOf(context)?.setAppBar(widget.applicationBar);
   }
 
   @override
@@ -340,22 +406,24 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
     Widget? body = widget.body == null
         ? null
         : NotificationListener<MetroPanoramaDetectNotification>(
-              onNotification: (notification) {
-                // 如果发现内部含有一个 Panorama！我们取消默认动画
-                if (!_hasPanorama) {
-                   _hasPanorama = true;
-                   // 你可以在这里静默停止动画，或者将其重置
-                   _metroAnimatedPageKey.currentState?.didFinish(); // 停止推场动画
-                }
-                return true; // 拦截阻止冒泡
-              },
-              child: _BodyBuilder(
-            body: KeyedSubtree(key: _bodyKey, child: widget.body!),
-            stackPanel: widget.stackPanel,
-            onWillPop: widget.onWillPop,
-            onDidPop: widget.onDidPop,
-            animatedPageKey: _metroAnimatedPageKey,
-          ),);
+            onNotification: (notification) {
+              // 如果发现内部含有一个 Panorama！我们取消默认动画
+              if (!_hasPanorama) {
+                _hasPanorama = true;
+                // 你可以在这里静默停止动画，或者将其重置
+                _metroAnimatedPageKey.currentState?.didFinish(); // 停止推场动画
+              }
+              return true; // 拦截阻止冒泡
+            },
+            child: _BodyBuilder(
+              body: KeyedSubtree(key: _bodyKey, child: widget.body!),
+              stackPanel: widget.stackPanel,
+              onWillPop: widget.onWillPop,
+              onDidPop: widget.onDidPop,
+              animatedPageKey: _metroAnimatedPageKey,
+              backButtonAlignment: widget.backButtonAlignment,
+            ),
+          );
 
     if (body != null) {
       MediaQueryData data = MediaQuery.of(context).removePadding(
