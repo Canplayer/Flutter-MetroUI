@@ -72,6 +72,7 @@ class MetroApplicationBar {
     this.buttons = const [],
     this.menuItems = const [],
     this.backgroundColor,
+    this.mini = false,
   });
 
   /// 显示在菜单栏左侧的图标按钮列表，建议最多 4 个。
@@ -80,8 +81,12 @@ class MetroApplicationBar {
   /// 点击「•••」后展开的文本菜单项列表。
   final List<MetroAppBarMenuItem> menuItems;
 
-  /// 菜单栏背景色，默认跟随当前主题（暗色为黑色，亮色为白色）。
+  /// 菜单栏背景色，默认为未展开时半透明黑、展开后纯黑。
   final Color? backgroundColor;
+
+  /// mini 模式：折叠时仅露出 30px 的底部条，向上拖拽后才显示按钮行（同时伴随动画）。
+  /// 非 mini 模式：折叠时默认露出 78px（按钮行始终可见），向上拖拽仅展开菜单项。
+  final bool mini;
 }
 
 // ─────────────────────────── 全局控制器 ───────────────────────────
@@ -122,9 +127,7 @@ class MetroAppBarScope extends InheritedNotifier<MetroAppBarController> {
 
   /// 获取控制器但不建立依赖（适合在回调/生命周期方法中使用）。
   static MetroAppBarController? controllerOf(BuildContext context) {
-    return context
-        .getInheritedWidgetOfExactType<MetroAppBarScope>()
-        ?.notifier;
+    return context.getInheritedWidgetOfExactType<MetroAppBarScope>()?.notifier;
   }
 }
 
@@ -198,10 +201,29 @@ class MetroApplicationBarView extends StatefulWidget {
 }
 
 class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
+    with TickerProviderStateMixin {
+  late AnimationController _animationController; // 整体展开/收起（0=折叠, 1=完全展开）
+  late AnimationController _buttonVisAnim; // 按钮行显隐（0=隐藏, 1=可见）
+
+  final double _kMiniStripH = 30.0; // ••• 条固定高度
   final double _topBarHeight = 50.0;
   final double _menuItemHeight = 56.0;
+
+  /// 折叠状态下的默认可见高度：mini 30px，非 mini 78px。
+  double get _collapsedHeight => widget.bar.mini ? 30.0 : 78.0;
+
+  double get _totalContentHeight {
+    double h = _kMiniStripH;
+    if (widget.bar.buttons.isNotEmpty) h += _topBarHeight;
+    if (widget.bar.menuItems.isNotEmpty) {
+      h += widget.bar.menuItems.length * _menuItemHeight + 16.0;
+    }
+    return h;
+  }
+
+  double get _maxExpansionHeight => _totalContentHeight - _collapsedHeight;
+
+  bool get _canExpand => _maxExpansionHeight > 0;
 
   @override
   void initState() {
@@ -210,12 +232,38 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
       vsync: this,
       duration: const Duration(milliseconds: 250),
     );
+    _buttonVisAnim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+      value: widget.bar.mini ? 0.0 : 1.0, // mini 初始隐藏；非 mini 始终可见
+    );
+    _animationController.addListener(_onExpansionValueChanged);
+    _animationController.addStatusListener(_onExpansionStatusChanged);
   }
 
   @override
   void dispose() {
+    _animationController.removeStatusListener(_onExpansionStatusChanged);
+    _animationController.removeListener(_onExpansionValueChanged);
     _animationController.dispose();
+    _buttonVisAnim.dispose();
     super.dispose();
+  }
+
+  /// 展开量 > 0 时显示按钮（仅 mini 模式，且只在首次触发）。
+  void _onExpansionValueChanged() {
+    if (!widget.bar.mini) return;
+    if (_animationController.value > 0 && _buttonVisAnim.isDismissed) {
+      _buttonVisAnim.forward();
+    }
+  }
+
+  /// 完全收起后隐藏按钮（仅 mini 模式）。
+  void _onExpansionStatusChanged(AnimationStatus status) {
+    if (!widget.bar.mini) return;
+    if (status == AnimationStatus.dismissed) {
+      _buttonVisAnim.reverse();
+    }
   }
 
   void _toggleMenu() {
@@ -231,23 +279,20 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
     _animationController.reverse();
   }
 
-  double get _maxExpansionHeight =>
-      widget.bar.menuItems.length * _menuItemHeight + 16.0;
-
   void _onVerticalDragUpdate(DragUpdateDetails details) {
-    if (widget.bar.menuItems.isEmpty) return;
-    // 向上滑动对应负的 delta，换算为正的增长比例
+    if (!_canExpand) return;
     final double delta = -details.primaryDelta!;
     final double valueDelta = delta / _maxExpansionHeight;
-    _animationController.value += valueDelta;
+    _animationController.value =
+        (_animationController.value + valueDelta).clamp(0.0, 1.0);
   }
 
   void _onVerticalDragEnd(DragEndDetails details) {
-    if (widget.bar.menuItems.isEmpty) return;
+    if (!_canExpand) return;
     if (details.primaryVelocity! < -300) {
-      _animationController.forward(); // 向上快滑，展开
+      _animationController.forward();
     } else if (details.primaryVelocity! > 300) {
-      _animationController.reverse(); // 向下快滑，收起
+      _animationController.reverse();
     } else {
       if (_animationController.value > 0.5) {
         _animationController.forward();
@@ -259,75 +304,72 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
 
   @override
   Widget build(BuildContext context) {
-    final Color bgColor = widget.bar.backgroundColor ?? const Color(0xE6000000);
     const Color fgColor = Colors.white;
 
-    return Container(
-      color: bgColor,
-      child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 顶层按钮排区域
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onVerticalDragUpdate: _onVerticalDragUpdate,
-                onVerticalDragEnd: _onVerticalDragEnd,
-                onTap: () {
-                  if (_animationController.value > 0) _closeMenu();
-                },
-                child: SizedBox(
-                  height: _topBarHeight,
-                  child: Stack(
-                    children: [
-                      // 居中安排的图标按钮们
-                      Center(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: widget.bar.buttons
-                              .map((btn) => _MetroBarIconButton(
-                                    btn: btn,
-                                    fgColor: fgColor,
-                                  ))
-                              .toList(),
-                        ),
-                      ),
-                      // 右侧固定展示的「•••」展开图标
-                      if (widget.bar.menuItems.isNotEmpty)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          bottom: 0,
-                          child: _MetroMoreButton(
-                            fgColor: fgColor,
-                            isOpen: false, // 废弃该参数引用
-                            onTap: _toggleMenu,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
+    return AnimatedBuilder(
+      animation: Listenable.merge([_animationController, _buttonVisAnim]),
+      builder: (context, _) {
+        final bool isDragged = _animationController.value > 0;
+        final Color bgColor = widget.bar.backgroundColor ??
+            (isDragged
+                ? const Color(0xFF000000)
+                : const Color.fromARGB(139, 0, 0, 0));
 
-              // 底部抽屉的菜单项，依赖容器扩大而被往上推
-              if (widget.bar.menuItems.isNotEmpty)
-                ClipRect(
-                  child: AnimatedBuilder(
-                    animation: _animationController,
-                    builder: (context, child) {
-                      return Align(
-                        alignment: Alignment.topCenter,
-                        heightFactor: Curves.easeOut
-                            .transform(_animationController.value),
-                        child: child,
-                      );
-                    },
-                    child: Column(
+        final double totalH = _totalContentHeight;
+        final double expandedH = _collapsedHeight +
+            Curves.easeOut.transform(_animationController.value) *
+                _maxExpansionHeight;
+        final double heightFactor = totalH > 0 ? expandedH / totalH : 1.0;
+
+        // 按钮行滑入/滑出动画（向上飞入，向下飞出）
+        final Animation<Offset> buttonSlide = Tween<Offset>(
+          begin: const Offset(0, 1), // 隐藏在自身高度下方
+          end: Offset.zero,
+        ).animate(CurvedAnimation(
+          parent: _buttonVisAnim,
+          curve: Curves.easeOut,
+        ));
+
+        return Container(
+          color: bgColor,
+          child: SafeArea(
+            top: false,
+            child: ClipRect(
+              child: Align(
+                alignment: Alignment.topCenter,
+                heightFactor: heightFactor,
+                child: Stack(
+                  children: [
+                    // 内容列（撑开 Stack 的完整布局高度）
+                    Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        //SizedBox(height: _kMiniStripH), // ••• 条占位
+                        if (widget.bar.buttons.isNotEmpty)
+                          // ClipRect 限制滑动动画的溢出范围
+                          ClipRect(
+                            child: SlideTransition(
+                              position: buttonSlide,
+                              child: FadeTransition(
+                                opacity: _buttonVisAnim,
+                                child: SizedBox(
+                                  height: _topBarHeight,
+                                  child: Center(
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: widget.bar.buttons
+                                          .map((btn) => _MetroBarIconButton(
+                                                btn: btn,
+                                                fgColor: fgColor,
+                                              ))
+                                          .toList(),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ...widget.bar.menuItems.map(
                           (item) => SizedBox(
                             height: _menuItemHeight,
@@ -341,15 +383,47 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        if (widget.bar.menuItems.isNotEmpty)
+                          const SizedBox(height: 16),
                       ],
                     ),
-                  ),
+                    // 拖拽区域 + ••• 按钮（覆盖折叠状态的完整可见高度）
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      right: 0,
+                      height: _collapsedHeight,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onVerticalDragUpdate: _onVerticalDragUpdate,
+                        onVerticalDragEnd: _onVerticalDragEnd,
+                        onTap: () {
+                          if (isDragged) _closeMenu();
+                        },
+                        child: Stack(
+                          children: [
+                            if (_canExpand)
+                              Positioned(
+                                top: 0,
+                                right: 0,
+                                height: _kMiniStripH,
+                                child: _MetroMoreButton(
+                                  fgColor: fgColor,
+                                  onTap: _toggleMenu,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-            ],
+              ),
+            ),
           ),
-        ),
-      );
+        );
+      },
+    );
   }
 }
 
@@ -399,12 +473,10 @@ class _MetroBarIconButton extends StatelessWidget {
 class _MetroMoreButton extends StatelessWidget {
   const _MetroMoreButton({
     required this.fgColor,
-    required this.isOpen,
     required this.onTap,
   });
 
   final Color fgColor;
-  final bool isOpen;
   final VoidCallback onTap;
 
   @override

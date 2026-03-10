@@ -355,6 +355,16 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
   }
 
   @override
+  void didUpdateWidget(MetroPageScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.applicationBar != oldWidget.applicationBar) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _updateApplicationBar();
+      });
+    }
+  }
+
+  @override
   void dispose() {
     //_geometryNotifier.dispose();
     routeObserver.unsubscribe(this);
