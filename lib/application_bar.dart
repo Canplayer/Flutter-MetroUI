@@ -148,28 +148,32 @@ class MetroApplicationBarOverlay extends StatelessWidget {
       animation: controller,
       builder: (context, _) {
         final bar = controller.currentBar;
-        return AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
-          switchInCurve: Curves.easeOut,
-          switchOutCurve: Curves.easeIn,
-          transitionBuilder: (child, animation) {
-            return FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.25),
-                  end: Offset.zero,
-                ).animate(animation),
-                child: child,
-              ),
-            );
-          },
-          child: bar != null
-              ? MetroApplicationBarView(
-                  key: ObjectKey(bar),
-                  bar: bar,
-                )
-              : const SizedBox.shrink(key: ValueKey('__no_bar__')),
+        // bar 为 null 时立即忽略所有指针事件，避免淡出动画期间遮挡底部内容
+        return IgnorePointer(
+          ignoring: bar == null,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            transitionBuilder: (child, animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.25),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
+              );
+            },
+            child: bar != null
+                ? MetroApplicationBarView(
+                    key: ObjectKey(bar),
+                    bar: bar,
+                  )
+                : const SizedBox.shrink(key: ValueKey('__no_bar__')),
+          ),
         );
       },
     );
@@ -193,83 +197,159 @@ class MetroApplicationBarView extends StatefulWidget {
       _MetroApplicationBarViewState();
 }
 
-class _MetroApplicationBarViewState extends State<MetroApplicationBarView> {
-  bool _menuOpen = false;
+class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  final double _topBarHeight = 50.0;
+  final double _menuItemHeight = 56.0;
 
-  void _toggleMenu() => setState(() => _menuOpen = !_menuOpen);
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _toggleMenu() {
+    if (_animationController.status == AnimationStatus.completed ||
+        _animationController.status == AnimationStatus.forward) {
+      _animationController.reverse();
+    } else {
+      _animationController.forward();
+    }
+  }
 
   void _closeMenu() {
-    if (_menuOpen) setState(() => _menuOpen = false);
+    _animationController.reverse();
+  }
+
+  double get _maxExpansionHeight =>
+      widget.bar.menuItems.length * _menuItemHeight + 16.0;
+
+  void _onVerticalDragUpdate(DragUpdateDetails details) {
+    if (widget.bar.menuItems.isEmpty) return;
+    // 向上滑动对应负的 delta，换算为正的增长比例
+    final double delta = -details.primaryDelta!;
+    final double valueDelta = delta / _maxExpansionHeight;
+    _animationController.value += valueDelta;
+  }
+
+  void _onVerticalDragEnd(DragEndDetails details) {
+    if (widget.bar.menuItems.isEmpty) return;
+    if (details.primaryVelocity! < -300) {
+      _animationController.forward(); // 向上快滑，展开
+    } else if (details.primaryVelocity! > 300) {
+      _animationController.reverse(); // 向下快滑，收起
+    } else {
+      if (_animationController.value > 0.5) {
+        _animationController.forward();
+      } else {
+        _animationController.reverse();
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final bool isDark = theme.brightness == Brightness.dark;
-    final Color bgColor = widget.bar.backgroundColor ??
-        (isDark ? Colors.black : Colors.white);
-    final Color fgColor = isDark ? Colors.white : Colors.black;
+    final Color bgColor = widget.bar.backgroundColor ?? const Color(0xE6000000);
+    const Color fgColor = Colors.white;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // 展开时显示在菜单栏上方的菜单项列表
-        AnimatedSize(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          alignment: Alignment.bottomCenter,
-          child: _menuOpen && widget.bar.menuItems.isNotEmpty
-              ? Material(
-                  color: bgColor,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: widget.bar.menuItems
-                        .map(
-                          (item) => _MetroMenuItemTile(
-                            item: item,
+    return Container(
+      color: bgColor,
+      child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 顶层按钮排区域
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onVerticalDragUpdate: _onVerticalDragUpdate,
+                onVerticalDragEnd: _onVerticalDragEnd,
+                onTap: () {
+                  if (_animationController.value > 0) _closeMenu();
+                },
+                child: SizedBox(
+                  height: _topBarHeight,
+                  child: Stack(
+                    children: [
+                      // 居中安排的图标按钮们
+                      Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: widget.bar.buttons
+                              .map((btn) => _MetroBarIconButton(
+                                    btn: btn,
+                                    fgColor: fgColor,
+                                  ))
+                              .toList(),
+                        ),
+                      ),
+                      // 右侧固定展示的「•••」展开图标
+                      if (widget.bar.menuItems.isNotEmpty)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          bottom: 0,
+                          child: _MetroMoreButton(
                             fgColor: fgColor,
-                            onTap: () {
-                              _closeMenu();
-                              item.onPressed?.call();
-                            },
+                            isOpen: false, // 废弃该参数引用
+                            onTap: _toggleMenu,
                           ),
-                        )
-                        .toList(),
+                        ),
+                    ],
                   ),
-                )
-              : const SizedBox.shrink(),
-        ),
-
-        // 主菜单栏（高度 72px，匹配 WP WVGA 规格）
-        Material(
-          child: SafeArea(
-            top: false,
-            child: SizedBox(
-              height: 50,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // 左侧图标按钮区域
-                  ...widget.bar.buttons.map(
-                    (btn) => _MetroBarIconButton(btn: btn, fgColor: fgColor),
-                  ),
-                  const Spacer(),
-                  // 右侧「•••」展开按钮（仅当 menuItems 非空时显示）
-                  if (widget.bar.menuItems.isNotEmpty)
-                    _MetroMoreButton(
-                      fgColor: fgColor,
-                      isOpen: _menuOpen,
-                      onTap: _toggleMenu,
-                    ),
-                ],
+                ),
               ),
-            ),
+
+              // 底部抽屉的菜单项，依赖容器扩大而被往上推
+              if (widget.bar.menuItems.isNotEmpty)
+                ClipRect(
+                  child: AnimatedBuilder(
+                    animation: _animationController,
+                    builder: (context, child) {
+                      return Align(
+                        alignment: Alignment.topCenter,
+                        heightFactor: Curves.easeOut
+                            .transform(_animationController.value),
+                        child: child,
+                      );
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        ...widget.bar.menuItems.map(
+                          (item) => SizedBox(
+                            height: _menuItemHeight,
+                            child: _MetroMenuItemTile(
+                              item: item,
+                              fgColor: fgColor,
+                              onTap: () {
+                                _closeMenu();
+                                item.onPressed?.call();
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
-      ],
-    );
+      );
   }
 }
 
@@ -286,20 +366,28 @@ class _MetroBarIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 使用 Semantics 代替 Tooltip，避免 Tooltip 依赖 Overlay（Navigator 内部）
-    // 而 AppBar 渲染在 Navigator 外部，无法访问其 Overlay。
     return Semantics(
       label: btn.label,
       button: true,
-      child: InkWell(
+      child: GestureDetector(
         onTap: btn.onPressed,
+        behavior: HitTestBehavior.opaque,
         child: SizedBox(
           width: 72,
           height: 72,
           child: Center(
-            child: IconTheme(
-              data: IconThemeData(color: fgColor, size: 32),
-              child: btn.icon,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: fgColor, width: 2.0),
+              ),
+              alignment: Alignment.center,
+              child: IconTheme(
+                data: IconThemeData(color: fgColor, size: 24),
+                child: btn.icon,
+              ),
             ),
           ),
         ),
@@ -321,8 +409,9 @@ class _MetroMoreButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: SizedBox(
         width: 72,
         height: 72,
@@ -351,8 +440,9 @@ class _MetroMenuItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         child: Text(

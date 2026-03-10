@@ -834,6 +834,8 @@ class _MetroPanoramaState extends State<MetroPanorama>
               final double titleEntryOffset =
                   tv * widget.config.titleEntryTranslate;
 
+              final topPadding = MediaQuery.of(context).padding.top;
+
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -857,7 +859,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
                     ),
                   ),
                   Positioned(
-                    top: widget.config.titleAreaTop,
+                    top: widget.config.titleAreaTop + topPadding,
                     left: 0,
                     height: widget.config.titleAreaHeight,
                     right: -widget.config.titleOverflowRight,
@@ -1132,12 +1134,13 @@ class _MetroPanoramaState extends State<MetroPanorama>
 
   Widget _buildItemWidget(MetroPanoramaItem item, int realIndex) {
     final double ew = _itemWidths[realIndex];
+    final topPadding = MediaQuery.of(context).padding.top;
     return Container(
       color: Colors.transparent,
       width: ew,
       padding: EdgeInsets.only(
           left: widget.config.itemPaddingLeft,
-          top: widget.config.itemPaddingTop),
+          top: widget.config.itemPaddingTop + topPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

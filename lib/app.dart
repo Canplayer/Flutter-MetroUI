@@ -756,137 +756,137 @@ class _MetroAppState extends State<MetroApp> {
     ];
   }
 
-ThemeData _themeBuilder(BuildContext context) {
-  ThemeData? theme;
+  ThemeData _themeBuilder(BuildContext context) {
+    ThemeData? theme;
 
-  // 统一判断是否应使用暗色（结合 widget.themeMode 与系统亮度）
-  final MetroThemeMode mode = widget.themeMode ?? MetroThemeMode.system;
-  final Brightness platformBrightness =
-      MediaQuery.platformBrightnessOf(context);
-  final bool useDarkTheme = mode == MetroThemeMode.dark ||
-      (mode == MetroThemeMode.system &&
-          platformBrightness == ui.Brightness.dark);
+    // 统一判断是否应使用暗色（结合 widget.themeMode 与系统亮度）
+    final MetroThemeMode mode = widget.themeMode ?? MetroThemeMode.system;
+    final Brightness platformBrightness =
+        MediaQuery.platformBrightnessOf(context);
+    final bool useDarkTheme = mode == MetroThemeMode.dark ||
+        (mode == MetroThemeMode.system &&
+            platformBrightness == ui.Brightness.dark);
 
-  // 当用户传入自定义 theme/darkTheme/highContrastTheme/... 时，优先按原版主题逻辑
-  if (widget.theme != null ||
-      widget.darkTheme != null ||
-      widget.highContrastTheme != null ||
-      widget.highContrastDarkTheme != null) {
-    // 根据亮度和高对比度解析要使用的主题（保留你原来的判定）
-    final bool highContrast = MediaQuery.highContrastOf(context);
-    ThemeData? selected;
-    if (useDarkTheme &&
-        highContrast &&
+    // 当用户传入自定义 theme/darkTheme/highContrastTheme/... 时，优先按原版主题逻辑
+    if (widget.theme != null ||
+        widget.darkTheme != null ||
+        widget.highContrastTheme != null ||
         widget.highContrastDarkTheme != null) {
-      selected = widget.highContrastDarkTheme;
-    } else if (useDarkTheme && widget.darkTheme != null) {
-      selected = widget.darkTheme;
-    } else if (highContrast && widget.highContrastTheme != null) {
-      selected = widget.highContrastTheme;
-    }
+      // 根据亮度和高对比度解析要使用的主题（保留你原来的判定）
+      final bool highContrast = MediaQuery.highContrastOf(context);
+      ThemeData? selected;
+      if (useDarkTheme &&
+          highContrast &&
+          widget.highContrastDarkTheme != null) {
+        selected = widget.highContrastDarkTheme;
+      } else if (useDarkTheme && widget.darkTheme != null) {
+        selected = widget.darkTheme;
+      } else if (highContrast && widget.highContrastTheme != null) {
+        selected = widget.highContrastTheme;
+      }
 
-    // 如果没有匹配到上面的（例如用户只提供了 theme 而非 darkTheme），回退到 widget.theme
-    selected ??= widget.theme ?? ThemeData.light();
+      // 如果没有匹配到上面的（例如用户只提供了 theme 而非 darkTheme），回退到 widget.theme
+      selected ??= widget.theme ?? ThemeData.light();
 
-    // —— 关键：如果整体策略（useDarkTheme）需要暗色，但用户只提供了一个 theme（未提供 darkTheme）,
-    // 则强制将返回的 ThemeData 设置为暗色模式（不会覆盖其他字段）
-    if (useDarkTheme) {
-      selected = selected.copyWith(brightness: Brightness.dark);
-      // 可选：如果你希望同时让 colorScheme 也匹配暗色风格，可以基于 seed 生成暗色 colorScheme：
-      // final Color seed = selected.colorScheme.primary;
-      // selected = ThemeData.from(colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark), textTheme: selected.textTheme).copyWith(
-      //   // 保留用户自定义的其它属性（如字体 family 等）
-      //   fontFamily: selected.fontFamily,
-      // );
-    }
+      // —— 关键：如果整体策略（useDarkTheme）需要暗色，但用户只提供了一个 theme（未提供 darkTheme）,
+      // 则强制将返回的 ThemeData 设置为暗色模式（不会覆盖其他字段）
+      if (useDarkTheme) {
+        selected = selected.copyWith(brightness: Brightness.dark);
+        // 可选：如果你希望同时让 colorScheme 也匹配暗色风格，可以基于 seed 生成暗色 colorScheme：
+        // final Color seed = selected.colorScheme.primary;
+        // selected = ThemeData.from(colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark), textTheme: selected.textTheme).copyWith(
+        //   // 保留用户自定义的其它属性（如字体 family 等）
+        //   fontFamily: selected.fontFamily,
+        // );
+      }
 
-    theme = selected;
+      theme = selected;
 
-    // 保留字体家族覆盖逻辑（跟原实现一致）
-    if (widget.fontFamily != null && widget.fontFamily!.isNotEmpty) {
+      // 保留字体家族覆盖逻辑（跟原实现一致）
+      if (widget.fontFamily != null && widget.fontFamily!.isNotEmpty) {
+        theme = theme.copyWith(
+          textTheme: theme.textTheme.apply(fontFamily: widget.fontFamily),
+        );
+      } else {
+        theme = theme.copyWith(
+          textTheme: theme.textTheme
+              .apply(fontFamily: 'Segoe UI', package: 'metro_ui'),
+        );
+      }
+
+      // 注入 MetroTitleTextTheme 扩展
+      final Color textColor = theme.textTheme.bodyMedium?.color ?? Colors.black;
       theme = theme.copyWith(
-        textTheme: theme.textTheme.apply(fontFamily: widget.fontFamily),
+        extensions: [
+          ...theme.extensions.values,
+          MetroTitleTextTheme(
+            titleTextStyle: TextStyle(
+              fontFamily: 'Segoe UI Light',
+              package: 'metro_ui',
+              fontSize: 135,
+              letterSpacing: -4,
+              color: textColor,
+            ),
+          ),
+        ],
       );
-    } else {
-      theme = theme.copyWith(
-        textTheme: theme.textTheme.apply(fontFamily: 'Segoe UI',package: 'metro_ui'),
-      );
+
+      return theme;
     }
 
-    // 注入 MetroTitleTextTheme 扩展
-    final Color textColor = theme.textTheme.bodyMedium?.color ?? Colors.black;
-    theme = theme.copyWith(
-      extensions: [
-        ...theme.extensions.values,
+    // --- Metro 原生主题逻辑（用户没有传入 theme/darkTheme 等） ---
+    // 当使用 MetroThemeMode.dark 时，我们也要把 Material 设置为暗色。
+    final bool useWhiteTheme = widget.themeMode == MetroThemeMode.light ||
+        (widget.themeMode == MetroThemeMode.system &&
+            MediaQuery.platformBrightnessOf(context) == ui.Brightness.light);
+
+    // 计算是否为暗色（与上面 useDarkTheme 保持一致）
+    final bool isDark = useDarkTheme;
+
+    // metroColor 保持原先逻辑
+    Color metroColor =
+        widget.metroColor ?? const Color.fromARGB(255, 27, 161, 226);
+
+    // 基于 isDark 创建 ThemeData，确保 Material 使用正确的亮/暗模式
+    final ThemeData metroTheme = ThemeData(
+      colorSchemeSeed: metroColor,
+      brightness: isDark ? Brightness.dark : Brightness.light,
+      fontFamily: widget.fontFamily ?? 'Segoe UI',
+      package: widget.fontFamily != null ? null : 'metro_ui',
+    );
+
+    // 在此基础上覆盖需要的字段（保留你的原逻辑：primaryColor、scaffoldBackgroundColor、onSurface）
+    const Color whiteColor = Color.fromARGB(255, 255, 255, 255);
+    const Color blackColor = Color.fromARGB(255, 0, 0, 0);
+
+    return metroTheme.copyWith(
+      colorScheme: metroTheme.colorScheme.copyWith(
+        primary: metroColor,
+        onSurface: useWhiteTheme ? blackColor : whiteColor,
+        //surface: useWhiteTheme ? whiteColor : blackColor,
+      ),
+      textTheme: metroTheme.textTheme.apply(
+        fontFamily: widget.fontFamily ?? 'Segoe UI',
+        package: widget.fontFamily != null ? null : 'metro_ui',
+        bodyColor: useWhiteTheme ? blackColor : whiteColor,
+        displayColor: useWhiteTheme ? blackColor : whiteColor,
+        decorationColor: useWhiteTheme ? blackColor : whiteColor,
+      ),
+      primaryColor: metroColor,
+      scaffoldBackgroundColor: useWhiteTheme ? whiteColor : blackColor,
+      extensions: <ThemeExtension<dynamic>>[
         MetroTitleTextTheme(
           titleTextStyle: TextStyle(
             fontFamily: 'Segoe UI Light',
             package: 'metro_ui',
             fontSize: 135,
             letterSpacing: -4,
-            color: textColor,
+            color: useWhiteTheme ? blackColor : whiteColor,
           ),
         ),
       ],
     );
-
-    return theme;
   }
-
-  // --- Metro 原生主题逻辑（用户没有传入 theme/darkTheme 等） ---
-  // 当使用 MetroThemeMode.dark 时，我们也要把 Material 设置为暗色。
-  final bool useWhiteTheme = widget.themeMode == MetroThemeMode.light ||
-      (widget.themeMode == MetroThemeMode.system &&
-          MediaQuery.platformBrightnessOf(context) == ui.Brightness.light);
-
-  // 计算是否为暗色（与上面 useDarkTheme 保持一致）
-  final bool isDark = useDarkTheme;
-
-  // metroColor 保持原先逻辑
-  Color metroColor =
-      widget.metroColor ?? const Color.fromARGB(255, 27, 161, 226);
-
-  // 基于 isDark 创建 ThemeData，确保 Material 使用正确的亮/暗模式
-  final ThemeData metroTheme = ThemeData(
-    colorSchemeSeed: metroColor,
-    brightness: isDark ? Brightness.dark : Brightness.light,
-    fontFamily: widget.fontFamily ?? 'Segoe UI',
-    package: widget.fontFamily != null ? null : 'metro_ui',
-  );
-
-  // 在此基础上覆盖需要的字段（保留你的原逻辑：primaryColor、scaffoldBackgroundColor、onSurface）
-  const Color whiteColor = Color.fromARGB(255, 255, 255, 255);
-  const Color blackColor = Color.fromARGB(255, 0, 0, 0);
-
-  return metroTheme.copyWith(
-    colorScheme: metroTheme.colorScheme.copyWith(
-      primary: metroColor,
-      onSurface: useWhiteTheme ? blackColor : whiteColor,
-      //surface: useWhiteTheme ? whiteColor : blackColor,
-    ),
-    textTheme: metroTheme.textTheme.apply(
-      fontFamily: widget.fontFamily ?? 'Segoe UI',
-      package: widget.fontFamily != null ? null : 'metro_ui',
-      bodyColor: useWhiteTheme ? blackColor : whiteColor,
-      displayColor: useWhiteTheme ? blackColor : whiteColor,
-      decorationColor: useWhiteTheme ? blackColor : whiteColor,
-    ),
-    primaryColor: metroColor,
-    scaffoldBackgroundColor: useWhiteTheme ? whiteColor : blackColor,
-    extensions: <ThemeExtension<dynamic>>[
-      MetroTitleTextTheme(
-        titleTextStyle: TextStyle(
-            fontFamily: 'Segoe UI Light',
-            package: 'metro_ui',
-            fontSize: 135,
-            letterSpacing: -4,
-          color: useWhiteTheme ? blackColor : whiteColor,
-        ),
-      ),
-    ],
-  );
-}
-
 
   Widget _materialBuilder(BuildContext context, Widget? child) {
     final ThemeData theme = _themeBuilder(context);
@@ -932,20 +932,18 @@ ThemeData _themeBuilder(BuildContext context) {
     return DefaultSelectionStyle(
       selectionColor: effectiveSelectionColor,
       cursorColor: effectiveCursorColor,
-      child: 
-      Stack(
+      child: Stack(
         children: [
-          _buildMetroUIDPIConversion(context, childWidget),
+          childWidget,
           Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
             child: MetroApplicationBarOverlay(controller: _appBarController),
-            ),
+          ),
         ],
       ),
-      
-      
+
       // Column(
       //   crossAxisAlignment: CrossAxisAlignment.stretch,
       //   children: [
