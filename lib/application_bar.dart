@@ -204,6 +204,8 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
     with TickerProviderStateMixin {
   late AnimationController _animationController; // 整体展开/收起（0=折叠, 1=完全展开）
   late AnimationController _buttonVisAnim; // 按钮行显隐（0=隐藏, 1=可见）
+  bool _isDragging = false;
+  bool _useExpandedChrome = false;
 
   final double _kMiniStripH = 30.0; // ••• 条固定高度
   final double _topBarHeight = 50.0;
@@ -237,69 +239,92 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
       duration: const Duration(milliseconds: 200),
       value: widget.bar.mini ? 0.0 : 1.0, // mini 初始隐藏；非 mini 始终可见
     );
-    _animationController.addListener(_onExpansionValueChanged);
-    _animationController.addStatusListener(_onExpansionStatusChanged);
   }
 
   @override
   void dispose() {
-    _animationController.removeStatusListener(_onExpansionStatusChanged);
-    _animationController.removeListener(_onExpansionValueChanged);
     _animationController.dispose();
     _buttonVisAnim.dispose();
     super.dispose();
   }
 
-  /// 展开量 > 0 时显示按钮（仅 mini 模式，且只在首次触发）。
-  void _onExpansionValueChanged() {
+  void _setDragging(bool dragging) {
+    if (_isDragging == dragging) return;
+    setState(() {
+      _isDragging = dragging;
+    });
+  }
+
+  void _setExpandedChromeVisible(bool visible) {
+    if (_useExpandedChrome == visible) return;
+    setState(() {
+      _useExpandedChrome = visible;
+    });
     if (!widget.bar.mini) return;
-    if (_animationController.value > 0 && _buttonVisAnim.isDismissed) {
+    if (visible) {
       _buttonVisAnim.forward();
+    } else {
+      _buttonVisAnim.reverse();
     }
   }
 
-  /// 完全收起后隐藏按钮（仅 mini 模式）。
-  void _onExpansionStatusChanged(AnimationStatus status) {
-    if (!widget.bar.mini) return;
-    if (status == AnimationStatus.dismissed) {
-      _buttonVisAnim.reverse();
+  void _settleMenu(bool expand) {
+    _setDragging(false);
+    _setExpandedChromeVisible(expand);
+    if (expand) {
+      _animationController.forward();
+    } else {
+      _animationController.reverse();
     }
   }
 
   void _toggleMenu() {
     if (_animationController.status == AnimationStatus.completed ||
         _animationController.status == AnimationStatus.forward) {
-      _animationController.reverse();
+      _settleMenu(false);
     } else {
-      _animationController.forward();
+      _settleMenu(true);
     }
   }
 
   void _closeMenu() {
-    _animationController.reverse();
+    _settleMenu(false);
+  }
+
+  void _onVerticalDragStart(DragStartDetails details) {
+    if (!_canExpand) return;
+    _setDragging(true);
   }
 
   void _onVerticalDragUpdate(DragUpdateDetails details) {
     if (!_canExpand) return;
+    _setDragging(true);
     final double delta = -details.primaryDelta!;
     final double valueDelta = delta / _maxExpansionHeight;
     _animationController.value =
         (_animationController.value + valueDelta).clamp(0.0, 1.0);
+    if (_animationController.value > 0) {
+      _setExpandedChromeVisible(true);
+    }
+  }
+
+  void _onVerticalDragCancel() {
+    if (!_canExpand) return;
+    final bool expand = _animationController.value > 0.5;
+    _settleMenu(expand);
   }
 
   void _onVerticalDragEnd(DragEndDetails details) {
     if (!_canExpand) return;
+    final bool expand;
     if (details.primaryVelocity! < -300) {
-      _animationController.forward();
+      expand = true;
     } else if (details.primaryVelocity! > 300) {
-      _animationController.reverse();
+      expand = false;
     } else {
-      if (_animationController.value > 0.5) {
-        _animationController.forward();
-      } else {
-        _animationController.reverse();
-      }
+      expand = _animationController.value > 0.5;
     }
+    _settleMenu(expand);
   }
 
   @override
@@ -309,9 +334,10 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
     return AnimatedBuilder(
       animation: Listenable.merge([_animationController, _buttonVisAnim]),
       builder: (context, _) {
-        final bool isDragged = _animationController.value > 0;
+        final bool isDragged = _isDragging && _animationController.value > 0;
+        final bool useExpandedChrome = _useExpandedChrome || isDragged;
         final Color bgColor = widget.bar.backgroundColor ??
-            (isDragged
+            (useExpandedChrome
                 ? const Color(0xFF000000)
                 : const Color.fromARGB(139, 0, 0, 0));
 
@@ -340,6 +366,39 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                 heightFactor: heightFactor,
                 child: Stack(
                   children: [
+                    // 拖拽区域 + ••• 按钮（覆盖折叠状态的完整可见高度）
+                    // 此区域应该在底层，内容在此之上操作优先级更高
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      right: 0,
+                      height: _collapsedHeight,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onVerticalDragStart: _onVerticalDragStart,
+                        onVerticalDragUpdate: _onVerticalDragUpdate,
+                        onVerticalDragCancel: _onVerticalDragCancel,
+                        onVerticalDragEnd: _onVerticalDragEnd,
+                        onTap: () {
+                          if (useExpandedChrome) _closeMenu();
+                        },
+                        child: Stack(
+                          children: [
+                            if (_canExpand)
+                              Positioned(
+                                top: 0,
+                                right: 0,
+                                height: _kMiniStripH,
+                                child: _MetroMoreButton(
+                                  fgColor: fgColor,
+                                  onTap: _toggleMenu,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+
                     // 内容列（撑开 Stack 的完整布局高度）
                     Column(
                       mainAxisSize: MainAxisSize.min,
@@ -386,35 +445,6 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                         if (widget.bar.menuItems.isNotEmpty)
                           const SizedBox(height: 16),
                       ],
-                    ),
-                    // 拖拽区域 + ••• 按钮（覆盖折叠状态的完整可见高度）
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      right: 0,
-                      height: _collapsedHeight,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onVerticalDragUpdate: _onVerticalDragUpdate,
-                        onVerticalDragEnd: _onVerticalDragEnd,
-                        onTap: () {
-                          if (isDragged) _closeMenu();
-                        },
-                        child: Stack(
-                          children: [
-                            if (_canExpand)
-                              Positioned(
-                                top: 0,
-                                right: 0,
-                                height: _kMiniStripH,
-                                child: _MetroMoreButton(
-                                  fgColor: fgColor,
-                                  onTap: _toggleMenu,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
                     ),
                   ],
                 ),
