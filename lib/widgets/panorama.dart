@@ -1162,7 +1162,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
                 style: TextStyle(
                   fontWeight: FontWeight.w200,
                   fontSize: widget.config.subtitleFontSize,
-                  color: Colors.white,
+                  //color: Colors.white,
                 ),
                 child: item.title,
               ),

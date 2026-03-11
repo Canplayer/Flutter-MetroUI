@@ -149,6 +149,7 @@ class MetroApplicationBar {
     this.buttons = const <Widget>[],
     this.menuItems = const [],
     this.backgroundColor,
+    this.expandedBackgroundColor,
     this.mini = false,
   });
 
@@ -158,8 +159,11 @@ class MetroApplicationBar {
   /// 点击「•••」后展开的文本菜单项列表。
   final List<MetroAppBarMenuItem> menuItems;
 
-  /// 菜单栏背景色，默认为未展开时半透明黑、展开后纯黑。
+  /// 菜单栏折叠时的背景色，默认为半透明黑。
   final Color? backgroundColor;
+
+  /// 菜单栏展开后的背景色，默认为纯黑。
+  final Color? expandedBackgroundColor;
 
   /// mini 模式：折叠时仅露出 30px 的底部条，向上拖拽后才显示按钮行（同时伴随动画）。
   /// 非 mini 模式：折叠时默认露出 78px（按钮行始终可见），向上拖拽仅展开菜单项。
@@ -477,10 +481,13 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
       builder: (context, _) {
         final bool isDragged = _isDragging && _animationController.value > 0;
         final bool useExpandedChrome = _useExpandedChrome || isDragged;
-        final Color bgColor = widget.bar.backgroundColor ??
-            (useExpandedChrome
-                ? const Color(0xFF000000)
-                : const Color.fromARGB(139, 0, 0, 0));
+
+        final Color collapsedBg =
+            widget.bar.backgroundColor ?? Theme.of(context).colorScheme.onSurface;
+        final Color expandedBg =
+            widget.bar.expandedBackgroundColor ?? Theme.of(context).colorScheme.onSurface;
+
+        final Color bgColor = useExpandedChrome ? expandedBg : collapsedBg;
 
         final double totalH = _totalContentHeight;
         final double expandedH = _collapsedHeight +

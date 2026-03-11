@@ -479,103 +479,7 @@ class MetroApp extends StatefulWidget {
 
   /// {@macro flutter.widgets.widgetsApp.localizationsDelegates}
   ///
-  /// 需要为 [GlobalMaterialLocalizations] 列表中的某个区域设置提供翻译的国际化应用
-  /// 应该指定此参数并列出应用程序可以处理的 [supportedLocales]。
-  ///
-  /// ```dart
-  /// // GlobalMaterialLocalizations 和 GlobalWidgetsLocalizations
-  /// // 类需要以下导入：
-  /// // import 'package:flutter_localizations/flutter_localizations.dart';
-  ///
-  /// const MaterialApp(
-  ///   localizationsDelegates: <LocalizationsDelegate<Object>>[
-  ///     // ... 在这里添加针对应用的特定本地化委托
-  ///     GlobalMaterialLocalizations.delegate,
-  ///     GlobalWidgetsLocalizations.delegate,
-  ///   ],
-  ///   supportedLocales: <Locale>[
-  ///     Locale('en', 'US'), // 英语
-  ///     Locale('he', 'IL'), // 希伯来语
-  ///     // ... 应用支持的其他区域
-  ///   ],
-  ///   // ...
-  /// )
-  /// ```
-  ///
-  /// ## 为新区域添加本地化
-  ///
-  /// 以下信息适用于应用为尚未由
-  /// [GlobalMaterialLocalizations] 支持的语言添加翻译的特殊情况。
-  ///
-  /// 生成 [WidgetsLocalizations] 和 [MaterialLocalizations] 的委托是
-  /// 自动包含的。应用程序可以通过创建
-  /// [LocalizationsDelegate<WidgetsLocalizations>]
-  /// 或 [LocalizationsDelegate<MaterialLocalizations>] 的实现并
-  /// 在其加载方法中返回自定义版本的
-  /// [WidgetsLocalizations] 或 [MaterialLocalizations] 来提供自己的版本。
-  ///
-  /// 例如：为 [MaterialLocalizations] 添加对它尚不支持的区域设置
-  /// 的支持，比如 `const Locale('foo', 'BR')`，首先需要
-  /// 创建一个提供翻译的 [MaterialLocalizations] 子类：
-  ///
-  /// ```dart
-  /// class FooLocalizations extends MaterialLocalizations {
-  ///   FooLocalizations();
-  ///   @override
-  ///   String get okButtonLabel => 'foo';
-  ///   // ...
-  ///   // 需要重写的其他许多 getter 和方法！
-  /// }
-  /// ```
-  ///
-  /// 然后必须创建一个 [LocalizationsDelegate] 子类，能够提供
-  /// [MaterialLocalizations] 子类的实例。在这种情况下，这
-  /// 基本上只是一个构造 `FooLocalizations` 对象的方法。
-  /// 这里使用了 [SynchronousFuture]，因为在“加载”本地化对象时
-  /// 不会进行异步工作。
-  ///
-  /// ```dart
-  /// // 继续前一个示例...
-  /// class FooLocalizationsDelegate extends LocalizationsDelegate<MaterialLocalizations> {
-  ///   const FooLocalizationsDelegate();
-  ///   @override
-  ///   bool isSupported(Locale locale) {
-  ///     return locale == const Locale('foo', 'BR');
-  ///   }
-  ///   @override
-  ///   Future<FooLocalizations> load(Locale locale) {
-  ///     assert(locale == const Locale('foo', 'BR'));
-  ///     return SynchronousFuture<FooLocalizations>(FooLocalizations());
-  ///   }
-  ///   @override
-  ///   bool shouldReload(FooLocalizationsDelegate old) => false;
-  /// }
-  /// ```
-  ///
-  /// 使用 `FooLocalizationsDelegate` 构造一个 [MetroApp] 会覆盖
-  /// 自动包含的 [MaterialLocalizations] 委托，因为
-  /// 仅使用每个 [LocalizationsDelegate.type] 的第一个委托，
-  /// 并且自动包含的委托被添加到应用的
-  /// [localizationsDelegates] 列表的末尾。
-  ///
-  /// ```dart
-  /// // 继续前一个示例...
-  /// const MaterialApp(
-  ///   localizationsDelegates: <LocalizationsDelegate<Object>>[
-  ///     FooLocalizationsDelegate(),
-  ///   ],
-  ///   // ...
-  /// )
-  /// ```
-  /// 参见：
-  ///
-  ///  * [supportedLocales]，必须与
-  ///    [localizationsDelegates] 一起指定。
-  ///  * [GlobalMaterialLocalizations]，一种
-  ///    [localizationsDelegates] 的值，
-  ///    为多种语言提供材料本地化。
-  ///  * Flutter 国际化教程，
-  ///    <https://flutter.dev/to/internationalization/>.
+  /// 本地化保持flutter原有的实现，用户可以通过传入localizationsDelegates来覆盖默认的Material和Cupertino本地化。
   final Iterable<LocalizationsDelegate<dynamic>>? localizationsDelegates;
 
   /// {@macro flutter.widgets.widgetsApp.localeListResolutionCallback}
@@ -772,6 +676,7 @@ class _MetroAppState extends State<MetroApp> {
         widget.darkTheme != null ||
         widget.highContrastTheme != null ||
         widget.highContrastDarkTheme != null) {
+      debugPrint('使用用户提供的主题配置，按照原版主题逻辑解析');
       // 根据亮度和高对比度解析要使用的主题（保留你原来的判定）
       final bool highContrast = MediaQuery.highContrastOf(context);
       ThemeData? selected;
@@ -858,6 +763,7 @@ class _MetroAppState extends State<MetroApp> {
     // 在此基础上覆盖需要的字段（保留你的原逻辑：primaryColor、scaffoldBackgroundColor、onSurface）
     const Color whiteColor = Color.fromARGB(255, 255, 255, 255);
     const Color blackColor = Color.fromARGB(255, 0, 0, 0);
+    const Color textBlackColor = Color.fromARGB(255, 33, 33, 33);
 
     return metroTheme.copyWith(
       colorScheme: metroTheme.colorScheme.copyWith(
@@ -868,21 +774,31 @@ class _MetroAppState extends State<MetroApp> {
       textTheme: metroTheme.textTheme.apply(
         fontFamily: widget.fontFamily ?? 'Segoe UI',
         package: widget.fontFamily != null ? null : 'metro_ui',
-        bodyColor: useWhiteTheme ? blackColor : whiteColor,
-        displayColor: useWhiteTheme ? blackColor : whiteColor,
-        decorationColor: useWhiteTheme ? blackColor : whiteColor,
+        bodyColor: useWhiteTheme ? textBlackColor : whiteColor,
+        displayColor: useWhiteTheme ? textBlackColor : whiteColor,
+        decorationColor: useWhiteTheme ? blackColor: whiteColor,
       ),
       primaryColor: metroColor,
       scaffoldBackgroundColor: useWhiteTheme ? whiteColor : blackColor,
       extensions: <ThemeExtension<dynamic>>[
-        MetroTitleTextTheme(
+        const MetroTitleTextTheme(
           titleTextStyle: TextStyle(
             fontFamily: 'Segoe UI Light',
             package: 'metro_ui',
             fontSize: 135,
             letterSpacing: -4,
-            color: useWhiteTheme ? blackColor : whiteColor,
+            //color: useWhiteTheme ? textBlackColor : whiteColor,
           ),
+        ),
+        MetroAppBarTheme(
+          backgroundColor: useWhiteTheme ? const Color.fromARGB(255, 221, 221, 221) : blackColor,
+          expandedBackgroundColor: useWhiteTheme ? const Color.fromARGB(255, 221, 221, 221) : blackColor.withAlpha(200),
+          buttonColor: useWhiteTheme ? blackColor : whiteColor,
+          buttonIconColor: useWhiteTheme ? const Color.fromARGB(255, 29, 29, 29) : whiteColor,
+          disabledButtonIconColor: useWhiteTheme ? textBlackColor : whiteColor,
+          pressedButtonIconColor: useWhiteTheme ? textBlackColor : whiteColor,
+          menuItemColor: useWhiteTheme ? textBlackColor : whiteColor,
+          disabledMenuItemColor: useWhiteTheme ? textBlackColor : whiteColor
         ),
       ],
     );
@@ -920,7 +836,17 @@ class _MetroAppState extends State<MetroApp> {
         duration: widget.themeAnimationStyle?.duration ??
             widget.themeAnimationDuration,
         curve: widget.themeAnimationStyle?.curve ?? widget.themeAnimationCurve,
-        child: childWidget,
+        child: Stack(
+          children: [
+            childWidget,
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: MetroApplicationBarOverlay(controller: _appBarController),
+            ),
+          ],
+        ),
       );
     } else {
       childWidget = Theme(
@@ -932,23 +858,17 @@ class _MetroAppState extends State<MetroApp> {
     return DefaultSelectionStyle(
       selectionColor: effectiveSelectionColor,
       cursorColor: effectiveCursorColor,
-      child: Stack(
-        children: [
-          childWidget,
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: MetroApplicationBarOverlay(controller: _appBarController),
-          ),
-        ],
-      ),
+      child: childWidget,
 
-      // Column(
-      //   crossAxisAlignment: CrossAxisAlignment.stretch,
+      // Stack(
       //   children: [
-      //     Expanded(child: childWidget),
-      //     MetroApplicationBarOverlay(controller: _appBarController),
+      //     childWidget,
+      //     Positioned(
+      //       left: 0,
+      //       right: 0,
+      //       bottom: 0,
+      //       child: MetroApplicationBarOverlay(controller: _appBarController),
+      //     ),
       //   ],
       // ),
     );

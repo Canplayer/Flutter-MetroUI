@@ -75,6 +75,10 @@ class _BodyBuilder extends StatelessWidget {
                     child: Center(
                       child: SvgPicture.asset(
                         'assets/ic_back.svg',
+                        colorFilter: ColorFilter.mode(
+                          Theme.of(context).colorScheme.onSurface,
+                          BlendMode.srcIn,
+                        ),
                         package: 'metro_ui',
                         width: 100,
                         height: 100,
