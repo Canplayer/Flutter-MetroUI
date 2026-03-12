@@ -61,17 +61,17 @@ class _BodyBuilder extends StatelessWidget {
           Align(
             alignment: backButtonAlignment,
             child: Transform.translate(
-              offset: const Offset(-20, 20),
+              offset: const Offset(-35, -20),
               child: Opacity(
-                opacity: 0.7,
+                opacity: 0.3,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () {
                     Navigator.maybePop(context);
                   },
                   child: SizedBox(
-                    width: 100,
-                    height: 100,
+                    width: 130,
+                    height: 130,
                     child: Center(
                       child: SvgPicture.asset(
                         'assets/ic_back.svg',
@@ -80,8 +80,6 @@ class _BodyBuilder extends StatelessWidget {
                           BlendMode.srcIn,
                         ),
                         package: 'metro_ui',
-                        width: 100,
-                        height: 100,
                       ),
                     ),
                   ),
@@ -159,7 +157,7 @@ class MetroPageScaffold extends StatefulWidget {
     this.onDidPush,
     this.onDidPushNext,
     this.onDidPopNext,
-    this.backButtonAlignment = Alignment.bottomLeft,
+    this.backButtonAlignment = Alignment.topLeft,
     this.applicationBar,
   });
 
