@@ -776,7 +776,7 @@ class _MetroAppState extends State<MetroApp> {
         package: widget.fontFamily != null ? null : 'metro_ui',
         bodyColor: useWhiteTheme ? textBlackColor : whiteColor,
         displayColor: useWhiteTheme ? textBlackColor : whiteColor,
-        decorationColor: useWhiteTheme ? blackColor: whiteColor,
+        decorationColor: useWhiteTheme ? blackColor : whiteColor,
       ),
       primaryColor: metroColor,
       scaffoldBackgroundColor: useWhiteTheme ? whiteColor : blackColor,
@@ -791,15 +791,21 @@ class _MetroAppState extends State<MetroApp> {
           ),
         ),
         MetroAppBarTheme(
-          backgroundColor: useWhiteTheme ? const Color.fromARGB(255, 221, 221, 221) : blackColor,
-          expandedBackgroundColor: useWhiteTheme ? const Color.fromARGB(255, 221, 221, 221) : blackColor.withAlpha(200),
-          buttonColor: useWhiteTheme ? blackColor : whiteColor,
-          buttonIconColor: useWhiteTheme ? const Color.fromARGB(255, 29, 29, 29) : whiteColor,
-          disabledButtonIconColor: useWhiteTheme ? textBlackColor : whiteColor,
-          pressedButtonIconColor: useWhiteTheme ? textBlackColor : whiteColor,
-          menuItemColor: useWhiteTheme ? textBlackColor : whiteColor,
-          disabledMenuItemColor: useWhiteTheme ? textBlackColor : whiteColor
-        ),
+            backgroundColor: useWhiteTheme
+                ? const Color.fromARGB(255, 221, 221, 221)
+                : blackColor,
+            expandedBackgroundColor: useWhiteTheme
+                ? const Color.fromARGB(255, 221, 221, 221)
+                : blackColor.withAlpha(200),
+            buttonColor: useWhiteTheme ? blackColor : whiteColor,
+            buttonIconColor: useWhiteTheme
+                ? const Color.fromARGB(255, 29, 29, 29)
+                : whiteColor,
+            disabledButtonIconColor:
+                useWhiteTheme ? textBlackColor : whiteColor,
+            pressedButtonIconColor: useWhiteTheme ? textBlackColor : whiteColor,
+            menuItemColor: useWhiteTheme ? textBlackColor : whiteColor,
+            disabledMenuItemColor: useWhiteTheme ? textBlackColor : whiteColor),
       ],
     );
   }
@@ -1016,11 +1022,18 @@ class _MetroAppState extends State<MetroApp> {
     // 1. 构建 WidgetsApp (获取基础 Context 和原始 MediaQueryData)
     Widget result = _buildWidgetApp(context);
 
-    // 2. 将 WidgetsApp 的结果包裹在 DPI 转换组件中
+    // 2.建立全局3D透视转换层，开发者写3D动画无需再考虑摄像机位置
+    result = Transform(
+      alignment: FractionalOffset.center,
+      transform: Matrix4.identity()..setEntry(3, 2, 0.00078), // 设置Z轴偏移
+      child: result,
+    );
+
+    // 3. 将 WidgetsApp 的结果包裹在 DPI 转换组件中
     // 这一步实现了全局缩放和软键盘/系统边距的修正
     result = _buildMetroUIDPIConversion(context, result);
 
-    // 3. 后续的 Focus、GridPaper 和 ScrollConfiguration 等全局包裹
+    // 4. 后续的 Focus、GridPaper 和 ScrollConfiguration 等全局包裹
     result = Focus(
       canRequestFocus: false,
       onKeyEvent: (FocusNode node, KeyEvent event) {
