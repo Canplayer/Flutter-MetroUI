@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:metro_ui/animations.dart';
 import 'package:metro_ui/application_bar.dart';
+import 'package:metro_ui/widgets/tile.dart';
 
 import 'route_aware_provider.dart';
 
@@ -64,8 +65,7 @@ class _BodyBuilder extends StatelessWidget {
               offset: const Offset(-35, -20),
               child: Opacity(
                 opacity: 0.3,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
+                child: Tile(
                   onTap: () {
                     Navigator.maybePop(context);
                   },
