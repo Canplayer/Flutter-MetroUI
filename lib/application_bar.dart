@@ -3,13 +3,24 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
+import 'package:metro_ui/metro_theme_extensions.dart';
+import 'package:metro_ui/widgets/tile.dart';
+
+// ---------------- 配置常量 ----------------
+const double kMetroAppBarMiniHeight = 30.0 * 0.8; // 折叠时的 mini 条高度
+const double kMetroAppBarNormalHeight = 71.875 * 0.8; // 正常模式下的折叠高度 (包含按钮)
+const double kMetroAppBarMoreButtonSize =
+    kMetroAppBarNormalHeight; // 更多(•••)按钮区域的尺寸
+// ----------------------------------------
 
 bool _isMiniModeFor(MetroApplicationBar bar) {
   return bar.mini || bar.buttons.isEmpty;
 }
 
 double _collapsedHeightFor(MetroApplicationBar bar) {
-  return _isMiniModeFor(bar) ? 30.0 : 78.0;
+  return _isMiniModeFor(bar)
+      ? kMetroAppBarMiniHeight
+      : kMetroAppBarNormalHeight;
 }
 
 int _widgetVisualSignature(Widget widget) {
@@ -58,12 +69,20 @@ class MetroAppBarButton extends StatelessWidget {
   const MetroAppBarButton({
     super.key,
     required this.icon,
+    this.color,
+    this.iconColor,
     required this.label,
     this.onPressed,
   });
 
   /// 按钮图标，建议使用 [Icon] 组件。
   final Widget icon;
+
+  /// 环形颜色
+  final Color? color;
+
+  /// 图标颜色
+  final Color? iconColor;
 
   /// 按钮标签，用于无障碍提示（Tooltip）。
   final String label;
@@ -73,31 +92,61 @@ class MetroAppBarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color fgColor = Colors.white;
+    final double circleSize = 48.125 * 0.8;
     return Semantics(
       label: label,
       button: true,
-      child: GestureDetector(
+      child: Tile(
         onTap: onPressed,
-        behavior: HitTestBehavior.opaque,
-        child: SizedBox(
-          width: 72,
-          height: 72,
-          child: Center(
-            child: Container(
-              width: 44,
-              height: 44,
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            // 圆环主体：在 Stack 中居中
+            Container(
+              width: circleSize,
+              height: circleSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: fgColor, width: 2.0),
+                border: Border.all(
+                  color: color ??
+                      Theme.of(context)
+                          .extension<MetroAppBarTheme>()!
+                          .buttonColor ??
+                      Colors.white,
+                  width: 2.0,
+                ),
               ),
               alignment: Alignment.center,
               child: IconTheme(
-                data: const IconThemeData(color: fgColor, size: 24),
+                data: IconThemeData(
+                  color: Theme.of(context)
+                          .extension<MetroAppBarTheme>()!
+                          .buttonIconColor ??
+                      Colors.white,
+                  size: 24,
+                ),
                 child: icon,
               ),
             ),
-          ),
+            // 文字部分：定位在圆环下方，偏移固定距离
+            Positioned(
+              top: circleSize + 11.875*0.8, // 圆环底部再往下 11.875*0.8 的位置
+              child: DefaultTextStyle(
+                style: TextStyle(
+                  color: Theme.of(context)
+                          .extension<MetroAppBarTheme>()!
+                          .buttonIconColor ??
+                      Colors.white,
+                  fontSize: 10,
+                  fontFamily: 'Segoe UI',
+                ),
+                child: Text(
+                  label,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -150,6 +199,9 @@ class MetroApplicationBar {
     this.menuItems = const [],
     this.backgroundColor,
     this.expandedBackgroundColor,
+    this.buttonColor,
+    this.buttonIconColor,
+    this.menuItemTextColor,
     this.mini = false,
   });
 
@@ -165,8 +217,17 @@ class MetroApplicationBar {
   /// 菜单栏展开后的背景色，默认为纯黑。
   final Color? expandedBackgroundColor;
 
-  /// mini 模式：折叠时仅露出 30px 的底部条，向上拖拽后才显示按钮行（同时伴随动画）。
-  /// 非 mini 模式：折叠时默认露出 78px（按钮行始终可见），向上拖拽仅展开菜单项。
+  /// 环形按钮的颜色与展开按钮的颜色
+  final Color? buttonColor;
+
+  /// 环形按钮中icon的颜色
+  final Color? buttonIconColor;
+
+  /// 菜单item文字的颜色
+  final Color? menuItemTextColor;
+
+  /// mini 模式：折叠时仅露出顶部条高，向上拖拽后才显示按钮行（同时伴随动画）。
+  /// 非 mini 模式：折叠时默认露出足够高度（按钮行始终可见），向上拖拽仅展开菜单项。
   /// 当 [buttons] 为空时，会自动按 mini 模式处理。
   final bool mini;
 }
@@ -290,20 +351,19 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
   late AnimationController _modeSwitchController; // mini/普通模式切换时的高度过渡
   bool _isDragging = false;
   bool _useExpandedChrome = false;
-  double _modeFromCollapsedHeight = 78.0;
-  double _modeToCollapsedHeight = 78.0;
+  double _modeFromCollapsedHeight = kMetroAppBarNormalHeight;
+  double _modeToCollapsedHeight = kMetroAppBarNormalHeight;
   int _buttonsSignature = 0;
   int _buttonsAnimRevision = 0;
 
-  final double _kMiniStripH = 30.0; // ••• 条固定高度
-  final double _topBarHeight = 50.0;
+  final double _kMiniStripH = kMetroAppBarMiniHeight; // ••• 条固定高度
   final double _menuItemHeight = 56.0;
 
   bool get _isMiniMode => _isMiniModeFor(widget.bar);
 
   double get _targetCollapsedHeight => _collapsedHeightFor(widget.bar);
 
-  /// 折叠状态下的默认可见高度：mini 30px，非 mini 78px。
+  /// 折叠状态下的默认可见高度
   double get _collapsedHeight {
     final double t = Curves.easeOutCubic.transform(_modeSwitchController.value);
     return _modeFromCollapsedHeight +
@@ -311,10 +371,12 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
   }
 
   double get _totalContentHeight {
-    double h = _kMiniStripH;
-    if (widget.bar.buttons.isNotEmpty) h += _topBarHeight;
+    double h = 0;
+    if (widget.bar.buttons.isNotEmpty) {
+      h += kMetroAppBarNormalHeight;
+    }
     if (widget.bar.menuItems.isNotEmpty) {
-      h += widget.bar.menuItems.length * _menuItemHeight + 16.0;
+      h += widget.bar.menuItems.length * _menuItemHeight + 16;
     }
     return h;
   }
@@ -375,9 +437,7 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
         _buttonsVisualSignature(widget.bar.buttons);
     if (nextButtonsSignature != _buttonsSignature) {
       _buttonsSignature = nextButtonsSignature;
-      if (widget.bar.buttons.isNotEmpty) {
-        _buttonsAnimRevision += 1;
-      }
+      _buttonsAnimRevision += 1;
     }
   }
 
@@ -470,7 +530,7 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
 
   @override
   Widget build(BuildContext context) {
-    const Color fgColor = Colors.white;
+    //const Color fgColor = Colors.white;
 
     return AnimatedBuilder(
       animation: Listenable.merge([
@@ -482,18 +542,20 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
         final bool isDragged = _isDragging && _animationController.value > 0;
         final bool useExpandedChrome = _useExpandedChrome || isDragged;
 
-        final Color collapsedBg =
-            widget.bar.backgroundColor ?? Theme.of(context).colorScheme.onSurface;
-        final Color expandedBg =
-            widget.bar.expandedBackgroundColor ?? Theme.of(context).colorScheme.onSurface;
+        final Color collapsedBg = widget.bar.backgroundColor ??
+            Theme.of(context).extension<MetroAppBarTheme>()!.backgroundColor ??
+            Colors.black;
+        final Color expandedBg = widget.bar.expandedBackgroundColor ??
+            Theme.of(context)
+                .extension<MetroAppBarTheme>()!
+                .expandedBackgroundColor ??
+            Colors.black.withAlpha(200);
 
         final Color bgColor = useExpandedChrome ? expandedBg : collapsedBg;
 
-        final double totalH = _totalContentHeight;
         final double expandedH = _collapsedHeight +
             Curves.easeOut.transform(_animationController.value) *
                 _maxExpansionHeight;
-        final double heightFactor = totalH > 0 ? expandedH / totalH : 1.0;
         final Key buttonsContentKey = ValueKey<int>(_buttonsAnimRevision);
 
         // 按钮行滑入/滑出动画（向上飞入，向下飞出）
@@ -510,144 +572,155 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
           child: SafeArea(
             top: false,
             child: ClipRect(
-              child: Align(
-                alignment: Alignment.topCenter,
-                heightFactor: heightFactor,
-                child: Stack(
-                  children: [
-                    // 拖拽区域 + ••• 按钮（覆盖折叠状态的完整可见高度）
-                    // 此区域应该在底层，内容在此之上操作优先级更高
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      right: 0,
-                      height: _collapsedHeight,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onVerticalDragStart: _onVerticalDragStart,
-                        onVerticalDragUpdate: _onVerticalDragUpdate,
-                        onVerticalDragCancel: _onVerticalDragCancel,
-                        onVerticalDragEnd: _onVerticalDragEnd,
-                        onTap: () {
-                          if (useExpandedChrome) _closeMenu();
-                        },
-                        child: Stack(
-                          children: [
-                            if (_canExpand)
-                              Positioned(
-                                top: 0,
-                                right: 0,
-                                height: _kMiniStripH,
-                                child: _MetroMoreButton(
-                                  fgColor: fgColor,
-                                  onTap: _toggleMenu,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // 内容列（撑开 Stack 的完整布局高度）
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+              child: SizedBox(
+                  height: expandedH,
+                  child: OverflowBox(
+                    alignment: Alignment.topCenter,
+                    minHeight: 0,
+                    maxHeight: double.infinity,
+                    child: Stack(
                       children: [
-                        //SizedBox(height: _kMiniStripH), // ••• 条占位
-                        if (widget.bar.buttons.isNotEmpty)
-                          // ClipRect 限制滑动动画的溢出范围
-                          ClipRect(
-                            child: SlideTransition(
-                              position: buttonSlide,
-                              child: FadeTransition(
-                                opacity: _buttonVisAnim,
-                                child: SizedBox(
-                                  height: _topBarHeight,
-                                  child: Center(
-                                    child: AnimatedSwitcher(
-                                      duration:
-                                          const Duration(milliseconds: 700),
-                                      reverseDuration:
-                                          const Duration(milliseconds: 100),
-                                      layoutBuilder:
-                                          (currentChild, previousChildren) {
-                                        return Stack(
-                                          alignment: Alignment.center,
-                                          children: [
-                                            ...previousChildren,
-                                            if (currentChild != null)
-                                              currentChild,
-                                          ],
-                                        );
-                                      },
-                                      transitionBuilder: (child, animation) {
-                                        final bool isIncoming =
-                                            child.key == buttonsContentKey;
-                                        if (isIncoming) {
-                                          return FadeTransition(
-                                            opacity: Tween<double>(
-                                              begin: 0.0,
-                                              end: 1.0,
-                                            ).animate(
-                                              CurvedAnimation(
-                                                parent: animation,
-                                                curve: const Interval(0.0, 0.25,
-                                                    curve: Curves.linear),
-                                              ),
-                                            ),
-                                            child: SlideTransition(
-                                              position: Tween<Offset>(
-                                                begin: const Offset(0, 1),
-                                                end: Offset.zero,
+                        // 拖拽区域 + ••• 按钮（覆盖折叠状态的完整可见高度）
+                        // 此区域应该在底层，内容在此之上操作优先级更高
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          right: 0,
+                          height: _collapsedHeight,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onVerticalDragStart: _onVerticalDragStart,
+                            onVerticalDragUpdate: _onVerticalDragUpdate,
+                            onVerticalDragCancel: _onVerticalDragCancel,
+                            onVerticalDragEnd: _onVerticalDragEnd,
+                            onTap: () {
+                              if (useExpandedChrome) _closeMenu();
+                            },
+                            child: Stack(
+                              children: [
+                                if (_canExpand)
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    height: _kMiniStripH,
+                                    child: _MetroMoreButton(
+                                      fgColor: widget.bar.buttonIconColor ??
+                                          Theme.of(context)
+                                              .extension<MetroAppBarTheme>()!
+                                              .buttonIconColor ??
+                                          Colors.white,
+                                      onTap: _toggleMenu,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // 内容列（撑开 Stack 的完整布局高度）
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            //SizedBox(height: _kMiniStripH), // ••• 条占位
+                            if (widget.bar.buttons.isNotEmpty)
+                              SlideTransition(
+                                position: buttonSlide,
+                                child: FadeTransition(
+                                  opacity: _buttonVisAnim,
+                                  child: SizedBox(
+                                    height: kMetroAppBarNormalHeight,
+                                    child: Center(
+                                      child: AnimatedSwitcher(
+                                        duration:
+                                            const Duration(milliseconds: 700),
+                                        reverseDuration:
+                                            const Duration(milliseconds: 100),
+                                        layoutBuilder:
+                                            (currentChild, previousChildren) {
+                                          return Stack(
+                                            alignment: Alignment.center,
+                                            children: [
+                                              ...previousChildren,
+                                              if (currentChild != null)
+                                                currentChild,
+                                            ],
+                                          );
+                                        },
+                                        transitionBuilder: (child, animation) {
+                                          final bool isIncoming =
+                                              child.key == buttonsContentKey;
+                                          if (isIncoming) {
+                                            return FadeTransition(
+                                              opacity: Tween<double>(
+                                                begin: 0.0,
+                                                end: 1.0,
                                               ).animate(
                                                 CurvedAnimation(
                                                   parent: animation,
-                                                  curve: Curves.elasticOut,
+                                                  curve: const Interval(
+                                                      0.0, 0.25,
+                                                      curve: Curves.linear),
                                                 ),
                                               ),
-                                              child: child,
-                                            ),
-                                          );
-                                        }
+                                              child: SlideTransition(
+                                                position: Tween<Offset>(
+                                                  begin: const Offset(0, 1),
+                                                  end: Offset.zero,
+                                                ).animate(
+                                                  CurvedAnimation(
+                                                    parent: animation,
+                                                    curve: Curves.elasticOut,
+                                                  ),
+                                                ),
+                                                child: child,
+                                              ),
+                                            );
+                                          }
 
-                                        return FadeTransition(
-                                          opacity: animation,
-                                          child: child,
-                                        );
-                                      },
-                                      child: KeyedSubtree(
-                                        key: buttonsContentKey,
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: widget.bar.buttons,
+                                          return FadeTransition(
+                                            opacity: animation,
+                                            child: child,
+                                          );
+                                        },
+                                        child: KeyedSubtree(
+                                          key: buttonsContentKey,
+                                          child: Row(
+                                            spacing: 36.25 * 0.8,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: widget.bar.buttons,
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
+
+                            ...widget.bar.menuItems.map(
+                              (item) => SizedBox(
+                                height: _menuItemHeight,
+                                child: _MetroMenuItemTile(
+                                  item: item,
+                                  fgColor: widget.bar.menuItemTextColor ??
+                                      Theme.of(context)
+                                          .extension<MetroAppBarTheme>()!
+                                          .menuItemColor ??
+                                      Colors.white,
+                                  onTap: () {
+                                    _closeMenu();
+                                    item.onPressed?.call();
+                                  },
+                                ),
+                              ),
                             ),
-                          ),
-                        ...widget.bar.menuItems.map(
-                          (item) => SizedBox(
-                            height: _menuItemHeight,
-                            child: _MetroMenuItemTile(
-                              item: item,
-                              fgColor: fgColor,
-                              onTap: () {
-                                _closeMenu();
-                                item.onPressed?.call();
-                              },
-                            ),
-                          ),
+                            if (widget.bar.menuItems.isNotEmpty)
+                              const SizedBox(height: 16),
+                          ],
                         ),
-                        if (widget.bar.menuItems.isNotEmpty)
-                          const SizedBox(height: 16),
                       ],
                     ),
-                  ],
-                ),
-              ),
+                  )),
             ),
           ),
         );
@@ -673,8 +746,8 @@ class _MetroMoreButton extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 72,
-        height: 72,
+        width: kMetroAppBarMoreButtonSize,
+        height: kMetroAppBarMoreButtonSize,
         child: Center(
           child: Icon(
             Icons.more_horiz,
@@ -700,16 +773,19 @@ class _MetroMenuItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Tile(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
+      //behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        child: Text(
-          item.label,
+        child: DefaultTextStyle(
           style: TextStyle(
             color: fgColor,
             fontSize: 22,
+            fontFamily: 'Segoe UI',
+          ),
+          child: Text(
+            item.label,
           ),
         ),
       ),

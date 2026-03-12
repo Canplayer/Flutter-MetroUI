@@ -793,10 +793,10 @@ class _MetroAppState extends State<MetroApp> {
         MetroAppBarTheme(
             backgroundColor: useWhiteTheme
                 ? const Color.fromARGB(255, 221, 221, 221)
-                : blackColor,
+                : blackColor.withAlpha(150),
             expandedBackgroundColor: useWhiteTheme
                 ? const Color.fromARGB(255, 221, 221, 221)
-                : blackColor.withAlpha(200),
+                : blackColor,
             buttonColor: useWhiteTheme ? blackColor : whiteColor,
             buttonIconColor: useWhiteTheme
                 ? const Color.fromARGB(255, 29, 29, 29)
@@ -809,7 +809,7 @@ class _MetroAppState extends State<MetroApp> {
       ],
     );
   }
-
+  
   Widget _materialBuilder(BuildContext context, Widget? child) {
     final ThemeData theme = _themeBuilder(context);
     final Color effectiveSelectionColor =
