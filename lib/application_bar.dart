@@ -65,7 +65,7 @@ int _barStructureKey(MetroApplicationBar bar) {
 ///
 /// 对应 WP 原版的 ApplicationBarIconButton，按钮会显示在底部菜单栏的左侧。
 /// 最多建议放置 4 个按钮，超出的按钮在小屏设备上可能被遮挡。
-class MetroAppBarButton extends StatelessWidget {
+class MetroAppBarButton extends StatefulWidget {
   const MetroAppBarButton({
     super.key,
     required this.icon,
@@ -91,13 +91,25 @@ class MetroAppBarButton extends StatelessWidget {
   final VoidCallback? onPressed;
 
   @override
+  State<MetroAppBarButton> createState() => _MetroAppBarButtonState();
+}
+
+class _MetroAppBarButtonState extends State<MetroAppBarButton> {
+  bool _isTouch = false;
+
+  @override
   Widget build(BuildContext context) {
     final double circleSize = 48.125 * 0.8;
     return Semantics(
-      label: label,
+      label: widget.label,
       button: true,
       child: Tile(
-        onTap: onPressed,
+        onTap: widget.onPressed,
+        onTouch: (isTouch) {
+          setState(() {
+            _isTouch = isTouch;
+          });
+        },
         child: Stack(
           alignment: Alignment.center,
           clipBehavior: Clip.none,
@@ -108,8 +120,11 @@ class MetroAppBarButton extends StatelessWidget {
               height: circleSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                color: _isTouch ? Theme.of(context)
+                        .colorScheme.primary
+                 : null,
                 border: Border.all(
-                  color: color ??
+                  color: widget.color ??
                       Theme.of(context)
                           .extension<MetroAppBarTheme>()!
                           .buttonColor ??
@@ -126,7 +141,7 @@ class MetroAppBarButton extends StatelessWidget {
                       Colors.white,
                   size: 24,
                 ),
-                child: icon,
+                child: widget.icon,
               ),
             ),
             // 文字部分：定位在圆环下方，偏移固定距离（仅菜单展开时显示）
@@ -146,7 +161,7 @@ class MetroAppBarButton extends StatelessWidget {
                     letterSpacing: 0.3,
                   ),
                   child: Text(
-                    label,
+                    widget.label,
                   ),
                 ),
               ),

@@ -3,14 +3,16 @@ import 'package:flutter/widgets.dart';
 //Windows Phone 核心风格组件磁贴，所有可以被按下的组件都遵照这个规范进行设计修改
 
 class Tile extends StatefulWidget {
-  //传入子组件
+  /// 传入子组件
   final Widget? child;
-  //是否允许回弹
+  /// 是否允许回弹
   final bool allowBack;
-  //按下后发生的事件
+  /// 按下后发生的事件
   final Function()? onTap;
+  /// 触摸事件，通常用于手指按下后变色处理
+  final Function(bool isTouch)? onTouch;
 
-  const Tile({super.key, this.child, this.allowBack = true, this.onTap});
+  const Tile({super.key, this.child, this.allowBack = true, this.onTap, this.onTouch});
 
   @override
   TileState createState() => TileState();
@@ -154,6 +156,7 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
           onPanDown: (details) {
             _isTouch = true;
             _handlePanDown(details, _widgetSize.width, _widgetSize.height);
+            widget.onTouch?.call(true);
           },
           //手指移动触发
           onPanUpdate: (details) {
@@ -178,12 +181,14 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
               await widget.onTap?.call();
             }
             _isTouch = false;
+            widget.onTouch?.call(false);
             _handleTapUp();
           },
           //移动取消（例如被打断、触发点击事件）
           onPanCancel: () async {
             if (_isTouch) {
               _isTouch = false;
+              widget.onTouch?.call(false);
               _handleTapUp();
             }
           },

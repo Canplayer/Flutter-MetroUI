@@ -13,7 +13,7 @@ import 'package:metro_ui/widgets/tile.dart';
 
 import 'route_aware_provider.dart';
 
-class _BodyBuilder extends StatelessWidget {
+class _BodyBuilder extends StatefulWidget {
   const _BodyBuilder({
     required this.body,
     this.stackPanel,
@@ -31,6 +31,13 @@ class _BodyBuilder extends StatelessWidget {
   final AlignmentGeometry backButtonAlignment;
 
   @override
+  State<_BodyBuilder> createState() => _BodyBuilderState();
+}
+
+class _BodyBuilderState extends State<_BodyBuilder> {
+  bool _isTouch = false;
+
+  @override
   Widget build(BuildContext context) {
     final MediaQueryData metrics = MediaQuery.of(context);
 
@@ -38,13 +45,13 @@ class _BodyBuilder extends StatelessWidget {
     final double top = metrics.padding.top;
 
     // 构建实际内容：如果有 stackPanel，则使用 Column 布局
-    Widget content = body;
-    if (stackPanel != null) {
+    Widget content = widget.body;
+    if (widget.stackPanel != null) {
       content = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          stackPanel!,
-          Expanded(child: body),
+          widget.stackPanel!,
+          Expanded(child: widget.body),
         ],
       );
     }
@@ -57,18 +64,24 @@ class _BodyBuilder extends StatelessWidget {
     if (canPop && !isAndroid) {
       content = Stack(
         fit: StackFit.loose,
+        clipBehavior: Clip.none,
         children: [
           content,
           Align(
-            alignment: backButtonAlignment,
+            alignment: widget.backButtonAlignment,
             child: Transform.translate(
               offset: const Offset(-35, -20),
-              child: Opacity(
-                opacity: 0.3,
-                child: Tile(
-                  onTap: () {
-                    Navigator.maybePop(context);
-                  },
+              child: Tile(
+                onTap: () {
+                  Navigator.maybePop(context);
+                },
+                onTouch: (isTouch) {
+                  setState(() {
+                    _isTouch = isTouch;
+                  });
+                },
+                child: Opacity(
+                  opacity: _isTouch ? 1.0 : 0.3,
                   child: SizedBox(
                     width: 130,
                     height: 130,
@@ -102,34 +115,34 @@ class _BodyBuilder extends StatelessWidget {
       //全局3D坐标观察点固定到屏幕中心
       //不要问我为什么是0.00078，我一点一点调出来的，我也不知道这个该怎么换算和为什么是这个值
       child: PopScope(
-          canPop: onWillPop != null,
-          onPopInvokedWithResult: (didPop, result) async {
-            if (didPop) {
-              return; // Pop 已发生，我们不做任何事
+        canPop: widget.onWillPop != null,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (didPop) {
+            return; // Pop 已发生，我们不做任何事
+          }
+          // 拦截返回事件
+          final bool shouldPop =
+              widget.onWillPop != null ? await widget.onWillPop!() : true;
+          if (shouldPop) {
+            // 如果允许退出，则播放退出动画
+            if (widget.onDidPop != null) {
+              debugPrint('开始退出动画');
+              await widget.onDidPop!();
+            } else {
+              await widget.animatedPageKey.currentState?.didPop();
             }
-            // 拦截返回事件
-            final bool shouldPop =
-                onWillPop != null ? await onWillPop!() : true;
-            if (shouldPop) {
-              // 如果允许退出，则播放退出动画
-              if (onDidPop != null) {
-                debugPrint('开始退出动画');
-                await onDidPop!();
-              } else {
-                await animatedPageKey.currentState?.didPop();
-              }
 
-              // 动画完成后，手动退出页面
-              if (context.mounted) {
-                Navigator.of(context).pop();
-              }
+            // 动画完成后，手动退出页面
+            if (context.mounted) {
+              Navigator.of(context).pop();
             }
-          },
-          child: MetroAnimatedPage(
-            key: animatedPageKey,
-            child: content,
-          ),
+          }
+        },
+        child: MetroAnimatedPage(
+          key: widget.animatedPageKey,
+          child: content,
         ),
+      ),
     );
   }
 }
