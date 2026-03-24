@@ -446,9 +446,13 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
           );
 
     if (body != null) {
-      MediaQueryData data = MediaQuery.of(context).removePadding(
-        removeTop: true,
-      );
+      MediaQueryData data = MediaQuery.of(context);
+      // 如果 primary 为 false（不延展至顶部），才将顶部 padding 削减成0。
+      // 否则保留其原始值，让内部的 SafeArea 能够读取到正缺的刘海高度以让出空间。
+      if (!widget.primary) {
+        data = data.removePadding(removeTop: true);
+      }
+      
       if (_resizeToAvoidBottomInset) {
         data = data.removeViewInsets(removeBottom: true);
       }

@@ -911,9 +911,10 @@ class _MetroAppState extends State<MetroApp> {
     final double layoutFactor = 1.0 / scaleFactor;
 
     // --- 修正 MediaQueryData ---
-    // 将系统报告的边距（如软键盘高度）按比例缩放
-    // 缩放后的值 = 原始值 * scaleFactor
-    final double inverseLayoutFactor = scaleFactor;
+    // 将系统报告的边距（如软键盘、刘海高度）按比例反向缩放
+    // 缩放后的值 = 原始值 / scaleFactor (也就是 * layoutFactor)
+    // 这样在经过下方的 Transform.scale 缩放回来后，在物理屏幕上刚好等于正确的边距真实大小高度
+    final double inverseLayoutFactor = layoutFactor;
 
     final MediaQueryData fixedData = originalData.copyWith(
       // 修正 viewInsets (软键盘遮挡)
