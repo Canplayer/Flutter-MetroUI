@@ -57,16 +57,26 @@ class _LeftEdgeRotateAnimationState extends State<LeftEdgeRotateAnimation> {
 
     if (renderBox == null || !renderBox.hasSize) return;
 
-    // 获取未经变换的位置
-    final position = renderBox.localToGlobal(Offset.zero);
+    // 将屏幕左上角(0,0)反算到当前组件局部坐标系，
+    // 这样可自动抵消祖先层上的全局缩放（例如 WVGA 的 Transform.scale）。
+    //     之前在 lib/animated_widgets.dart 里用的是 localToGlobal(Offset.zero)。这个值是“经过祖先 Transform.scale 之后”的全局坐标，所以在不同屏幕宽度下会被放大或缩小，导致你看到：
+    // 小屏时 offset 偏大
+    // 大屏时 offset 偏小
+    // 我已经改成了“反算坐标系”的方式：
+    // 用 renderBox.globalToLocal(Offset.zero) 把屏幕左上角反投影到当前组件的局部坐标
+    // 再取其 dx 的相反数作为逻辑 offset
+    // 这样会自动抵消 WVGA 缩放和祖先层 Transform 影响，得到稳定的逻辑坐标，和你固定 480 设计坐标系一致
+    final Offset screenOriginInLocal = renderBox.globalToLocal(Offset.zero);
+    final double logicalEdgeOffset = -screenOriginInLocal.dx;
 
-    if (_edgeOffset != position.dx) {
+    if (_edgeOffset != logicalEdgeOffset) {
       setState(() {
-        _edgeOffset = position.dx;
+        _edgeOffset = logicalEdgeOffset;
       });
     }
   }
-    double _getPivotX() {
+
+  double _getPivotX() {
     return -50 * 0.8;
   }
 
