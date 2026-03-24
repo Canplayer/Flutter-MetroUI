@@ -28,25 +28,30 @@ class StackPanel extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          height: 25,
+        // Container(
+        //   height: 25,
+        // ),
+        const SafeArea(
+          minimum: EdgeInsets.only(top: 38.5),
+          child: SizedBox(),
         ),
-        const SizedBox(height: 13),
+        //const SizedBox(height: 13),
         Transform.translate(
           offset: const Offset(18, 0),
           child: DefaultTextStyle(
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 17.5,
               color: Theme.of(context).textTheme.bodyLarge?.color,
-              fontWeight: FontWeight.normal,
+              fontWeight: FontWeight.w400,
+              letterSpacing: 0.6,
               fontFamily: Theme.of(context).textTheme.bodyLarge?.fontFamily,
             ),
             child: top,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 9.5),
         Transform.translate(
-          offset: const Offset(15, 0),
+          offset: const Offset(14, 0),
           child: DefaultTextStyle(
             maxLines: 1,
             style: TextStyle(
@@ -57,6 +62,7 @@ class StackPanel extends StatelessWidget {
               overflow: TextOverflow.visible,
               color: Theme.of(context).textTheme.bodyLarge?.color,
               fontFamily: Theme.of(context).textTheme.bodyLarge?.fontFamily,
+              letterSpacing: 0.3,
             ),
             child: bottom,
           ),
