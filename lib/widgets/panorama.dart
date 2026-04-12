@@ -85,9 +85,6 @@ class PanoramaConfig {
   /// 大标题循环间距的额外余量（像素，加在 titleContainerWidth + parentWidth 之后）。
   final double titleSpacingExtra;
 
-  /// 背景图案单元宽度（像素）。
-  final double bgPatternWidth;
-
   /// 大标题区域相对顶部偏移（像素，负值=向上溢出）。
   final double titleAreaTop;
 
@@ -151,7 +148,6 @@ class PanoramaConfig {
     this.pivotX = -200.0,
     this.titleContainerWidth = 500.0,
     this.titleSpacingExtra = 100.0,
-    this.bgPatternWidth = 1000.0,
     this.titleAreaTop = -40 * 0.8,
     this.titleAreaHeight = 150.0,
     this.titleOverflowRight = 2000.0,
@@ -445,18 +441,18 @@ class PanoramaScrollPhysics extends ScrollPhysics {
 
 class MetroPanorama extends StatefulWidget {
   final Widget title;
-  final Widget background;
+  final Widget? background;
   final List<MetroPanoramaItem> items;
   final ValueChanged<int>? onPageChange;
-  final PanoramaConfig config;
+  final PanoramaConfig? config;
 
   const MetroPanorama({
     super.key,
     required this.title,
-    required this.background,
+    this.background,
     required this.items,
     this.onPageChange,
-    this.config = const PanoramaConfig(),
+    this.config,
   });
 
   @override
@@ -465,14 +461,36 @@ class MetroPanorama extends StatefulWidget {
 
 class _MetroPanoramaState extends State<MetroPanorama>
     with TickerProviderStateMixin {
+  PanoramaConfig? _resolvedConfig;
+
+  PanoramaConfig get _config =>
+      _resolvedConfig ?? widget.config ?? const PanoramaConfig();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final newConfig = widget.config ??
+        Theme.of(context).extension<MetroPanoramaThemeData>()?.config ??
+        const PanoramaConfig();
+    if (_resolvedConfig != newConfig) {
+      _resolvedConfig = newConfig;
+      _subtitleSnapController.duration = newConfig.snapDuration;
+      _rotationController.duration = newConfig.rotationDuration;
+      _translationController.duration = newConfig.translationDuration;
+      _rotationTween.begin = newConfig.rotationStartDegrees;
+    }
+  }
+
   static const double _pi = 3.1415926535897932;
   static double _degreesToRadians(double degrees) => degrees * _pi / 180;
-  double get _pivot => widget.config.pivotX;
+  double get _pivot => _config.pivotX;
 
   late AnimationController _rotationController;
   late AnimationController _translationController;
   late Animation<double> _rotationAnimation;
   late Animation<double> _translationAnimation;
+  late final Tween<double> _rotationTween;
+  late final Tween<double> _translationTween;
 
   late ScrollController _scrollController;
 
@@ -486,6 +504,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
   bool _isBallistic = false;
   bool _isInterruptingBallistic = false;
   double? _dragStartPixels;
+
   /// 归位动画期间持有的计时器。
   /// 手指抬起 → 归位动画开始时启动，若在计时器超时前再次按下则视为"打断惯性"。
   Timer? _ballisticInterruptTimer;
@@ -500,8 +519,8 @@ class _MetroPanoramaState extends State<MetroPanorama>
   Map<int, double> _subtitleSnapFrom = {};
   Map<int, double> _subtitleSnapTo = {};
 
-  double get _titleContainerWidth => widget.config.titleContainerWidth;
-  double get _bgPatternWidth => widget.config.bgPatternWidth;
+  double get _titleContainerWidth => _config.titleContainerWidth;
+  double _bgPatternWidth = 1000.0;
   double _titleSpacing = 1500.0;
 
   // ── 布局派生值（由 _recalculateLayout 统一维护）───────────────────────────────
@@ -530,7 +549,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
   /// 根据 parentWidth 和 config 统一计算所有布局派生值。
   /// 仅当 pageWidth 发生变化时才重新计算，并在非首次构建时将滚动位置校正到当前页。
   void _recalculateLayout(double parentWidth) {
-    final double newPageWidth = parentWidth - widget.config.nextPagePeekSize;
+    final double newPageWidth = parentWidth - _config.nextPagePeekSize;
     final bool isFirstBuild = _cycleLength == 0;
     if (!isFirstBuild && newPageWidth == _pageWidth) return;
 
@@ -608,40 +627,43 @@ class _MetroPanoramaState extends State<MetroPanorama>
         realIndex < _titleWidths.length ? _titleWidths[realIndex] : 0.0;
     if (titleWidth <= 0) return fallback;
 
-    return (_itemWidths[realIndex] - widget.config.itemPaddingLeft - titleWidth)
+    return (_itemWidths[realIndex] - _config.itemPaddingLeft - titleWidth)
         .clamp(0.0, double.infinity);
   }
 
   @override
   void initState() {
     super.initState();
+    // Cache the initial config to avoid using Theme.of in initState
+    final initialConfig = widget.config ?? const PanoramaConfig();
+    _resolvedConfig = initialConfig;
 
     _scrollController = ScrollController(initialScrollOffset: 0.0);
 
     _subtitleSnapController = AnimationController(
       vsync: this,
-      duration: widget.config.snapDuration,
+      duration: initialConfig.snapDuration,
     );
     _subtitleSnapController.addListener(_onSubtitleSnapTick);
 
     _rotationController = AnimationController(
       vsync: this,
-      duration: widget.config.rotationDuration,
+      duration: initialConfig.rotationDuration,
     );
     _translationController = AnimationController(
       vsync: this,
-      duration: widget.config.translationDuration,
+      duration: initialConfig.translationDuration,
     );
 
-    _rotationAnimation =
-        Tween<double>(begin: widget.config.rotationStartDegrees, end: 0)
-            .animate(CurvedAnimation(
+    _rotationTween =
+        Tween<double>(begin: initialConfig.rotationStartDegrees, end: 0);
+    _rotationAnimation = _rotationTween.animate(CurvedAnimation(
       parent: _rotationController,
       curve: MetroCurves.panoramaRotateIn,
     ));
 
-    _translationAnimation =
-        Tween<double>(begin: 1, end: 0).animate(CurvedAnimation(
+    _translationTween = Tween<double>(begin: 1, end: 0);
+    _translationAnimation = _translationTween.animate(CurvedAnimation(
       parent: _translationController,
       curve: MetroCurves.panoramaTranslateIn,
     ));
@@ -681,9 +703,8 @@ class _MetroPanoramaState extends State<MetroPanorama>
 
   void _onSubtitleSnapTick() {
     final double raw = _subtitleSnapController.value;
-    final double t = widget.config.snapCurve != null
-        ? widget.config.snapCurve!.transform(raw)
-        : raw;
+    final double t =
+        _config.snapCurve != null ? _config.snapCurve!.transform(raw) : raw;
     Map<int, double> newMap = {};
     for (int i = 0; i < widget.items.length; i++) {
       double from = _subtitleSnapFrom[i] ?? 0.0;
@@ -766,8 +787,8 @@ class _MetroPanoramaState extends State<MetroPanorama>
     //        speed=1 时偏移量与滚动量完全一致，小标题看起来固定在原位。
     // 规则2：d<0  时，小标题偏移 = |d| × subtitleBackwardSpeed（更慢的分离速率）
     final double titleDx = d >= 0
-        ? (d * widget.config.subtitleForwardSpeed).clamp(0.0, maxDx)
-        : (-d) * widget.config.subtitleBackwardSpeed;
+        ? (d * _config.subtitleForwardSpeed).clamp(0.0, maxDx)
+        : (-d) * _config.subtitleBackwardSpeed;
     return titleDx.clamp(0.0, maxDx);
   }
 
@@ -778,7 +799,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
         _recalculateLayout(constraints.maxWidth);
         _titleSpacing = _titleContainerWidth +
             constraints.maxWidth +
-            widget.config.titleSpacingExtra;
+            _config.titleSpacingExtra;
 
         return AnimatedBuilder(
           animation:
@@ -830,39 +851,53 @@ class _MetroPanoramaState extends State<MetroPanorama>
                   (data.bOffset % _bgPatternWidth) - _bgPatternWidth;
               if (renderB <= -_bgPatternWidth) renderB += _bgPatternWidth;
 
-              final double bgEntryOffset = tv * widget.config.bgEntryTranslate;
-              final double titleEntryOffset =
-                  tv * widget.config.titleEntryTranslate;
+              final double bgEntryOffset = tv * _config.bgEntryTranslate;
+              final double titleEntryOffset = tv * _config.titleEntryTranslate;
 
               final topPadding = MediaQuery.of(context).padding.top;
 
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    width: _bgPatternWidth * 4,
-                    height: parentHeight,
-                    child: Transform.translate(
-                      offset: Offset(bgEntryOffset, 0),
-                      child: Stack(clipBehavior: Clip.none, children: [
-                        for (int i = 0; i < 4; i++)
-                          Positioned(
-                            left: renderB + i * _bgPatternWidth,
-                            top: 0,
-                            width: _bgPatternWidth,
-                            height: parentHeight,
-                            child: widget.background,
-                          ),
-                      ]),
+                  if (widget.background != null)
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      width: _bgPatternWidth * 2,
+                      height: parentHeight,
+                      child: Transform.translate(
+                        offset: Offset(bgEntryOffset, 0),
+                        child: Stack(clipBehavior: Clip.none, children: [
+                          for (int i = 0; i < 2; i++)
+                            Positioned(
+                              left: renderB + i * _bgPatternWidth,
+                              top: 0,
+                              width: i == 0 ? null : _bgPatternWidth,
+                              height: parentHeight,
+                              child: i == 0
+                                  ? _MeasureSize(
+                                      onChange: (size) {
+                                        if ((size.width - _bgPatternWidth)
+                                                    .abs() >
+                                                0.5 &&
+                                            size.width > 0) {
+                                          setState(() {
+                                            _bgPatternWidth = size.width;
+                                          });
+                                        }
+                                      },
+                                      child: widget.background,
+                                    )
+                                  : widget.background ?? const SizedBox(),
+                            ),
+                        ]),
+                      ),
                     ),
-                  ),
                   Positioned(
-                    top: widget.config.titleAreaTop + topPadding,
+                    top: _config.titleAreaTop + topPadding,
                     left: 0,
-                    height: widget.config.titleAreaHeight,
-                    right: -widget.config.titleOverflowRight,
+                    height: _config.titleAreaHeight,
+                    right: -_config.titleOverflowRight,
                     child: Transform.translate(
                       offset: Offset(titleEntryOffset, 0),
                       child: Stack(
@@ -872,7 +907,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
                             Positioned(
                               left: renderT +
                                   i * _titleSpacing +
-                                  widget.config.titleLeftMargin,
+                                  _config.titleLeftMargin,
                               top: 0,
                               child: SizedBox(
                                 width: _titleContainerWidth,
@@ -898,7 +933,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
           child: ValueListenableBuilder<double>(
             valueListenable: _translationNotifier,
             builder: (context, tv, child) => Transform.translate(
-              offset: Offset(tv * widget.config.contentEntryTranslate, 0),
+              offset: Offset(tv * _config.contentEntryTranslate, 0),
               child: child,
             ),
             child: NotificationListener<ScrollNotification>(
@@ -965,14 +1000,14 @@ class _MetroPanoramaState extends State<MetroPanorama>
                     double bgSpeed = (_bgPatternWidth - parentWidth) /
                         parentWidth /
                         _effectivePageCount *
-                        widget.config.bgDragSpeedDivisor;
+                        _config.bgDragSpeedDivisor;
                     double newT = titleScrollable
                         ? _parallaxNotifier.value.tOffset -
                             dx *
                                 (_titleContainerWidth - parentWidth) /
                                 parentWidth /
                                 _effectivePageCount *
-                                widget.config.bigTitleDragSpeedDivisor
+                                _config.bigTitleDragSpeedDivisor
                         : 0.0;
                     double newB =
                         _parallaxNotifier.value.bOffset - dx * bgSpeed;
@@ -986,7 +1021,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
                         if (_isWideItem[i]) {
                           double maxDx = _itemWidths[i] - _pageWidth;
                           newMap[i] = ((newMap[i] ?? 0.0) +
-                                  dx * widget.config.subtitleInterruptSpeed)
+                                  dx * _config.subtitleInterruptSpeed)
                               .clamp(0.0, maxDx);
                         }
                       }
@@ -1053,9 +1088,9 @@ class _MetroPanoramaState extends State<MetroPanorama>
                         isInfinite: isInfinite,
                         pageSnapPoints: _pageSnapPoints,
                         stoppedVelocityThreshold:
-                            widget.config.stoppedVelocityThreshold,
-                        snapCurve: widget.config.snapCurve,
-                        snapDuration: widget.config.snapDuration,
+                            _config.stoppedVelocityThreshold,
+                        snapCurve: _config.snapCurve,
+                        snapDuration: _config.snapDuration,
                         getDragStartPixels: () => _dragStartPixels,
                         onTargetCalculated: (target) {
                           _targetS = target;
@@ -1067,7 +1102,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
                           // 启动计时器：归位动画时长内若手指再次按下，视为打断惯性
                           _ballisticInterruptTimer?.cancel();
                           _ballisticInterruptTimer = Timer(
-                            widget.config.snapDuration,
+                            _config.snapDuration,
                             () => _ballisticInterruptTimer = null,
                           );
                           // 手指抬起时立即通知页面变化，无需等动画结束
@@ -1118,7 +1153,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
                 valueListenable: _translationNotifier,
                 builder: (context, tv, child) => Transform.translate(
                   offset: Offset(
-                      tv * widget.config.contentEntryTranslate -
+                      tv * _config.contentEntryTranslate -
                           _itemWidths[widget.items.length - 1],
                       0),
                   child: child!,
@@ -1139,8 +1174,8 @@ class _MetroPanoramaState extends State<MetroPanorama>
       color: Colors.transparent,
       width: ew,
       padding: EdgeInsets.only(
-          left: widget.config.itemPaddingLeft,
-          top: widget.config.itemPaddingTop + topPadding),
+          left: _config.itemPaddingLeft,
+          top: _config.itemPaddingTop + topPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1161,7 +1196,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
               child: DefaultTextStyle.merge(
                 style: TextStyle(
                   fontWeight: FontWeight.w200,
-                  fontSize: widget.config.subtitleFontSize,
+                  fontSize: _config.subtitleFontSize,
                   //color: Colors.white,
                 ),
                 child: item.title,

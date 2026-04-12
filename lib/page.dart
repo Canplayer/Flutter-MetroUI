@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter/cupertino.dart';
-//import 'package:flutter/material.dart';
+import 'package:metro_ui/metro_theme_extensions.dart';
+import 'package:flutter/material.dart';
 
 /// 一个使用想学习模仿Windows Phone换页行为的路由。因为修改于MaterialPageRoute，
 /// 所以部分行为可能与MaterialPageRoute一致，但是做了很多删改。
@@ -101,6 +101,9 @@ mixin MetroRouteTransitionMixin<T> on PageRoute<T> {
   Widget buildTransitions(BuildContext context, Animation<double> animation,
       Animation<double> secondaryAnimation, Widget child) {
     // 这里的动画行为还是直接切吧，如果尝试使用任何的动画行为，可能第一帧会删一下我也不知道什么原因反正这样写硬切才是我发现的最佳方案。
+    final pageTheme = Theme.of(context).extension<MetroPageThemeData>();
+    // we can use pageTheme for transitions in the future
+    if (pageTheme != null) { /* no-op */ }
     return child;
   }
 }

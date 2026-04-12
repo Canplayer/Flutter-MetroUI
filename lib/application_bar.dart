@@ -221,6 +221,10 @@ class MetroApplicationBar {
     this.buttonColor,
     this.buttonIconColor,
     this.menuItemTextColor,
+    this.expandCurve,
+    this.collapseCurve,
+    this.expandDuration,
+    this.collapseDuration,
     this.mini = false,
   });
 
@@ -244,6 +248,18 @@ class MetroApplicationBar {
 
   /// 菜单item文字的颜色
   final Color? menuItemTextColor;
+
+  /// MetroAppBar的展开动画曲线
+  final Curve? expandCurve;
+
+  /// MetroAppBar的收缩动画曲线
+  final Curve? collapseCurve;
+
+  /// MetroAppBar的展开动画时间
+  final Duration? expandDuration;
+
+  /// MetroAppBar的收缩动画时间
+  final Duration? collapseDuration;
 
   /// mini 模式：折叠时仅露出顶部条高，向上拖拽后才显示按钮行（同时伴随动画）。
   /// 非 mini 模式：折叠时默认露出足够高度（按钮行始终可见），向上拖拽仅展开菜单项。
@@ -495,20 +511,22 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
   void _settleMenu(bool expand) {
     _setDragging(false);
     _setExpandedChromeVisible(expand);
+
+    final theme = Theme.of(context).extension<MetroAppBarTheme>();
+    final Curve eCurve = widget.bar.expandCurve ?? theme?.expandCurve ?? Curves.easeOut;
+    final Curve cCurve = widget.bar.collapseCurve ?? theme?.collapseCurve ?? Curves.easeIn;
+    final Duration eDur = widget.bar.expandDuration ?? theme?.expandDuration ?? const Duration(milliseconds: 250);
+    final Duration cDur = widget.bar.collapseDuration ?? theme?.collapseDuration ?? const Duration(milliseconds: 250);
+
     if (expand) {
-      _animationController.forward();
+      _animationController.animateTo(1.0, duration: eDur, curve: eCurve);
     } else {
-      _animationController.reverse();
+      _animationController.animateTo(0.0, duration: cDur, curve: cCurve);
     }
   }
 
   void _toggleMenu() {
-    if (_animationController.status == AnimationStatus.completed ||
-        _animationController.status == AnimationStatus.forward) {
-      _settleMenu(false);
-    } else {
-      _settleMenu(true);
-    }
+    _settleMenu(!_useExpandedChrome);
   }
 
   void _closeMenu() {
@@ -579,8 +597,7 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
         final Color bgColor = useExpandedChrome ? expandedBg : collapsedBg;
 
         final double expandedH = _collapsedHeight +
-            Curves.easeOut.transform(_animationController.value) *
-                _maxExpansionHeight;
+            _animationController.value * _maxExpansionHeight;
         final Key buttonsContentKey = ValueKey<int>(_buttonsAnimRevision);
 
         // 按钮行滑入/滑出动画（向上飞入，向下飞出）
