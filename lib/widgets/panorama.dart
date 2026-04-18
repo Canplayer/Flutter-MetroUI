@@ -78,6 +78,9 @@ class PanoramaConfig {
   /// 透视旋转的 X 轴原点（像素，负值=在组件左侧）。
   final double pivotX;
 
+  /// 3D旋转动画曲线
+  final Curve rotationCurve;
+
   // ── 布局 ─────────────────────────────────────────────────────────────────────
   /// 大标题容器宽度（像素）。
   final double titleContainerWidth;
@@ -139,13 +142,14 @@ class PanoramaConfig {
     this.snapVelocityScale = 0.2,
     this.snapCurve,
     this.snapDuration = const Duration(milliseconds: 350),
-    this.rotationDuration = const Duration(milliseconds: 500),
+    this.rotationDuration = const Duration(milliseconds: 450),
     this.translationDuration = const Duration(milliseconds: 1000),
-    this.rotationStartDegrees = -86.5,
-    this.bgEntryTranslate = 720.0,
-    this.titleEntryTranslate = 1216.0,
-    this.contentEntryTranslate = 960.0,
-    this.pivotX = -200.0,
+    this.rotationStartDegrees = -86.95,
+    this.bgEntryTranslate = 880 * 0.8,
+    this.titleEntryTranslate = 1460 * 0.8,
+    this.contentEntryTranslate = 1090 * 0.8,
+    this.pivotX = -240.0 * 0.8,
+    this.rotationCurve = MetroCurves.panoramaRotateIn_8,
     this.titleContainerWidth = 500.0,
     this.titleSpacingExtra = 100.0,
     this.titleAreaTop = -40 * 0.8,
@@ -659,7 +663,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
         Tween<double>(begin: initialConfig.rotationStartDegrees, end: 0);
     _rotationAnimation = _rotationTween.animate(CurvedAnimation(
       parent: _rotationController,
-      curve: MetroCurves.panoramaRotateIn,
+      curve: _config.rotationCurve,
     ));
 
     _translationTween = Tween<double>(begin: 1, end: 0);

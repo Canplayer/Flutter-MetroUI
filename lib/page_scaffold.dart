@@ -112,8 +112,7 @@ class _BodyBuilderState extends State<_BodyBuilder> {
         ),
       ),
 
-      //全局3D坐标观察点固定到屏幕中心
-      //不要问我为什么是0.00078，我一点一点调出来的，我也不知道这个该怎么换算和为什么是这个值
+
       child: PopScope(
         canPop: widget.onWillPop != null,
         onPopInvokedWithResult: (didPop, result) async {

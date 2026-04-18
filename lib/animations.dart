@@ -25,10 +25,10 @@ class MetroAnimatedPageState extends State<MetroAnimatedPage>
   // 翻转动画原点距离
   double _pivot = 0;
   static const double _pivotMax = 320; // magic number常量化
-  
+
   // 角度转弧度的常量
   static const double _degreesToRadians = 3.1415926535897932 / 180.0;
-  
+
   // 将角度转换为弧度
   static double _toRadians(double degrees) => degrees * _degreesToRadians;
 
@@ -50,8 +50,9 @@ class MetroAnimatedPageState extends State<MetroAnimatedPage>
       duration: const Duration(milliseconds: 0),
     );
     // 初始化为静止状态，防止LateInitializationError
-    _rotationAnimation = Tween<double>(begin: _toRadians(-180), end: _toRadians(-180))
-        .animate(_rotationController);
+    _rotationAnimation =
+        Tween<double>(begin: _toRadians(-180), end: _toRadians(-180))
+            .animate(_rotationController);
     _translationAnimation =
         Tween<double>(begin: -100, end: -100).animate(_translationController);
     //新页面会调用这个方法，也就是说如果传入的widget默认行为将会直接播放push动画
@@ -126,15 +127,14 @@ class MetroAnimatedPageState extends State<MetroAnimatedPage>
   /// didPopNext动画：从90度旋转到0度（下一页退出）
   Future<void> didPopNext() async {
     _setupAnimation(
-      rotationBegin: _toRadians(40.5),
-      rotationEnd: _toRadians(0),
-      translationBegin: 0,
-      translationEnd: 0,
-      rotationDuration: const Duration(milliseconds: 250),
-      translationDuration: const Duration(milliseconds: 250),
-      rotationCurve: MetroCurves.normalPageRotateIn,
-      translationCurve: MetroCurves.normalPageRotateIn
-    );
+        rotationBegin: _toRadians(40.5),
+        rotationEnd: _toRadians(0),
+        translationBegin: 0,
+        translationEnd: 0,
+        rotationDuration: const Duration(milliseconds: 250),
+        translationDuration: const Duration(milliseconds: 250),
+        rotationCurve: MetroCurves.normalPageRotateIn,
+        translationCurve: MetroCurves.normalPageRotateIn);
     _rotationController.reset();
     _translationController.reset();
     _rotationController.forward();
@@ -271,42 +271,160 @@ abstract final class MetroCurves {
 
   /// 一个用于panorama页面进入时候的旋转的动画曲线
   //static const Cubic panoramaRotateIn = Cubic(0.1, 0.31, 0.395, 0.89);
-  static final KeyframeInterpolatedCurve panoramaRotateIn = KeyframeInterpolatedCurve(
-    KeyframeBuilder.normalize(
-      points: const [
-        Offset(0, 95), Offset(1, 86.4), Offset(2, 79.2), Offset(3, 72.5),
-        Offset(4, 66.2), Offset(5, 60.6), Offset(6, 55.2), Offset(7, 50.3),
-        Offset(8, 45.7), Offset(9, 41.5), Offset(10, 37.5), Offset(11, 33.8),
-        Offset(12, 30.4), Offset(13, 27.2), Offset(14, 24.3), Offset(15, 21.8),
-        Offset(16, 19.2), Offset(17, 17), Offset(18, 14.8), Offset(19, 12.8),
-        Offset(21, 9.2), Offset(22, 7.7), Offset(23, 6.3), Offset(24, 4.8),
-        Offset(25, 3.6), Offset(26, 1.3), Offset(27, 0.3), Offset(28, 0), Offset(29, 0),
-      ],
-      maxTime: 30,
-      maxValue: 95,
-      reversed: true, // 因为原始数据是从95到0，需要反转成0到1
-    ),
+  static const KeyframeInterpolatedCurve panoramaRotateIn_8 =
+      KeyframeInterpolatedCurve(
+    // { x: 0.0, y: -86.8978 },{ x: 0.960937, y: -79.6849 },{ x: 1.89453, y: -72.937 },{ x: 2.83203, y: -66.6736 },
+    // { x: 3.76953, y: -61.0616 },{ x: 4.70508, y: -55.6501 },{ x: 5.64062, y: -50.7396 },{ x: 6.57617, y: -46.1298 },
+    // { x: 7.51172, y: -41.9208 },{ x: 8.44922, y: -37.9123 },{ x: 9.38477, y: -34.2044 },{ x: 10.3223, y: -30.9324 },
+    // { x: 11.2969, y: -27.5903 },{ x: 12.2324, y: -24.6841 },{ x: 13.0937, y: -22.0117 },{ x: 14.1035, y: -19.5732 },
+    // { x: 14.9668, y: -17.5355 },{ x: 15.9766, y: -15.1638 },{ x: 16.9121, y: -13.1595 },{ x: 18.7871, y: -9.55179 },
+    // { x: 19.6445, y: -8.19969 },{ x: 20.584, y: -6.51256 },{ x: 21.5937, y: -5.14239 },{ x: 22.5293, y: -3.93982 },
+    // { x: 23.3906, y: -2.63729 },{ x: 24.3262, y: -1.46809 },{ x: 25.2988, y: -0.483097 },{ x: 26, y: 0 }
+    [
+      Offset(0.000000, 0.000000),
+      Offset(0.036959, 0.083004),
+      Offset(0.072867, 0.160658),
+      Offset(0.108924, 0.232735),
+      Offset(0.144982, 0.297317),
+      Offset(0.180965, 0.359591),
+      Offset(0.216947, 0.416100),
+      Offset(0.252930, 0.469149),
+      Offset(0.288912, 0.517585),
+      Offset(0.324970, 0.563714),
+      Offset(0.360953, 0.606384),
+      Offset(0.397012, 0.644037),
+      Offset(0.434496, 0.682497),
+      Offset(0.470477, 0.715941),
+      Offset(0.503604, 0.746694),
+      Offset(0.542442, 0.774756),
+      Offset(0.575646, 0.798205),
+      Offset(0.614485, 0.825498),
+      Offset(0.650465, 0.848563),
+      Offset(0.722581, 0.890080),
+      Offset(0.755558, 0.905640),
+      Offset(0.791692, 0.925055),
+      Offset(0.830527, 0.940823),
+      Offset(0.866512, 0.954661),
+      Offset(0.899638, 0.969651),
+      Offset(0.935623, 0.983106),
+      Offset(0.973031, 0.994441),
+      Offset(1.000000, 1.000000),
+    ],
   );
+
+  /// 贝塞尔曲线近似版本panorama页面进入时候的旋转的动画曲线
+  static const Cubic panoramaRotateIn2_8 = Cubic(0.096, 0.197, 0.31, 0.810);
 
   /// 一个用于panorama页面进入时候的内容物平移的动画曲线
   //static const Cubic panoramaTranslateIn = Cubic(0.197, 0.893, 0.41, 0.99);
-  static final KeyframeInterpolatedCurve panoramaTranslateIn = KeyframeInterpolatedCurve(
-    KeyframeBuilder.normalize(
-      points: const [
-        Offset(0, 1000), Offset(1, 923.3), Offset(2, 859.7), Offset(3, 790.2),
-        Offset(4, 728.7), Offset(5, 677), Offset(6, 623.1), Offset(7, 575.6),
-        Offset(8, 532.6), Offset(9, 492.2), Offset(10, 452.8), Offset(11, 417.2),
-        Offset(12,385.9), Offset(13, 354.7), Offset(14, 327.7), Offset(15, 302.9),
-        Offset(16, 279.2), Offset(17, 257.3), Offset(18, 237.2), Offset(20, 200.8),
-        Offset(21, 185.6), Offset(23, 157.6), Offset(24, 144.5), Offset(25, 133.7),
-        Offset(26, 112.1), Offset(27, 103.5), Offset(28, 94.9), Offset(29, 87.3),
-        Offset(31, 73.3), Offset(32, 66.8), Offset(33, 61.6), Offset(36, 47.6),
-        Offset(39, 35.6), Offset(45, 19.4), Offset(50, 10.8), Offset(55, 4.3), Offset(59, 0)
-      ],
-      maxTime: 60,
-      maxValue: 1000,
-      reversed: true, // 因为原始数据是从1000到0，需要反转成0到1
-    ),
+  static const KeyframeInterpolatedCurve panoramaTranslateIn =
+      KeyframeInterpolatedCurve(
+    // { x: 0, y: 1340 },
+    // { x: 1, y: 1234.7 },
+    // { x: 2.443, y: 1125.91 },
+    // { x: 3.443, y: 1051.31 },
+    // { x: 4.443, y: 980.536 },
+    // { x: 5.443, y: 920.238 },
+    // { x: 6.443, y: 867.093 },
+    // { x: 7.443, y: 817.545 },
+    // { x: 8.443, y: 768.67 },
+    // { x: 9.443, y: 725.109 },
+    // { x: 10.443, y: 685.568 },
+    // { x: 11.0, y: 665.596 },
+    // { x: 12.0, y: 631.626 },
+    // { x: 13.0, y: 596.672 },
+    // { x: 14.0, y: 570.387 },
+    // { x: 15.0, y: 544.673 },
+    // { x: 16.0, y: 520.958 },
+    // { x: 17.0, y: 498.813 },
+    // { x: 18.0, y: 479.395 },
+    // { x: 19.0, y: 460.65 },
+    // { x: 20.0, y: 443.68 },
+    // { x: 21.0, y: 427.998 },
+    // { x: 22.0, y: 413.392 },
+    // { x: 23.0, y: 400.229 },
+    // { x: 24.0, y: 387.855 },
+    // { x: 25.0, y: 376.886 },
+    // { x: 26.0, y: 366.083 },
+    // { x: 27.0, y: 356.351 },
+    // { x: 28.0, y: 347.33 },
+    // { x: 29.0, y: 338.727 },
+    // { x: 30.0, y: 331.657 },
+    // { x: 31.0, y: 324.282 },
+    // { x: 32.0, y: 317.773 },
+    // { x: 33.0, y: 311.733 },
+    // { x: 34.0, y: 306.102 },
+    // { x: 35.0, y: 301.595 },
+    // { x: 36.0, y: 296.158 },
+    // { x: 37.0, y: 291.83 },
+    // { x: 38.0, y: 287.778 },
+    // { x: 41.0, y: 275.939 },
+    // { x: 43.0, y: 270.274 },
+    // { x: 44.0, y: 268.061 },
+    // { x: 46.0, y: 264.345 },
+    // { x: 47.0, y: 262.373 },
+    // { x: 49.0, y: 259.232 },
+    // { x: 50.0, y: 257.837 },
+    // { x: 51.0, y: 256.442 },
+    // { x: 54.0, y: 252.831 },
+    // { x: 55.0, y: 252.176 },
+    // { x: 56.0, y: 251.428 },
+    // { x: 57.0, y: 250.847 },
+    // { x: 59.0, y: 250 }
+    [
+      Offset(0.000000, 0.000000),
+      Offset(0.016948, 0.095925),
+      Offset(0.041404, 0.195808),
+      Offset(0.058352, 0.264300),
+      Offset(0.075300, 0.329279),
+      Offset(0.092248, 0.384640),
+      Offset(0.109196, 0.433433),
+      Offset(0.126144, 0.478925),
+      Offset(0.143092, 0.523798),
+      Offset(0.160040, 0.563792),
+      Offset(0.176988, 0.600095),
+      Offset(0.186496, 0.618432),
+      Offset(0.203444, 0.649621),
+      Offset(0.220392, 0.681713),
+      Offset(0.237340, 0.705846),
+      Offset(0.254288, 0.729454),
+      Offset(0.271236, 0.751228),
+      Offset(0.288184, 0.771559),
+      Offset(0.305132, 0.789387),
+      Offset(0.322080, 0.806598),
+      Offset(0.339028, 0.822178),
+      Offset(0.355976, 0.836576),
+      Offset(0.372924, 0.849986),
+      Offset(0.389872, 0.862071),
+      Offset(0.406820, 0.873432),
+      Offset(0.423768, 0.883503),
+      Offset(0.440716, 0.893422),
+      Offset(0.457664, 0.902357),
+      Offset(0.474612, 0.910639),
+      Offset(0.491560, 0.918538),
+      Offset(0.508508, 0.925029),
+      Offset(0.525456, 0.931800),
+      Offset(0.542404, 0.937776),
+      Offset(0.559352, 0.943322),
+      Offset(0.576300, 0.948492),
+      Offset(0.593248, 0.952630),
+      Offset(0.610196, 0.957621),
+      Offset(0.627144, 0.961595),
+      Offset(0.644092, 0.965315),
+      Offset(0.694936, 0.976185),
+      Offset(0.728832, 0.981386),
+      Offset(0.745780, 0.983418),
+      Offset(0.779676, 0.986830),
+      Offset(0.796624, 0.988640),
+      Offset(0.830520, 0.991524),
+      Offset(0.847468, 0.992805),
+      Offset(0.864416, 0.994085),
+      Offset(0.915260, 0.997401),
+      Offset(0.932208, 0.998002),
+      Offset(0.949156, 0.998689),
+      Offset(0.966104, 0.999222),
+      Offset(1.000000, 1.000000),
+    ],
   );
 
   /// 普通页面退出旋转的动画曲线
@@ -316,18 +434,17 @@ abstract final class MetroCurves {
   static const Cubic normalPageRotateIn = Cubic(0.2, 0.6, 0.21, 1);
 }
 
-
 class KeyframeInterpolatedCurve extends Curve {
   /// 关键帧数据点列表
   /// 每个 Offset 的 dx 表示时间（0-1），dy 表示值（0-1）
   /// 必须按时间升序排列
   final List<Offset> keyframes;
 
-  const KeyframeInterpolatedCurve(this.keyframes)
-      : assert(keyframes.length >= 2, 'At least 2 keyframes are required');
+  const KeyframeInterpolatedCurve(this.keyframes);
 
   @override
   double transformInternal(double t) {
+    if (keyframes.isEmpty) return 0.0;
     // 边界情况处理
     if (t <= 0.0) return keyframes.first.dy;
     if (t >= 1.0) return keyframes.last.dy;
@@ -339,7 +456,8 @@ class KeyframeInterpolatedCurve extends Curve {
 
       if (t >= current.dx && t <= next.dx) {
         // 在当前区间内进行线性插值
-        final double segmentProgress = (t - current.dx) / (next.dx - current.dx);
+        final double segmentProgress =
+            (t - current.dx) / (next.dx - current.dx);
         return current.dy + (next.dy - current.dy) * segmentProgress;
       }
     }
@@ -352,7 +470,7 @@ class KeyframeInterpolatedCurve extends Curve {
 /// 辅助类：用于从原始数据点创建关键帧
 class KeyframeBuilder {
   /// 从原始数据点创建归一化的关键帧
-  /// 
+  ///
   /// [points]: 原始数据点列表，每个点的 dx 是时间，dy 是值
   /// [maxTime]: 最大时间值（用于归一化时间）
   /// [maxValue]: 最大值（用于归一化数值）
@@ -366,14 +484,14 @@ class KeyframeBuilder {
     if (points.isEmpty) return [];
 
     // 自动计算最大值
-    final double actualMaxTime = maxTime ?? 
-        points.map((p) => p.dx).reduce((a, b) => a > b ? a : b);
-    final double actualMaxValue = maxValue ?? 
-        points.map((p) => p.dy).reduce((a, b) => a > b ? a : b);
+    final double actualMaxTime =
+        maxTime ?? points.map((p) => p.dx).reduce((a, b) => a > b ? a : b);
+    final double actualMaxValue =
+        maxValue ?? points.map((p) => p.dy).reduce((a, b) => a > b ? a : b);
 
     return points.map((point) {
       final double normalizedX = point.dx / actualMaxTime;
-      final double normalizedY = reversed 
+      final double normalizedY = reversed
           ? 1.0 - (point.dy / actualMaxValue)
           : point.dy / actualMaxValue;
       return Offset(normalizedX, normalizedY);
@@ -381,7 +499,7 @@ class KeyframeBuilder {
   }
 
   /// 从简单的数值列表创建关键帧
-  /// 
+  ///
   /// [values]: 数值列表
   /// [maxValue]: 最大值（用于归一化）
   /// [reversed]: 是否反转值
@@ -392,13 +510,13 @@ class KeyframeBuilder {
   }) {
     if (values.isEmpty) return [];
 
-    final double actualMaxValue = maxValue ?? 
-        values.reduce((a, b) => a > b ? a : b);
+    final double actualMaxValue =
+        maxValue ?? values.reduce((a, b) => a > b ? a : b);
     final int count = values.length;
 
     return List.generate(count, (index) {
       final double normalizedX = index / (count - 1);
-      final double normalizedY = reversed 
+      final double normalizedY = reversed
           ? 1.0 - (values[index] / actualMaxValue)
           : values[index] / actualMaxValue;
       return Offset(normalizedX, normalizedY);

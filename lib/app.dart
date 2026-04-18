@@ -691,17 +691,25 @@ class _MetroAppState extends State<MetroApp> {
       Duration appBarExpandDuration = const Duration(milliseconds: 300);
       Duration appBarCollapseDuration = const Duration(milliseconds: 200);
 
-      double panoramaTranslate = 1000.0;
+      double panoramaTitleEntryTranslate = 1460 * 0.8;
+      double panoramaBgEntryTranslate = 880 * 0.8;
+      double panoramaContentEntryTranslate = 1090 * 0.8;
+      Duration panoramaRotationDuration = const Duration(milliseconds: 450);
+
       Color buttonPressedBg = primaryColor;
       Color buttonPressedText = whiteColor;
 
       if (widget.version == MetroDesignVersion.wp7) {
         appBarExpandCurve = Curves.bounceOut;
         appBarCollapseCurve = Curves.easeIn;
-        appBarExpandDuration = const Duration(milliseconds: 400); // Exaggerated bounce
+        appBarExpandDuration =
+            const Duration(milliseconds: 400); // Exaggerated bounce
         appBarCollapseDuration = const Duration(milliseconds: 250);
-        
-        panoramaTranslate = 800.0;
+
+        panoramaTitleEntryTranslate = 2600.0;
+        panoramaBgEntryTranslate = 1400.0;
+        panoramaRotationDuration = const Duration(milliseconds: 750);
+
         buttonPressedBg = onSurface;
         buttonPressedText = useWhiteTheme ? whiteColor : blackColor;
       } else if (widget.version == MetroDesignVersion.wp81) {
@@ -748,7 +756,10 @@ class _MetroAppState extends State<MetroApp> {
         ),
         MetroPanoramaThemeData(
           config: PanoramaConfig(
-            titleEntryTranslate: panoramaTranslate,
+            titleEntryTranslate: panoramaTitleEntryTranslate,
+            bgEntryTranslate: panoramaBgEntryTranslate,
+            contentEntryTranslate: panoramaContentEntryTranslate,
+            rotationDuration: panoramaRotationDuration,
           ),
         ),
         const MetroPageThemeData(),
@@ -1055,9 +1066,11 @@ class _MetroAppState extends State<MetroApp> {
     Widget result = _buildWidgetApp(context);
 
     // 2.建立全局3D透视转换层，开发者写3D动画无需再考虑摄像机位置
+    //全局3D坐标观察点固定到屏幕中心
+    //不要问我为什么是0.000795，我一点一点调出来的，我也不知道这个该怎么换算和为什么是这个值
     result = Transform(
       alignment: FractionalOffset.center,
-      transform: Matrix4.identity()..setEntry(3, 2, 0.00078), // 设置Z轴偏移
+      transform: Matrix4.identity()..setEntry(3, 2, 0.000795), // 设置Z轴偏移
       child: result,
     );
 
