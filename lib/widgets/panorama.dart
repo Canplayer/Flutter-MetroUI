@@ -145,7 +145,7 @@ class PanoramaConfig {
     this.rotationDuration = const Duration(milliseconds: 450),
     this.translationDuration = const Duration(milliseconds: 1000),
     this.rotationStartDegrees = -86.95,
-    this.bgEntryTranslate = 880 * 0.8,
+    this.bgEntryTranslate = 840 * 0.8,
     this.titleEntryTranslate = 1460 * 0.8,
     this.contentEntryTranslate = 1090 * 0.8,
     this.pivotX = -240.0 * 0.8,

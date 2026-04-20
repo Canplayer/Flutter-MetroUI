@@ -692,7 +692,7 @@ class _MetroAppState extends State<MetroApp> {
       Duration appBarCollapseDuration = const Duration(milliseconds: 200);
 
       double panoramaTitleEntryTranslate = 1460 * 0.8;
-      double panoramaBgEntryTranslate = 880 * 0.8;
+      double panoramaBgEntryTranslate = 840 * 0.8;
       double panoramaContentEntryTranslate = 1090 * 0.8;
       Duration panoramaRotationDuration = const Duration(milliseconds: 450);
 
