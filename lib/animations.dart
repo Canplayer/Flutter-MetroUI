@@ -431,6 +431,60 @@ abstract final class MetroCurves {
 
   /// 普通页面进入旋转的动画曲线
   static const Cubic normalPageRotateIn = Cubic(0.2, 0.6, 0.21, 1);
+
+  /// AppBar弹出时的动画曲线
+  /// { x: 0, y: 72 },
+  /// { x: 1, y: 49 },
+  /// { x: 2, y: 32 },
+  /// { x: 3, y: 23 },
+  /// { x: 4, y: 16 },
+  /// { x: 5, y: 11 },
+  /// { x: 6, y: 7 },
+  /// { x: 7, y: 5 },
+  /// { x: 8, y: 3 },
+  /// { x: 9, y: 2 },
+  /// { x: 12, y: 0 }
+  static const Cubic appBarTranslateIn = Cubic(
+    0.106, // a (P1.x)
+    0.301, // b (P1.y)
+    0.090, // c (P2.x)
+    0.993, // d (P2.y)
+  );
+
+  /// AppBar按钮弹出时的动画曲线
+  ///     { x: 0, y: 50 },
+  ///     { x: 1, y: 33 },
+  ///     { x: 2, y: 19 },
+  ///     { x: 3, y: 9 },
+  ///     { x: 4, y: 2 },
+  ///     { x: 5, y: -3 },
+  ///     { x: 6, y: -6 },
+  ///     { x: 7, y: -9 },
+  ///     { x: 8, y: -10 },
+  ///     { x: 11, y: -9 },
+  ///     { x: 13, y: -8 },
+  ///     { x: 18, y: -3 },
+  ///     { x: 21, y: -1 },
+  ///     { x: 23, y: 0 }
+  static const KeyframeInterpolatedCurve appBarButtonTranslateIn =
+      KeyframeInterpolatedCurve(
+    [
+      Offset(0.000000, 0.000000),
+      Offset(0.043478, 0.340000),
+      Offset(0.086957, 0.620000),
+      Offset(0.130435, 0.820000),
+      Offset(0.173913, 0.960000),
+      Offset(0.217391, 1.060000),
+      Offset(0.260870, 1.120000),
+      Offset(0.304348, 1.180000),
+      Offset(0.347826, 1.200000),
+      Offset(0.478261, 1.180000),
+      Offset(0.565217, 1.160000),
+      Offset(0.782609, 1.060000),
+      Offset(0.913043, 1.020000),
+      Offset(1.000000, 1.000000),
+    ],
+  );
 }
 
 class KeyframeInterpolatedCurve extends Curve {

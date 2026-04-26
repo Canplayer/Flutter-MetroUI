@@ -152,6 +152,7 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
         //按下缩小,
 
         child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           //触碰即按下
           onPanDown: (details) {
             _isTouch = true;

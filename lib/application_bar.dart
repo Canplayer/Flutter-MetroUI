@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
+import 'package:metro_ui/animations.dart';
 import 'package:metro_ui/metro_theme_extensions.dart';
 import 'package:metro_ui/widgets/tile.dart';
 
 // ---------------- 配置常量 ----------------
 const double kMetroAppBarMiniHeight = 30.0 * 0.8; // 折叠时的 mini 条高度
-const double kMetroAppBarNormalHeight = 71.875 * 0.8; // 正常模式下的折叠高度 (包含按钮)
+const double kMetroAppBarNormalHeight = 72 * 0.8; // 正常模式下的折叠高度 (包含按钮)
 const double kMetroAppBarMoreButtonSize =
     kMetroAppBarNormalHeight; // 更多(•••)按钮区域的尺寸
 // ----------------------------------------
@@ -333,20 +334,17 @@ class MetroApplicationBarOverlay extends StatelessWidget {
         return IgnorePointer(
           ignoring: bar == null,
           child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
-            switchInCurve: Curves.easeOut,
-            switchOutCurve: Curves.easeIn,
+            duration: const Duration(milliseconds: 200),
+            switchInCurve: MetroCurves.appBarTranslateIn,
+            switchOutCurve: MetroCurves.appBarTranslateIn,
             transitionBuilder: (child, animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
+              return SlideTransition(
                   position: Tween<Offset>(
-                    begin: const Offset(0, 0.25),
+                    begin: const Offset(0, 1),
                     end: Offset.zero,
                   ).animate(animation),
                   child: child,
-                ),
-              );
+                );
             },
             child: bar != null
                 ? MetroApplicationBarView(
@@ -381,11 +379,44 @@ class MetroApplicationBarView extends StatefulWidget {
 
 class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
     with TickerProviderStateMixin {
+  // --- AppBar 按钮切换 & 初始载入的动画体系配置 ---
+  static const Duration btnOutgoingDuration = Duration(milliseconds: 100); // 退出时间
+  static const Curve btnOutgoingCurve = Curves.easeIn;                     // 退出曲线
+  static const double btnOutgoingDistance = 40.0;                          // 退出垂直距离 (向上移动)
+  
+  static const Duration btnIncomingDelay = Duration(milliseconds: 100);    // 进入延迟时间
+  static const Duration btnIncomingDuration = Duration(milliseconds: 400); // 进入动画时间
+  static const Curve btnIncomingCurve = MetroCurves.appBarButtonTranslateIn; // 进入动画曲线
+  static const double btnIncomingDistance = 50.0;                          // 进入垂直起始距离 (距下方)
+  // ------------------------------------------------
+
+  // --- Menu菜单展开/收起时(如向上滑引出更多项)，按钮行动画配置 ---
+  static const Duration menuIncomingDuration = Duration(milliseconds: 200);
+  static const Curve menuIncomingCurve = Curves.easeIn;
+  static const double menuIncomingDistance = kMetroAppBarMiniHeight;
+
+  static const Duration menuOutgoingDuration = Duration(milliseconds: 200);
+  static const Curve menuOutgoingCurve = Curves.easeIn;
+  static const double menuOutgoingDistance = kMetroAppBarMiniHeight;
+  // ------------------------------------------------
+
+  // --- 从 Mini 到非 Mini (或反之) 状态切换时，按钮行动画配置 ---
+  static const Duration miniSwitchIncomingDuration = Duration(milliseconds: 400);
+  static const Curve miniSwitchIncomingCurve = MetroCurves.appBarButtonTranslateIn;
+  static const double miniSwitchIncomingDistance = 50;
+
+  static const Duration miniSwitchOutgoingDuration = Duration(milliseconds: 400);
+  static const Curve miniSwitchOutgoingCurve = Curves.easeIn;
+  static const double miniSwitchOutgoingDistance = kMetroAppBarMiniHeight;
+  // ------------------------------------------------
+
   late AnimationController _animationController; // 整体展开/收起（0=折叠, 1=完全展开）
   late AnimationController _buttonVisAnim; // 按钮行显隐（0=隐藏, 1=可见）
   late AnimationController _modeSwitchController; // mini/普通模式切换时的高度过渡
   bool _isDragging = false;
   bool _useExpandedChrome = false;
+  bool _isFirstLoad = true; // 跟踪是否处于界面的第一帧以便播放初始进入动画
+  bool _isTriggeredByMiniSwitch = false; // 判断动画触发缘由
   double _modeFromCollapsedHeight = kMetroAppBarNormalHeight;
   double _modeToCollapsedHeight = kMetroAppBarNormalHeight;
   int _buttonsSignature = 0;
@@ -427,6 +458,14 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {
+          _isFirstLoad = false;
+        });
+      }
+    });
+
     final double initialCollapsedHeight = _targetCollapsedHeight;
     _modeFromCollapsedHeight = initialCollapsedHeight;
     _modeToCollapsedHeight = initialCollapsedHeight;
@@ -441,9 +480,11 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
     );
     _buttonVisAnim = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 200),
-      value: _isMiniMode ? 0.0 : 1.0, // mini 初始隐藏；非 mini 始终可见
+      duration: menuIncomingDuration,
+      reverseDuration: menuOutgoingDuration,
+      value: _isMiniMode ? 0.0 : 1.0, // 把控制行显隐的系统复原，其不应干扰子组件进场
     );
+    
     _buttonsSignature = _buttonsVisualSignature(widget.bar.buttons);
   }
 
@@ -463,6 +504,10 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
 
     final bool wasMiniMode = _isMiniModeFor(oldWidget.bar);
     if (wasMiniMode != _isMiniMode) {
+      _isTriggeredByMiniSwitch = true;
+      _buttonVisAnim.duration = miniSwitchIncomingDuration;
+      _buttonVisAnim.reverseDuration = miniSwitchOutgoingDuration;
+
       if (_isMiniMode) {
         if (_animationController.value == 0 && !_useExpandedChrome) {
           _buttonVisAnim.reverse();
@@ -501,6 +546,11 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
       _useExpandedChrome = visible;
     });
     if (!_isMiniMode) return;
+    
+    _isTriggeredByMiniSwitch = false;
+    _buttonVisAnim.duration = menuIncomingDuration;
+    _buttonVisAnim.reverseDuration = menuOutgoingDuration;
+
     if (visible) {
       _buttonVisAnim.forward();
     } else {
@@ -600,13 +650,23 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
             _animationController.value * _maxExpansionHeight;
         final Key buttonsContentKey = ValueKey<int>(_buttonsAnimRevision);
 
+        final bool isRowExiting = _buttonVisAnim.status == AnimationStatus.reverse || 
+                                  _buttonVisAnim.status == AnimationStatus.dismissed;
+
+        // 获取当前的各类参数
+        final Curve incomingCurve = _isTriggeredByMiniSwitch ? miniSwitchIncomingCurve : menuIncomingCurve;
+        final Curve outgoingCurve = _isTriggeredByMiniSwitch ? miniSwitchOutgoingCurve : menuOutgoingCurve;
+        final double incomingDistance = _isTriggeredByMiniSwitch ? miniSwitchIncomingDistance : menuIncomingDistance;
+        final double outgoingDistance = _isTriggeredByMiniSwitch ? miniSwitchOutgoingDistance : menuOutgoingDistance;
+
         // 按钮行滑入/滑出动画（向上飞入，向下飞出）
         final Animation<Offset> buttonSlide = Tween<Offset>(
-          begin: const Offset(0, 1), // 隐藏在自身高度下方
+          begin: Offset(0, isRowExiting ? (outgoingDistance / kMetroAppBarNormalHeight) : (incomingDistance / kMetroAppBarNormalHeight)),
           end: Offset.zero,
         ).animate(CurvedAnimation(
           parent: _buttonVisAnim,
-          curve: Curves.easeOut,
+          curve: incomingCurve,
+          reverseCurve: outgoingCurve,
         ));
 
         return Container(
@@ -614,6 +674,7 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
           child: SafeArea(
             top: false,
             child: ClipRect(
+              clipBehavior: Clip.none,
               child: SizedBox(
                   height: expandedH,
                   child: OverflowBox(
@@ -621,6 +682,7 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                     minHeight: 0,
                     maxHeight: double.infinity,
                     child: Stack(
+                      clipBehavior: Clip.none,
                       children: [
                         // 拖拽区域 + ••• 按钮（覆盖折叠状态的完整可见高度）
                         // 此区域应该在底层，内容在此之上操作优先级更高
@@ -678,73 +740,102 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                               SlideTransition(
                                 position: buttonSlide,
                                 child: FadeTransition(
-                                  opacity: _buttonVisAnim,
+                                  opacity: isRowExiting ? _buttonVisAnim : const AlwaysStoppedAnimation(1.0),
                                   child: _AppBarLabelVisibility(
                                     show: showLabel,
                                     child: SizedBox(
                                       height: kMetroAppBarNormalHeight,
                                       child: Center(
-                                        child: AnimatedSwitcher(
-                                          duration:
-                                              const Duration(milliseconds: 700),
-                                          reverseDuration:
-                                              const Duration(milliseconds: 100),
-                                          layoutBuilder:
-                                              (currentChild, previousChildren) {
-                                            return Stack(
-                                              alignment: Alignment.center,
-                                              children: [
-                                                ...previousChildren,
-                                                if (currentChild != null)
-                                                  currentChild,
-                                              ],
-                                            );
-                                          },
-                                          transitionBuilder:
-                                              (child, animation) {
-                                            final bool isIncoming =
-                                                child.key == buttonsContentKey;
-                                            if (isIncoming) {
-                                              return FadeTransition(
-                                                opacity: Tween<double>(
-                                                  begin: 0.0,
-                                                  end: 1.0,
-                                                ).animate(
-                                                  CurvedAnimation(
-                                                    parent: animation,
-                                                    curve: const Interval(
-                                                        0.0, 0.25,
-                                                        curve: Curves.linear),
-                                                  ),
-                                                ),
-                                                child: SlideTransition(
-                                                  position: Tween<Offset>(
-                                                    begin: const Offset(0, 1),
-                                                    end: Offset.zero,
-                                                  ).animate(
-                                                    CurvedAnimation(
-                                                      parent: animation,
-                                                      curve: Curves.elasticOut,
-                                                    ),
-                                                  ),
-                                                  child: child,
-                                                ),
-                                              );
-                                            }
+                                        child: Builder(
+                                          builder: (context) {
+                                            // --- 自动计算 ---
+                                            // AnimatedSwitcher的duration控制进场，reverseDuration控制退场
+                                            final Duration totalIncomingDuration = btnIncomingDelay + btnIncomingDuration;
+                                            final double incomingStartRatio = btnIncomingDelay.inMilliseconds / totalIncomingDuration.inMilliseconds;
 
-                                            return FadeTransition(
-                                              opacity: animation,
-                                              child: child,
+                                            return AnimatedSwitcher(
+                                              duration: totalIncomingDuration,
+                                              reverseDuration: btnOutgoingDuration,
+                                              layoutBuilder:
+                                                  (currentChild, previousChildren) {
+                                                return Stack(
+                                                  alignment: Alignment.center,
+                                                  children: [
+                                                    ...previousChildren,
+                                                    if (currentChild != null)
+                                                      currentChild,
+                                                  ],
+                                                );
+                                              },
+                                              transitionBuilder:
+                                                  (child, animation) {
+                                                final bool isIncoming =
+                                                    child.key == buttonsContentKey;
+                                                if (isIncoming) {
+                                                  return FadeTransition(
+                                                    opacity: Tween<double>(
+                                                      begin: 0.0,
+                                                      end: 1.0,
+                                                    ).animate(
+                                                      CurvedAnimation(
+                                                        parent: animation,
+                                                        curve: Threshold(incomingStartRatio),
+                                                      ),
+                                                    ),
+                                                    child: SlideTransition(
+                                                      position: Tween<Offset>(
+                                                        begin: Offset(
+                                                            0,
+                                                            btnIncomingDistance /
+                                                                kMetroAppBarNormalHeight),
+                                                        end: Offset.zero,
+                                                      ).animate(
+                                                        CurvedAnimation(
+                                                          parent: animation,
+                                                          curve: Interval(
+                                                            incomingStartRatio,
+                                                            1.0,
+                                                            curve: btnIncomingCurve,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      child: child,
+                                                    ),
+                                                  );
+                                                }
+
+                                                return FadeTransition(
+                                                  opacity: animation,
+                                                  child: SlideTransition(
+                                                    position: Tween<Offset>(
+                                                      begin: Offset(
+                                                          0,
+                                                          -btnOutgoingDistance /
+                                                              kMetroAppBarNormalHeight),
+                                                      end: Offset.zero,
+                                                    ).animate(
+                                                      CurvedAnimation(
+                                                        parent: animation,
+                                                        curve: btnOutgoingCurve,
+                                                      ),
+                                                    ),
+                                                    child: child,
+                                                  ),
+                                                );
+                                              },
+                              
+                                              child: _isFirstLoad 
+                                                  ? const SizedBox.shrink(key: ValueKey('__initial_empty__'))
+                                                  : KeyedSubtree(
+                                                key: buttonsContentKey,
+                                                child: Row(
+                                                  spacing: 36.25 * 0.8,
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: widget.bar.buttons,
+                                                ),
+                                              ),
                                             );
                                           },
-                                          child: KeyedSubtree(
-                                            key: buttonsContentKey,
-                                            child: Row(
-                                              spacing: 36.25 * 0.8,
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: widget.bar.buttons,
-                                            ),
-                                          ),
                                         ),
                                       ),
                                     ),
