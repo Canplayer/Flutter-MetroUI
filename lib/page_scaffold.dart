@@ -111,8 +111,6 @@ class _BodyBuilderState extends State<_BodyBuilder> {
           bottom: bottom,
         ),
       ),
-
-
       child: PopScope(
         canPop: widget.onWillPop != null,
         onPopInvokedWithResult: (didPop, result) async {
@@ -314,6 +312,10 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
   final GlobalKey<MetroAnimatedPageState> _metroAnimatedPageKey =
       GlobalKey<MetroAnimatedPageState>();
 
+  // 背景 Z 轴空间动画控制器
+  late AnimationController _zAxisController;
+  late Animation<double> _zAxisAnimation;
+
   // 内部方法
   //late _ScaffoldGeometryNotifier _geometryNotifier;
 
@@ -336,9 +338,44 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
     await _metroAnimatedPageKey.currentState?.didFinish();
   }
 
+  /// 触发背景向后推的动画，支持传递自定义动画曲线。
+  /// [duration] 默认 500ms（也就是横线展开的时间）。
+  void pushBackBackground({
+    Curve curve = Curves.linear,
+    Duration duration = const Duration(milliseconds: 500),
+  }) {
+    if (!mounted) return;
+    _zAxisController.duration = duration;
+    _zAxisAnimation = CurvedAnimation(parent: _zAxisController, curve: curve);
+    _zAxisController.forward();
+  }
+
+  /// 恢复原始层级
+  void restoreBackground({
+    Curve curve = Curves.easeOutCubic,
+    Duration duration = const Duration(milliseconds: 350),
+  }) {
+    if (!mounted) return;
+    _zAxisController.duration = duration;
+    // 使用 reverseCurve 保证倒退时的动画曲线也是平滑的
+    _zAxisAnimation = CurvedAnimation(
+      parent: _zAxisController,
+      curve: Curves.linear,
+      reverseCurve: curve,
+    );
+    _zAxisController.reverse();
+  }
+
   @override
   void initState() {
     super.initState();
+
+    // 初始化 Z 轴动画控制器（后推变暗动画）
+    _zAxisController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 500));
+    _zAxisAnimation =
+        CurvedAnimation(parent: _zAxisController, curve: Curves.easeOutCubic);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // 登记当前页面的 Application Bar
       _updateApplicationBar();
@@ -376,6 +413,7 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
   @override
   void dispose() {
     //_geometryNotifier.dispose();
+    _zAxisController.dispose();
     routeObserver.unsubscribe(this);
     super.dispose();
   }
@@ -451,7 +489,7 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
       if (!widget.primary) {
         data = data.removePadding(removeTop: true);
       }
-      
+
       if (_resizeToAvoidBottomInset) {
         data = data.removeViewInsets(removeBottom: true);
       }
@@ -466,11 +504,31 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
     );
 
     return ScrollNotificationObserver(
-      child: Material(
-        color: widget.backgroundColor ?? themeData.scaffoldBackgroundColor,
-        child: Padding(
-          padding: EdgeInsets.only(bottom: math.max(0.0, minInsets.bottom)),
-          child: body,
+      child: AnimatedBuilder(
+        animation: _zAxisAnimation,
+        builder: (context, child) {
+          final double z = _zAxisAnimation.value * 200.0;
+          final Matrix4 matrix = Matrix4.identity()
+            //..setEntry(3, 2, 0.002) // perspective
+            ..setEntry(2, 3, z)
+            //解决该死的Flutter不认为这是个3D图形的问题，必须设置一个非常小的值来欺骗它，否则即使设置了Z轴偏移，Flutter也会认为它是个2D图形，导致z轴动画失效
+            ..rotateX(0.000000000000001);
+
+          return Transform(
+            transform: matrix,
+            alignment: FractionalOffset.center,
+            child: Opacity(
+              opacity: 1.0 - (_zAxisAnimation.value * 0.4),
+              child: child,
+            ),
+          );
+        },
+        child: Material(
+          color: widget.backgroundColor ?? themeData.scaffoldBackgroundColor,
+          child: Padding(
+            padding: EdgeInsets.only(bottom: math.max(0.0, minInsets.bottom)),
+            child: body,
+          ),
         ),
       ),
     );
