@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:metro_ui/metro_theme_extensions.dart';
 import 'package:metro_ui/page_scaffold.dart';
+import 'package:metro_ui/widgets/tile.dart';
 
 /// 一种长按调出的 Metro 风格上下文菜单。
 /// 
@@ -377,26 +378,6 @@ class MetroContextMenuItem extends StatefulWidget {
 }
 
 class _MetroContextMenuItemState extends State<MetroContextMenuItem> {
-  bool _isPressed = false;
-
-  void _handleTapDown(TapDownDetails details) {
-    setState(() {
-      _isPressed = true;
-    });
-  }
-
-  void _handleTapUp(TapUpDetails details) {
-    setState(() {
-      _isPressed = false;
-    });
-    widget.onTap?.call();
-  }
-
-  void _handleTapCancel() {
-    setState(() {
-      _isPressed = false;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -404,11 +385,8 @@ class _MetroContextMenuItemState extends State<MetroContextMenuItem> {
     final defaultItemHeight = widget.height ?? themeData?.itemHeight ?? 56.0;
     final defaultTextStyle = widget.textStyle ?? themeData?.itemTextStyle ?? const TextStyle(fontSize: 24, fontWeight: FontWeight.w400);
 
-    return GestureDetector(
-      onTapDown: _handleTapDown,
-      onTapUp: _handleTapUp,
-      onTapCancel: _handleTapCancel,
-      behavior: HitTestBehavior.opaque,
+    return Tile(
+      onTap: widget.onTap,
       child: Container(
         height: defaultItemHeight,
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
