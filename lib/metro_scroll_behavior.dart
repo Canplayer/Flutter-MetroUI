@@ -192,6 +192,12 @@ class _MetroOverscrollIndicatorState extends State<MetroOverscrollIndicator>
   }
 
   bool _handleScrollNotification(ScrollNotification notification) {
+    // 只处理当前层级的滚动事件，忽略内部嵌套的滚动组件向上冒泡的通知
+    // 这样内部的 SingleChildScrollView 就不会触发外部的超缩放效果
+    if (notification.depth != 0) {
+      return false;
+    }
+
     // 滚动更新 - 从 ScrollMetrics 获取超滚动信息
     if (notification is ScrollUpdateNotification) {
       final metrics = notification.metrics;
