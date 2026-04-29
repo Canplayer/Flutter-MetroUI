@@ -38,13 +38,12 @@ class StackPanel extends StatelessWidget {
         //const SizedBox(height: 13),
         Transform.translate(
           offset: const Offset(18, 0),
-          child: DefaultTextStyle(
+          child: DefaultTextStyle.merge(
             style: TextStyle(
               fontSize: 17.5,
               color: Theme.of(context).textTheme.bodyLarge?.color,
               fontWeight: FontWeight.w400,
               letterSpacing: 0.6,
-              fontFamily: Theme.of(context).textTheme.bodyLarge?.fontFamily,
             ),
             child: top,
           ),
@@ -52,7 +51,7 @@ class StackPanel extends StatelessWidget {
         const SizedBox(height: 9.5),
         Transform.translate(
           offset: const Offset(14, 0),
-          child: DefaultTextStyle(
+          child: DefaultTextStyle.merge(
             maxLines: 1,
             style: TextStyle(
               fontSize: 57,
@@ -61,7 +60,6 @@ class StackPanel extends StatelessWidget {
               fontWeight: FontWeight.w300,
               overflow: TextOverflow.visible,
               color: Theme.of(context).textTheme.bodyLarge?.color,
-              fontFamily: Theme.of(context).textTheme.bodyLarge?.fontFamily,
               letterSpacing: 0.3,
             ),
             child: bottom,

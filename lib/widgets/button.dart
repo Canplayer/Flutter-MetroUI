@@ -77,7 +77,7 @@ class MetroButtoState extends State<MetroButton> {
             width: widget.borderWidth,
           ),
         ),
-        child: DefaultTextStyle(
+        child: DefaultTextStyle.merge(
           style: TextStyle(
             fontSize: 19.5,
             color: currentTextColor,

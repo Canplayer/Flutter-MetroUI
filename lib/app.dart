@@ -699,6 +699,9 @@ class _MetroAppState extends State<MetroApp> {
       Color buttonPressedBg = primaryColor;
       Color buttonPressedText = whiteColor;
 
+      Color contextMenuBg = useWhiteTheme ? blackColor : whiteColor;
+      Color contextMenuLine = useWhiteTheme ? blackColor : whiteColor ;
+
       if (widget.version == MetroDesignVersion.wp7) {
         appBarExpandCurve = Curves.bounceOut;
         appBarCollapseCurve = Curves.easeIn;
@@ -761,6 +764,22 @@ class _MetroAppState extends State<MetroApp> {
             contentEntryTranslate: panoramaContentEntryTranslate,
             rotationDuration: panoramaRotationDuration,
           ),
+        ),
+        MetroContextMenuThemeData(
+          backgroundColor: contextMenuBg,
+          lineColor: contextMenuLine,
+          pushBackDuration: const Duration(milliseconds: 500),
+          restoreDuration: const Duration(milliseconds: 350),
+          lineAnimationDuration: const Duration(milliseconds: 500),
+          menuAnimationDuration: const Duration(milliseconds: 400),
+          itemTextStyle: TextStyle(
+            fontSize: 24,
+            fontFamily: 'Segoe UI Light',
+            package: 'metro_ui',
+            fontWeight: FontWeight.w400,
+            color: useWhiteTheme ? whiteColor : blackColor,
+          ),
+          itemHeight: 70.0,
         ),
         const MetroPageThemeData(),
       ];

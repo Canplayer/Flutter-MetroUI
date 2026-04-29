@@ -512,7 +512,7 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
             //..setEntry(3, 2, 0.002) // perspective
             ..setEntry(2, 3, z)
             //解决该死的Flutter不认为这是个3D图形的问题，必须设置一个非常小的值来欺骗它，否则即使设置了Z轴偏移，Flutter也会认为它是个2D图形，导致z轴动画失效
-            ..rotateX(0.000000000000001);
+            ..rotateX(z==0?0: 0.000000000000001);
 
           return Transform(
             transform: matrix,

@@ -150,14 +150,12 @@ class _MetroAppBarButtonState extends State<MetroAppBarButton> {
               Positioned(
                 top: circleSize + 7 * 0.8, // 圆环底部再往下 11.875*0.8 的位置
                 child: DefaultTextStyle(
-                  style: TextStyle(
+                  style: (Theme.of(context).textTheme.bodyMedium ?? const TextStyle()).copyWith(
                     color: Theme.of(context)
                             .extension<MetroAppBarTheme>()!
                             .buttonIconColor ??
                         Colors.white,
                     fontSize: 13 * 0.8,
-                    fontFamily: 'Segoe UI',
-                    package: 'metro_ui',
                     fontWeight: FontWeight.w400,
                     letterSpacing: 0.3,
                   ),
@@ -924,11 +922,9 @@ class _MetroMenuItemTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 0),
         alignment: Alignment.centerLeft,
         child: DefaultTextStyle(
-          style: TextStyle(
+          style: (Theme.of(context).textTheme.bodyMedium ?? const TextStyle()).copyWith(
             color: fgColor,
             fontSize: 32 * 0.8,
-            fontFamily: 'Segoe UI',
-            package: 'metro_ui',
             fontWeight: FontWeight.w300,
             //字宽
             //letterSpacing: 0.1,

@@ -230,3 +230,65 @@ class MetroPageThemeData extends ThemeExtension<MetroPageThemeData> {
     return const MetroPageThemeData();
   }
 }
+
+/// ContextMenu 专用主题扩展
+class MetroContextMenuThemeData extends ThemeExtension<MetroContextMenuThemeData> {
+  final Color? backgroundColor;
+  final Color? lineColor;
+  final Duration? pushBackDuration;
+  final Duration? restoreDuration;
+  final Duration? lineAnimationDuration;
+  final Duration? menuAnimationDuration;
+  final TextStyle? itemTextStyle;
+  final double? itemHeight;
+
+  const MetroContextMenuThemeData({
+    this.backgroundColor,
+    this.lineColor,
+    this.pushBackDuration,
+    this.restoreDuration,
+    this.lineAnimationDuration,
+    this.menuAnimationDuration,
+    this.itemTextStyle,
+    this.itemHeight,
+  });
+
+  @override
+  ThemeExtension<MetroContextMenuThemeData> copyWith({
+    Color? backgroundColor,
+    Color? lineColor,
+    Duration? pushBackDuration,
+    Duration? restoreDuration,
+    Duration? lineAnimationDuration,
+    Duration? menuAnimationDuration,
+    TextStyle? itemTextStyle,
+    double? itemHeight,
+  }) {
+    return MetroContextMenuThemeData(
+      backgroundColor: backgroundColor ?? this.backgroundColor,
+      lineColor: lineColor ?? this.lineColor,
+      pushBackDuration: pushBackDuration ?? this.pushBackDuration,
+      restoreDuration: restoreDuration ?? this.restoreDuration,
+      lineAnimationDuration: lineAnimationDuration ?? this.lineAnimationDuration,
+      menuAnimationDuration: menuAnimationDuration ?? this.menuAnimationDuration,
+      itemTextStyle: itemTextStyle ?? this.itemTextStyle,
+      itemHeight: itemHeight ?? this.itemHeight,
+    );
+  }
+
+  @override
+  ThemeExtension<MetroContextMenuThemeData> lerp(
+      covariant ThemeExtension<MetroContextMenuThemeData>? other, double t) {
+    if (other is! MetroContextMenuThemeData) return this;
+    return MetroContextMenuThemeData(
+      backgroundColor: Color.lerp(backgroundColor, other.backgroundColor, t),
+      lineColor: Color.lerp(lineColor, other.lineColor, t),
+      pushBackDuration: t < 0.5 ? pushBackDuration : other.pushBackDuration,
+      restoreDuration: t < 0.5 ? restoreDuration : other.restoreDuration,
+      lineAnimationDuration: t < 0.5 ? lineAnimationDuration : other.lineAnimationDuration,
+      menuAnimationDuration: t < 0.5 ? menuAnimationDuration : other.menuAnimationDuration,
+      itemTextStyle: TextStyle.lerp(itemTextStyle, other.itemTextStyle, t),
+      itemHeight: t < 0.5 ? itemHeight : other.itemHeight,
+    );
+  }
+}

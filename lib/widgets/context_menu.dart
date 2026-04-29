@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:metro_ui/metro_theme_extensions.dart';
 import 'package:metro_ui/page_scaffold.dart';
 
 /// 一种长按调出的 Metro 风格上下文菜单。
@@ -11,9 +12,9 @@ class MetroContextMenu extends StatefulWidget {
     super.key,
     required this.child,
     required this.menu,
-    this.pushBackDuration = const Duration(milliseconds: 500),
+    this.pushBackDuration,
     this.pushBackCurve = Curves.linear,
-    this.restoreDuration = const Duration(milliseconds: 350),
+    this.restoreDuration,
     this.restoreCurve = Curves.easeOutCubic,
   });
 
@@ -24,13 +25,13 @@ class MetroContextMenu extends StatefulWidget {
   final Widget menu;
 
   /// 背景 Z 轴向后推的动画时长
-  final Duration pushBackDuration;
+  final Duration? pushBackDuration;
 
   /// 背景向后推的动画曲线
   final Curve pushBackCurve;
 
   /// 背景 Z 轴恢复的动画时长
-  final Duration restoreDuration;
+  final Duration? restoreDuration;
 
   /// 背景 Z 轴的恢复动画曲线
   final Curve restoreCurve;
@@ -60,10 +61,11 @@ class _MetroContextMenuState extends State<MetroContextMenu> {
     if (_isOpen || _isDismissing) return;
 
     // 1. 通知 MetroPageScaffold 背景向后移动拉远
+    final themeData = Theme.of(context).extension<MetroContextMenuThemeData>();
     final scaffoldState = MetroPageScaffold.maybeOf(context);
     if (scaffoldState != null) {
       scaffoldState.pushBackBackground(
-        duration: widget.pushBackDuration,
+        duration: widget.pushBackDuration ?? themeData?.pushBackDuration ?? const Duration(milliseconds: 500),
         curve: widget.pushBackCurve,
       );
     }
@@ -102,7 +104,11 @@ class _MetroContextMenuState extends State<MetroContextMenu> {
                   targetRect: targetRect,
                   touchOffset: localTouchOffset,
                   overlaySize: overlayRenderBox.size,
-                  menu: widget.menu,
+                  menu: Container(
+                    color: Theme.of(context).extension<MetroContextMenuThemeData>()?.backgroundColor ?? Theme.of(context).colorScheme.surface,
+                    child: widget.menu,
+                  ),
+                  themeData: themeData,
                   childClone: SizedBox(
                     width: _savedSize!.width,
                     height: _savedSize!.height,
@@ -139,14 +145,15 @@ class _MetroContextMenuState extends State<MetroContextMenu> {
     // 强制立即隐藏 Overlay 中的菜单，使它瞬间消失
     _overlayKey.currentState?.hideMenu();
 
+    final themeData = Theme.of(context).extension<MetroContextMenuThemeData>();
     final scaffoldState = MetroPageScaffold.maybeOf(context);
     scaffoldState?.restoreBackground(
-      duration: widget.restoreDuration,
+      duration: widget.restoreDuration ?? themeData?.restoreDuration ?? const Duration(milliseconds: 350),
       curve: widget.restoreCurve,
     );
 
     // 等待背景动画执行完毕后再销毁 Overlay 并放回原 Widget
-    await Future.delayed(widget.restoreDuration);
+    await Future.delayed(widget.restoreDuration ?? themeData?.restoreDuration ?? const Duration(milliseconds: 350));
     
     if (!mounted) return;
 
@@ -189,6 +196,7 @@ class _ContextMenuOverlay extends StatefulWidget {
     required this.menu,
     required this.childClone,
     required this.onDismiss,
+    this.themeData,
   });
 
   final Rect targetRect;
@@ -197,6 +205,7 @@ class _ContextMenuOverlay extends StatefulWidget {
   final Widget menu;
   final Widget childClone;
   final VoidCallback onDismiss;
+  final MetroContextMenuThemeData? themeData;
 
   @override
   State<_ContextMenuOverlay> createState() => _ContextMenuOverlayState();
@@ -220,23 +229,24 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
   @override
   void initState() {
     super.initState();
-    // 整体动画 900ms：横线 500ms + 菜单 400ms
+    final int lineMs = widget.themeData?.lineAnimationDuration?.inMilliseconds ?? 500;
+    final int menuMs = widget.themeData?.menuAnimationDuration?.inMilliseconds ?? 400;
+    final int totalMs = lineMs + menuMs;
+
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900));
+        vsync: this, duration: Duration(milliseconds: totalMs));
 
     _lineAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        // 前 500ms 进行横线展开
-        curve: const Interval(0.0, 500 / 900, curve: Curves.linear),
+        curve: Interval(0.0, lineMs / totalMs, curve: Curves.linear),
       ),
     );
 
     _menuAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        // 后 400ms 菜单展开
-        curve: const Interval(500 / 900, 1.0, curve: Curves.linear),
+        curve: Interval(lineMs / totalMs, 1.0, curve: Curves.linear),
       ),
     );
 
@@ -303,7 +313,7 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
                 top: lineTop,
                 height: 2.0,
                 child: Container(
-                  color: Theme.of(context).colorScheme.primary,
+                  color: widget.themeData?.lineColor ?? Theme.of(context).colorScheme.primary,
                 ),
               );
             },
@@ -330,6 +340,86 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
           ),
         ]
       ],
+    );
+  }
+}
+
+/// 上下文菜单子项，专为 Metro 设计。
+///
+/// 常作为 [MetroContextMenu.menu] 的子元素（放入 Column 中等）出现。
+class MetroContextMenuItem extends StatefulWidget {
+  const MetroContextMenuItem({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.height,
+    this.textStyle,
+    this.pressedBackgroundColor,
+  });
+
+  /// 菜单项的主体内容
+  final Widget child;
+
+  /// 点击回调
+  final VoidCallback? onTap;
+
+  /// 菜单项高度，若为空，尝试从主题获取 `itemHeight`，回退为 56.0
+  final double? height;
+
+  /// 菜单项文字样式，若为空，尝试从主题获取 `itemTextStyle`
+  final TextStyle? textStyle;
+
+  /// 菜单项按下时的背景颜色，若为空，使用默认的主题强调色
+  final Color? pressedBackgroundColor;
+
+  @override
+  State<MetroContextMenuItem> createState() => _MetroContextMenuItemState();
+}
+
+class _MetroContextMenuItemState extends State<MetroContextMenuItem> {
+  bool _isPressed = false;
+
+  void _handleTapDown(TapDownDetails details) {
+    setState(() {
+      _isPressed = true;
+    });
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    setState(() {
+      _isPressed = false;
+    });
+    widget.onTap?.call();
+  }
+
+  void _handleTapCancel() {
+    setState(() {
+      _isPressed = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final themeData = Theme.of(context).extension<MetroContextMenuThemeData>();
+    final defaultItemHeight = widget.height ?? themeData?.itemHeight ?? 56.0;
+    final defaultTextStyle = widget.textStyle ?? themeData?.itemTextStyle ?? const TextStyle(fontSize: 24, fontWeight: FontWeight.w400);
+
+    return GestureDetector(
+      onTapDown: _handleTapDown,
+      onTapUp: _handleTapUp,
+      onTapCancel: _handleTapCancel,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: defaultItemHeight,
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        alignment: Alignment.centerLeft,
+        child: DefaultTextStyle(
+          style: (Theme.of(context).textTheme.bodyMedium ?? const TextStyle()).merge(defaultTextStyle).copyWith(
+            color: defaultTextStyle.color,
+          ),
+          child: widget.child,
+        ),
+      ),
     );
   }
 }
