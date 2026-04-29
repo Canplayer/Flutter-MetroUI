@@ -270,7 +270,7 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
 
     // 线条高度位置
     final double lineTop =
-        isUpward ? widget.targetRect.top - 2.0 : widget.targetRect.bottom;
+        isUpward ? widget.targetRect.top - 1.0 : widget.targetRect.bottom;
 
     return Stack(
       children: [
@@ -312,7 +312,7 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
                 left: left,
                 right: right,
                 top: lineTop,
-                height: 2.0,
+                height: 1.0,
                 child: Container(
                   color: widget.themeData?.lineColor ?? Theme.of(context).colorScheme.primary,
                 ),
@@ -324,7 +324,7 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
           Positioned(
             left: 0,
             right: 0,
-            top: isUpward ? null : lineTop + 2.0,
+            top: isUpward ? null : lineTop + 1.0,
             bottom: isUpward ? (widget.overlaySize.height - lineTop) : null,
             child: AnimatedBuilder(
               animation: _menuAnimation,
