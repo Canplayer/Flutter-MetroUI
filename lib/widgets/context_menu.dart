@@ -38,10 +38,10 @@ class MetroContextMenu extends StatefulWidget {
   final Curve restoreCurve;
 
   @override
-  State<MetroContextMenu> createState() => _MetroContextMenuState();
+  MetroContextMenuState createState() => MetroContextMenuState();
 }
 
-class _MetroContextMenuState extends State<MetroContextMenu> {
+class MetroContextMenuState extends State<MetroContextMenu> {
   // 使用 GlobalKey，让 child 可以在当前 Widget 树和 Overlay 树之间完美转移而不丢失 State
   final GlobalKey _contentKey = GlobalKey();
   final GlobalKey<_ContextMenuOverlayState> _overlayKey = GlobalKey<_ContextMenuOverlayState>();
@@ -119,7 +119,7 @@ class _MetroContextMenuState extends State<MetroContextMenu> {
                       child: widget.child,
                     ),
                   ),
-                  onDismiss: _dismissMenu,
+                  onDismiss: dismissMenu,
                 ),
               ),
             ),
@@ -136,7 +136,7 @@ class _MetroContextMenuState extends State<MetroContextMenu> {
     overlayState.insert(_overlayEntry!);
   }
 
-  void _dismissMenu() async {
+  void dismissMenu() async {
     if (_isDismissing) return;
     
     // 进入隐藏菜单动画并等待背景回归
