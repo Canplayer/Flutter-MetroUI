@@ -12,15 +12,15 @@ class StackPanel extends StatelessWidget {
   /// [top] 和 [bottom] 参数通常传入 Text 小部件。
   const StackPanel({
     super.key,
-    required this.top,
-    required this.bottom,
+    this.top,
+    this.bottom,
   });
 
   /// 上方的小部件
-  final Widget top;
+  final Widget? top;
 
   /// 下方的小部件
-  final Widget bottom;
+  final Widget? bottom;
 
   @override
   Widget build(BuildContext context) {
@@ -45,9 +45,10 @@ class StackPanel extends StatelessWidget {
               fontWeight: FontWeight.w400,
               letterSpacing: 0.6,
             ),
-            child: top,
+            child: top??const SizedBox.shrink(),
           ),
         ),
+        if(bottom != null)...[
         const SizedBox(height: 9.5),
         Transform.translate(
           offset: const Offset(14, 0),
@@ -62,9 +63,10 @@ class StackPanel extends StatelessWidget {
               color: Theme.of(context).textTheme.bodyLarge?.color,
               letterSpacing: 0.3,
             ),
-            child: bottom,
+            child: bottom??const SizedBox.shrink(),
           ),
         ),
+        ],
       ],
     );
   }
