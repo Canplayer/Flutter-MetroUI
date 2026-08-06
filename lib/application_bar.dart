@@ -117,13 +117,11 @@ class _MetroAppBarButtonState extends State<MetroAppBarButton> {
           children: [
             // 圆环主体：在 Stack 中居中
             Container(
-              width: circleSize,
               height: circleSize,
+              width: circleSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _isTouch ? Theme.of(context)
-                        .colorScheme.primary
-                 : null,
+                color: _isTouch ? Theme.of(context).colorScheme.primary : null,
                 border: Border.all(
                   color: widget.color ??
                       Theme.of(context)
@@ -133,7 +131,11 @@ class _MetroAppBarButtonState extends State<MetroAppBarButton> {
                   width: 5 * 0.625 * 0.8,
                 ),
               ),
-              alignment: Alignment.center,
+            ),
+            // 第二层：负责渲染 Icon，独占完整的 circleSize
+            SizedBox(
+              height: circleSize,
+              width: circleSize,
               child: IconTheme(
                 data: IconThemeData(
                   color: Theme.of(context)
@@ -150,7 +152,9 @@ class _MetroAppBarButtonState extends State<MetroAppBarButton> {
               Positioned(
                 top: circleSize + 7 * 0.8, // 圆环底部再往下 11.875*0.8 的位置
                 child: DefaultTextStyle(
-                  style: (Theme.of(context).textTheme.bodyMedium ?? const TextStyle()).copyWith(
+                  style: (Theme.of(context).textTheme.bodyMedium ??
+                          const TextStyle())
+                      .copyWith(
                     color: Theme.of(context)
                             .extension<MetroAppBarTheme>()!
                             .buttonIconColor ??
