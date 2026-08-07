@@ -21,6 +21,27 @@ typedef OnSlideProgress = void Function(double progress);
 /// 页面构建器。
 typedef PageItemBuilder = Widget Function(BuildContext context, int index);
 
+/// [SwipePageView] 的默认初始页码。
+const int kSwipePageViewInitialPage = 0;
+
+/// [SwipePageView] 的默认松手换页阈值（像素）。
+const double kSwipePageViewSwipeThreshold = 160.0 / 0.8;
+
+/// [SwipePageView] 的默认最大拖动位移（像素）。
+const double kSwipePageViewMaxDragDistance = 320.0 / 0.8;
+
+/// [SwipePageView] 的默认飞出/飞入位移（像素）。
+const double kSwipePageViewFlyDistance = 320.0;
+
+/// [SwipePageView] 的默认飞出/飞入动画时长。
+const Duration kSwipePageViewFlyDuration = Duration(milliseconds: 300);
+
+/// [SwipePageView] 的默认渐隐/渐显动画时长。
+const Duration kSwipePageViewFadeDuration = Duration(milliseconds: 100);
+
+/// [SwipePageView] 的默认归位动画时长。
+const Duration kSwipePageViewSnapBackDuration = Duration(milliseconds: 200);
+
 /// 编程式控制 [SwipePageView] 换页的控制器。
 ///
 /// 创建后传入 [SwipePageView.controller] 即可使用。
@@ -79,13 +100,13 @@ class SwipePageView extends StatefulWidget {
     this.onTransitionEnd,
     this.onSlideProgress,
     this.controller,
-    this.initialPage = 0,
-    this.swipeThreshold = 160.0/0.8,
-    this.maxDragDistance = 320.0/0.8,
-    this.flyDistance = 320.0,
-    this.flyDuration = const Duration(milliseconds: 2000),
-    this.fadeDuration = const Duration(milliseconds: 200),
-    this.snapBackDuration = const Duration(milliseconds: 200),
+    this.initialPage = kSwipePageViewInitialPage,
+    this.swipeThreshold = kSwipePageViewSwipeThreshold,
+    this.maxDragDistance = kSwipePageViewMaxDragDistance,
+    this.flyDistance = kSwipePageViewFlyDistance,
+    this.flyDuration = kSwipePageViewFlyDuration,
+    this.fadeDuration = kSwipePageViewFadeDuration,
+    this.snapBackDuration = kSwipePageViewSnapBackDuration,
   });
 
   /// 页面构建器。index 可以是任意整数，超出当前页范围时同样会被调用，
@@ -359,20 +380,20 @@ class _SwipePageViewState extends State<SwipePageView>
       onHorizontalDragEnd: _handleDragEnd,
       onHorizontalDragCancel: _handleDragCancel,
       behavior: HitTestBehavior.opaque,
-      child: ClipRect(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (!_isTransitioning) ...[
-              // 静止 / 拖动 / 归位：只渲染当前页 A
-              _buildPage(_currentIndex, _dragOffset, 1.0),
-            ] else ...[
-              // 换页动画：B 在底层，A 在上层飞出
-              _buildPageB(),
-              _buildPageA(),
-            ],
+      child: Stack(
+        fit: StackFit.expand,
+        // 不裁切：页面滑出容器边缘时完整渲染，不会被切断
+        clipBehavior: Clip.none,
+        children: [
+          if (!_isTransitioning) ...[
+            // 静止 / 拖动 / 归位：只渲染当前页 A
+            _buildPage(_currentIndex, _dragOffset, 1.0),
+          ] else ...[
+            // 换页动画：B 在底层，A 在上层飞出
+            _buildPageB(),
+            _buildPageA(),
           ],
-        ),
+        ],
       ),
     );
   }

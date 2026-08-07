@@ -8,6 +8,7 @@ void main() {
     List<SwipePageItem>? items,
     SwipeTitleAlign align = SwipeTitleAlign.start,
     double titleGap = 24.0,
+    EdgeInsetsGeometry padding = EdgeInsets.zero,
     OnPageChanged? onPageChanged,
     OnSlideProgress? onSlideProgress,
   }) {
@@ -37,6 +38,7 @@ void main() {
           snapBackDuration: const Duration(milliseconds: 120),
           align: align,
           titleGap: titleGap,
+          padding: padding,
           onPageChanged: onPageChanged,
           onSlideProgress: onSlideProgress,
         ),
@@ -115,7 +117,6 @@ void main() {
     // bar-0：C(左) A(中) B(右)
     // A 左边缘对齐父容器左侧（x ≈ 0）
     expect(tester.getTopLeft(find.text('A')).dx, closeTo(0, 1));
-
     // C 在 A 左侧：C 右边缘 ≈ A 左边缘 - titleGap(24)
     final aLeft = tester.getTopLeft(find.text('A')).dx;
     expect(tester.getTopRight(find.text('C')).dx,
@@ -125,6 +126,34 @@ void main() {
     final aRight = tester.getTopRight(find.text('A')).dx;
     expect(tester.getTopLeft(find.text('B')).dx,
         closeTo(aRight + 24, 1));
+  });
+
+  testWidgets('SwipePages 默认整体内边距：水平 18', (tester) async {
+    // 不指定 padding → 使用默认 EdgeInsets.symmetric(horizontal: 18)
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SwipePages(
+            items: [
+              const SwipePageItem(
+                title: Text('A'),
+                page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
+              ),
+              const SwipePageItem(
+                title: Text('B'),
+                page: ColoredBox(color: Colors.green, child: SizedBox.expand()),
+              ),
+            ],
+            swipeThreshold: 50,
+            maxDragDistance: 150,
+          ),
+        ),
+      ),
+    );
+    await tester.pump(); // 等待宽度测量
+
+    // 整体内缩 18：当前标题 A 左边缘 = 18（而非 0）
+    expect(tester.getTopLeft(find.text('A')).dx, closeTo(18, 1));
   });
 
   testWidgets('center 模式：当前标题水平居中于父容器', (tester) async {

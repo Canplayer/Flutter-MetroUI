@@ -25,25 +25,45 @@ class SwipePageItem {
   final Widget page;
 }
 
+/// [SwipePageIndicator] 的默认标题间距。
+const double kSwipePageIndicatorTitleGap = 24.0;
+
+/// [SwipePageIndicator] 的默认标题对齐方式。
+const SwipeTitleAlign kSwipePageIndicatorAlign = SwipeTitleAlign.start;
+
+/// [SwipePageIndicator] 独立使用时的默认飞出/飞入动画时长。
+/// 注意：被 [SwipePagesBase] 组合时以 [SwipePageView] 的时长为准
+/// （[kSwipePageViewFlyDuration]），以保证标题与页面动画同步。
+const Duration kSwipePageIndicatorFlyDuration = Duration(milliseconds: 2000);
+
+/// [SwipePageIndicator] 独立使用时的默认渐隐/渐显动画时长。
+const Duration kSwipePageIndicatorFadeDuration = Duration(milliseconds: 200);
+
+/// [SwipePages] 整体（标题 + 主体）的默认内边距：水平 18。
+const EdgeInsetsGeometry kSwipePagesPadding = EdgeInsets.symmetric(horizontal: 18);
+
 /// 组合组件（标题指示器 + 滑动翻页）的公共基类。
 ///
 /// 持有标题/页面列表与全部动画、布局、回调参数。
 /// 子类决定两者的布局方式：
 /// - [SwipePages]：Column 上下布局（标题在页面上方）；
 /// - [SwipeStackPages]：Stack 叠放布局（标题悬浮在页面顶部）。
+///
+/// 动画/布局参数均为可空，未指定时透传回落为子组件（[SwipePageView] /
+/// [SwipePageIndicator]）各自的默认值常量，修改子组件默认值无需在此重复维护。
 abstract class SwipePagesBase extends StatefulWidget {
   const SwipePagesBase({
     super.key,
     required this.items,
-    this.initialPage = 0,
-    this.swipeThreshold = 160.0 / 0.8,
-    this.maxDragDistance = 320.0 / 0.8,
-    this.flyDistance = 320.0,
-    this.flyDuration = const Duration(milliseconds: 2000),
-    this.fadeDuration = const Duration(milliseconds: 200),
-    this.snapBackDuration = const Duration(milliseconds: 200),
-    this.titleGap = 24.0,
-    this.align = SwipeTitleAlign.start,
+    this.initialPage,
+    this.swipeThreshold,
+    this.maxDragDistance,
+    this.flyDistance,
+    this.flyDuration,
+    this.fadeDuration,
+    this.snapBackDuration,
+    this.titleGap,
+    this.align,
     this.onPageChanged,
     this.onTransitionEnd,
     this.onSlideProgress,
@@ -52,32 +72,32 @@ abstract class SwipePagesBase extends StatefulWidget {
   /// 页面条目列表（标题 + 页面）。
   final List<SwipePageItem> items;
 
-  /// 初始页码（可为负数）。
-  final int initialPage;
+  /// 初始页码（可为负数），透传给 [SwipePageView]。
+  final int? initialPage;
 
   /// 松手触发换页的最小位移（像素），透传给 [SwipePageView]。
-  final double swipeThreshold;
+  final double? swipeThreshold;
 
   /// 拖动过程中页面允许的最大位移（像素），透传给 [SwipePageView]。
-  final double maxDragDistance;
+  final double? maxDragDistance;
 
   /// 换页时页面飞出/飞入的位移（像素），透传给 [SwipePageView]。
-  final double flyDistance;
+  final double? flyDistance;
 
   /// 飞出/飞入动画时长，透传给 [SwipePageView] 与标题指示器。
-  final Duration flyDuration;
+  final Duration? flyDuration;
 
   /// 渐隐/渐显动画时长，透传给 [SwipePageView] 与标题指示器。
-  final Duration fadeDuration;
+  final Duration? fadeDuration;
 
   /// 归位动画时长，透传给 [SwipePageView]。
-  final Duration snapBackDuration;
+  final Duration? snapBackDuration;
 
-  /// 标题之间的间距。
-  final double titleGap;
+  /// 标题之间的间距，透传给标题指示器。
+  final double? titleGap;
 
   /// 标题对齐方式（左/中/右），透传给标题指示器。
-  final SwipeTitleAlign align;
+  final SwipeTitleAlign? align;
 
   /// 翻页回调（松手触发换页的瞬间），透传。
   final OnPageChanged? onPageChanged;
@@ -101,6 +121,9 @@ abstract class SwipePagesBase extends StatefulWidget {
 /// - 同时显示三个标题：上一页 / 当前页 / 下一页；
 /// - 只有两个页面（A、B，A 为当前）时显示 B A B；
 /// - 只有一个页面时只显示一个标题。
+///
+/// 整个组件（标题 + 主体）默认带水平 18 的内边距（见 [kSwipePagesPadding]），
+/// 可通过 [padding] 覆盖。
 class SwipePages extends SwipePagesBase {
   const SwipePages({
     super.key,
@@ -117,7 +140,11 @@ class SwipePages extends SwipePagesBase {
     super.onPageChanged,
     super.onTransitionEnd,
     super.onSlideProgress,
+    this.padding = kSwipePagesPadding,
   });
+
+  /// 整体内边距（标题与主体统一内缩），默认水平 18。
+  final EdgeInsetsGeometry padding;
 
   @override
   State<SwipePages> createState() => _SwipePagesState();
@@ -177,7 +204,7 @@ mixin _SwipeSyncState<T extends SwipePagesBase> on State<T> {
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.initialPage;
+    _currentIndex = widget.initialPage ?? kSwipePageViewInitialPage;
   }
 
   void _handleSwapEnded() {
@@ -206,10 +233,10 @@ mixin _SwipeSyncState<T extends SwipePagesBase> on State<T> {
       currentIndex: _currentIndex,
       progress: _progress,
       swapTargetIndex: _swapTarget,
-      titleGap: widget.titleGap,
-      align: widget.align,
-      flyDuration: widget.flyDuration,
-      fadeDuration: widget.fadeDuration,
+      titleGap: widget.titleGap ?? kSwipePageIndicatorTitleGap,
+      align: widget.align ?? kSwipePageIndicatorAlign,
+      flyDuration: widget.flyDuration ?? kSwipePageViewFlyDuration,
+      fadeDuration: widget.fadeDuration ?? kSwipePageViewFadeDuration,
       onSwapEnded: _handleSwapEnded,
       onTitleTap: _handleTitleTap,
     );
@@ -220,13 +247,14 @@ mixin _SwipeSyncState<T extends SwipePagesBase> on State<T> {
     final n = widget.items.length;
     return SwipePageView(
       controller: _viewController,
-      initialPage: widget.initialPage,
-      swipeThreshold: widget.swipeThreshold,
-      maxDragDistance: widget.maxDragDistance,
-      flyDistance: widget.flyDistance,
-      flyDuration: widget.flyDuration,
-      fadeDuration: widget.fadeDuration,
-      snapBackDuration: widget.snapBackDuration,
+      initialPage: widget.initialPage ?? kSwipePageViewInitialPage,
+      swipeThreshold: widget.swipeThreshold ?? kSwipePageViewSwipeThreshold,
+      maxDragDistance: widget.maxDragDistance ?? kSwipePageViewMaxDragDistance,
+      flyDistance: widget.flyDistance ?? kSwipePageViewFlyDistance,
+      flyDuration: widget.flyDuration ?? kSwipePageViewFlyDuration,
+      fadeDuration: widget.fadeDuration ?? kSwipePageViewFadeDuration,
+      snapBackDuration:
+          widget.snapBackDuration ?? kSwipePageViewSnapBackDuration,
       itemBuilder: (context, index) => widget.items[index % n].page,
       onPageChanged: (o, n) {
         setState(() {
@@ -259,12 +287,16 @@ class _SwipePagesState extends State<SwipePages>
   Widget build(BuildContext context) {
     if (widget.items.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        buildIndicator(),
-        Expanded(child: buildView()),
-      ],
+    // 整体内边距：标题与主体统一内缩
+    return Padding(
+      padding: widget.padding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          buildIndicator(),
+          Expanded(child: buildView()),
+        ],
+      ),
     );
   }
 }
@@ -320,10 +352,10 @@ class SwipePageIndicator extends StatefulWidget {
     required this.currentIndex,
     this.progress = 0,
     this.swapTargetIndex,
-    this.titleGap = 24.0,
-    this.align = SwipeTitleAlign.start,
-    this.flyDuration = const Duration(milliseconds: 2000),
-    this.fadeDuration = const Duration(milliseconds: 200),
+    this.titleGap = kSwipePageIndicatorTitleGap,
+    this.align = kSwipePageIndicatorAlign,
+    this.flyDuration = kSwipePageIndicatorFlyDuration,
+    this.fadeDuration = kSwipePageIndicatorFadeDuration,
     this.onSwapEnded,
     this.onTitleTap,
   });
