@@ -25,7 +25,7 @@ typedef PageItemBuilder = Widget Function(BuildContext context, int index);
 const int kSwipePageViewInitialPage = 0;
 
 /// [SwipePageView] 的默认松手换页阈值（像素）。
-const double kSwipePageViewSwipeThreshold = 160.0 / 0.8;
+const double kSwipePageViewSwipeThreshold = 90.0 / 0.8;
 
 /// [SwipePageView] 的默认最大拖动位移（像素）。
 const double kSwipePageViewMaxDragDistance = 320.0 / 0.8;
