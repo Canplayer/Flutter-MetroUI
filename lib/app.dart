@@ -444,7 +444,7 @@ class MetroApp extends StatefulWidget {
   ///  * [ThemeData.brightness]，它指示系统的各个部分正在使用哪种类型的主题。
   final MetroThemeMode? themeMode;
 
-  /// 应用的默认字体家族（默认：'Segoe UI'）。
+  /// 应用的默认字体家族（默认：'Segoe WP'）。
   /// 如果你使用了 assets 字体，请在 pubspec.yaml 中声明并传入与之对应的 family 名称。
   final String? fontFamily;
 
@@ -723,9 +723,10 @@ class _MetroAppState extends State<MetroApp> {
       return <ThemeExtension<dynamic>>[
         MetroTitleTextTheme(
           titleTextStyle: TextStyle(
-            fontFamily: 'Segoe UI Light',
+            fontFamily: 'Segoe WP',
             package: 'metro_ui',
             fontSize: 135,
+            fontWeight: FontWeight.w300,
             letterSpacing: -4,
             color: textColor,
           ),
@@ -774,9 +775,9 @@ class _MetroAppState extends State<MetroApp> {
           menuAnimationDuration: const Duration(milliseconds: 400),
           itemTextStyle: TextStyle(
             fontSize: 24,
-            fontFamily: 'Segoe UI Light',
+            fontFamily: 'Segoe WP',
             package: 'metro_ui',
-            fontWeight: FontWeight.w400,
+            fontWeight: FontWeight.w300,
             color: useWhiteTheme ? whiteColor : blackColor,
           ),
           itemHeight: 70.0,
@@ -826,7 +827,7 @@ class _MetroAppState extends State<MetroApp> {
       } else {
         theme = theme.copyWith(
           textTheme: theme.textTheme
-              .apply(fontFamily: 'Segoe UI', package: 'metro_ui'),
+              .apply(fontFamily: 'Segoe WP', package: 'metro_ui'),
         );
       }
 
@@ -846,7 +847,7 @@ class _MetroAppState extends State<MetroApp> {
     final ThemeData metroTheme = ThemeData(
       colorSchemeSeed: primaryColor,
       brightness: useDarkTheme ? Brightness.dark : Brightness.light,
-      fontFamily: widget.fontFamily ?? 'Segoe UI',
+      fontFamily: widget.fontFamily ?? 'Segoe WP',
       package: widget.fontFamily != null ? null : 'metro_ui',
     );
 
@@ -859,7 +860,7 @@ class _MetroAppState extends State<MetroApp> {
         onSurface: onSurface,
       ),
       textTheme: metroTheme.textTheme.apply(
-        fontFamily: widget.fontFamily ?? 'Segoe UI',
+        fontFamily: widget.fontFamily ?? 'Segoe WP',
         package: widget.fontFamily != null ? null : 'metro_ui',
         bodyColor: defaultTextColor,
         displayColor: defaultTextColor,

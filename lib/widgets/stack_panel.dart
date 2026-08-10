@@ -32,41 +32,42 @@ class StackPanel extends StatelessWidget {
         //   height: 25,
         // ),
         const SafeArea(
-          minimum: EdgeInsets.only(top: 38.5),
+          minimum: EdgeInsets.only(top: 47 * 0.8),
           child: SizedBox(),
         ),
         //const SizedBox(height: 13),
         Transform.translate(
-          offset: const Offset(18, 0),
+          offset: const Offset(22 * 0.8, 0),
           child: DefaultTextStyle.merge(
             style: TextStyle(
-              fontSize: 17.5,
+              fontSize: 22 * 0.8,
               color: Theme.of(context).textTheme.bodyLarge?.color,
-              fontWeight: FontWeight.w400,
+              fontWeight: FontWeight(400),
               letterSpacing: 0.6,
             ),
-            child: top??const SizedBox.shrink(),
+            child: top ?? const SizedBox.shrink(),
           ),
         ),
-        //const SizedBox(height: 9.5),
-        if(bottom != null)...[
-        Transform.translate(
-          offset: const Offset(14, 0),
-          child: DefaultTextStyle.merge(
-            maxLines: 1,
-            style: TextStyle(
-              fontSize: 57,
-              //行间距
-              height: 1,
-              fontWeight: FontWeight.w300,
-              overflow: TextOverflow.visible,
-              color: Theme.of(context).textTheme.bodyLarge?.color,
-              letterSpacing: 0.3,
+        if (bottom != null) ...[
+          Transform.translate(
+            offset: const Offset(17.5 * 0.8, 3.5 * 0.8),
+            child: DefaultTextStyle.merge(
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 57,
+                //行间距
+                height: 1,
+                fontWeight: const FontWeight(350),
+                overflow: TextOverflow.visible,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+                letterSpacing: 0.3,
+              ),
+              child: bottom ?? const SizedBox.shrink(),
             ),
-            child: bottom??const SizedBox.shrink(),
           ),
-        ),
-        const SizedBox(height: 32*0.8),
+          SizedBox(
+            height: 44 * 0.8,
+          ),
         ],
       ],
     );

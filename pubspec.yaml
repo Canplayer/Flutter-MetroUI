@@ -58,44 +58,23 @@ flutter:
     - assets/ic_back.svg
 
   fonts:
-    - family: Segoe UI
+    # Segoe WP 字体集（Windows Phone 7 系统字体），全部归入一个家族，用字重区分。
+    # 各文件实际 usWeightClass：Light=300 / SemiLight=350（非标准，pubspec 只接受
+    # 100–900 整百值故按 300 注册）/ Regular=400 / Semibold=600 / Bold=700 /
+    # Black=800（字体名是 Black，但实际 usWeightClass=800）。
+    # 注意：SemiLight 与 Light 同为 300，同家族同字重的多个文件，引擎按注册顺序
+    # 匹配（先注册者优先）；Dart 中请求 FontWeight(350) 时会取最接近的已注册字重。
+    - family: Segoe WP
       fonts:
-          # 实际上SEGOEUISL和SEGUISLI的设定字重是350，但Flutter不支持350，所以只能设定为300
-        - asset: fonts/SEGOEUISL.TTF
+        - asset: fonts/SegoeWP-Light.ttf
           weight: 300
-          style: normal
-        - asset: fonts/SEGUISLI.TTF
+        - asset: fonts/SegoeWP-Semilight.ttf
           weight: 300
-          style: italic
-
-        - asset: fonts/SEGOEUI.TTF
+        - asset: fonts/SegoeWP.ttf
           weight: 400
-          style: normal
-        - asset: fonts/SEGOEUII.TTF
-          weight: 400
-          style: italic
-
-
-        - asset: fonts/SEGOEUIB.TTF
+        - asset: fonts/SegoeWP-Semibold.ttf
+          weight: 600
+        - asset: fonts/SegoeWP-Bold.ttf
           weight: 700
-          style: normal
-        - asset: fonts/SEGOEUIZ.TTF
-          weight: 700
-          style: italic
-
-        - asset: fonts/SEGUIBL.TTF
-          weight: 900
-          style: normal
-        - asset: fonts/SEGUIBLI.TTF
-          weight: 900
-          style: italic
-
-    #因Flutter不支持350字重，所以只能拆分字体家族
-    - family: Segoe UI Light
-      fonts:
-        - asset: fonts/SEGOEUIL.TTF
-          weight: 300
-          style: normal
-        - asset: fonts/SEGUILI.TTF
-          weight: 300
-          style: italic
+        - asset: fonts/SegoeWP-Black.ttf
+          weight: 800
