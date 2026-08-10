@@ -13,6 +13,26 @@ const double kMetroAppBarMiniHeight = 30.0 * 0.8; // 折叠时的 mini 条高度
 const double kMetroAppBarNormalHeight = 72 * 0.8; // 正常模式下的折叠高度 (包含按钮)
 const double kMetroAppBarMoreButtonSize =
     kMetroAppBarNormalHeight; // 更多(•••)按钮区域的尺寸
+const double kMetroAppBarButtonSize = 48.125 * 0.8; // 环形按钮直径
+// 按钮行内圆环顶部的固定间距：圆环垂直居中于按钮行（kMetroAppBarNormalHeight）时的上边距。
+// 用固定间距（而非 Center 居中）定位圆环，按钮高度变化（文字显隐）不会使圆环上移。
+const double kMetroAppBarButtonTopInset =
+    (kMetroAppBarNormalHeight - kMetroAppBarButtonSize) / 2;
+// 按钮文字区域高度（圆环底部间距 + 文字行高）
+const double kMetroAppBarButtonLabelAreaHeight = 7 * 0.8 + 14;
+// 按钮行总高：圆环定位间距 + 按钮 + 文字区域。
+// 保证菜单展开后文字仍在按钮行命中区域内，点击文字也能触发按钮。
+const double kMetroAppBarButtonRowHeight = kMetroAppBarButtonTopInset +
+    kMetroAppBarButtonSize +
+    kMetroAppBarButtonLabelAreaHeight;
+// 按钮之间的原始视觉间距（原 Row spacing：36.25 * 0.8），现已吸收进按钮宽度。
+// 按钮（Tile 层）宽度 = 圆环直径 + 该间距：按钮之间无额外间隔（Row 无 spacing），
+// 圆环在按钮内居中 → 圆环中心距 = 按钮宽度 = 原来的 (直径 + spacing)，
+// 圆环之间的视觉间距与最初布局完全一致；同时文字可用宽度 = 按钮宽度，
+// 稍长的标签也能单行完整显示不换行。
+const double kMetroAppBarButtonSpacing = 36.25 * 0.8;
+const double kMetroAppBarButtonWidth =
+    kMetroAppBarButtonSize + kMetroAppBarButtonSpacing;
 // ----------------------------------------
 
 bool _isMiniModeFor(MetroApplicationBar bar) {
@@ -94,11 +114,17 @@ class MetroAppBarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double circleSize = 48.125 * 0.8;
+    final double circleSize = kMetroAppBarButtonSize;
     final bool isDisabled = onPressed == null;
     final bool labelVisible = _AppBarLabelVisibility.of(context);
-    // 文字区域高度（圆环底部间距 + 文字行高），用于撑大按钮的命中区域
-    final double labelAreaHeight = labelVisible ? 7 * 0.8 + 14 : 0.0;
+    // 文字区域高度（圆环底部间距 + 文字行高），用于撑高按钮命中区域，
+    // 保证菜单展开后点击文字也能触发按压/点击
+    final double labelAreaHeight =
+        labelVisible ? kMetroAppBarButtonLabelAreaHeight : 0.0;
+    // 按钮（Tile 层）宽度 = 圆环直径 + 原按钮间距：
+    // 圆环在按钮内居中、位置不变，圆环中心距保持最初的视觉间距；
+    // 文字可用宽度 = 按钮宽度，单行完整显示。
+    final double buttonWidth = kMetroAppBarButtonWidth;
 
     return Tile(
       // Tile 不再承担点击事件（保留其 3D 回弹/旋转动画），
@@ -106,15 +132,16 @@ class MetroAppBarButton extends StatelessWidget {
       child: MetroPressDetector(
         onPressed: onPressed,
         child: SizedBox(
-          width: circleSize,
+          width: buttonWidth,
           height: circleSize + labelAreaHeight,
           child: Stack(
             alignment: Alignment.topCenter,
             clipBehavior: Clip.none,
             children: [
-              // 透明占位：撑高 Stack 的命中区域（覆盖下方文字），圆环贴顶位置不变
+              // 透明占位：撑满按钮的命中区域（覆盖下方文字，点击文字也能触发），
+              // 圆环在按钮内居中，位置由按钮行的固定顶部间距决定，不受宽度变化影响
               SizedBox(
-                width: circleSize,
+                width: buttonWidth,
                 height: circleSize + labelAreaHeight,
               ),
               MetroCircleButton(
@@ -129,7 +156,7 @@ class MetroAppBarButton extends StatelessWidget {
                 pressed: isDisabled ? false : null,
               ),
               // 文字部分：位于圆环下方（仅菜单展开时显示），
-              // 与圆环同属 MetroPressDetector 的命中区域，点击文字也会触发点击
+              // 可用宽度 = 按钮宽度，单行完整显示不换行
               if (labelVisible)
                 Positioned(
                   top: circleSize + 7 * 0.8, // 圆环底部再往下 11.875*0.8 的位置
@@ -150,6 +177,9 @@ class MetroAppBarButton extends StatelessWidget {
                       ),
                       child: Text(
                         label,
+                        // 兜底：极端超长时也不折行（按文本边界裁剪）
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ),
@@ -434,6 +464,7 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
   double get _totalContentHeight {
     double h = 0;
     if (widget.bar.buttons.isNotEmpty) {
+      // 按钮行加高部分已由下方间距等量缩减，实际内容总高不变
       h += kMetroAppBarNormalHeight;
     }
     if (widget.bar.menuItems.isNotEmpty) {
@@ -688,83 +719,87 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
           color: bgColor,
           child: SafeArea(
             top: false,
-            child: ClipRect(
-              clipBehavior: Clip.none,
-              child: SizedBox(
-                  height: expandedH,
-                  child: OverflowBox(
-                    alignment: Alignment.topCenter,
-                    minHeight: 0,
-                    maxHeight: double.infinity,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        // 拖拽区域 + ••• 按钮（覆盖折叠状态的完整可见高度）
-                        // 此区域应该在底层，内容在此之上操作优先级更高
-                        Positioned(
-                          left: 0,
-                          top: 0,
-                          right: 0,
-                          height: _collapsedHeight,
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.translucent,
-                            onVerticalDragStart: _onVerticalDragStart,
-                            onVerticalDragUpdate: _onVerticalDragUpdate,
-                            onVerticalDragCancel: _onVerticalDragCancel,
-                            onVerticalDragEnd: _onVerticalDragEnd,
-                            onTap: () {
-                              if (useExpandedChrome)
-                                _closeMenu();
-                              else
-                                _toggleMenu();
-                            },
-                            child: Stack(
-                              children: [
-                                //if (_canExpand)
-                                Positioned(
-                                  top: 11.875 * 0.8,
-                                  right: 23.75 * 0.8,
-                                  child: SizedBox(
-                                    width: 41 * 0.625 * 0.8,
-                                    height: 9 * 0.625 * 0.8,
-                                    child: FittedBox(
-                                      // 自动等比缩放并居中
-                                      fit: BoxFit.contain,
-                                      child: CustomPaint(
-                                        size: const Size(41, 9),
-                                        painter: _ThreeDotsP(
-                                            color: Theme.of(context)
-                                                    .extension<
-                                                        MetroAppBarTheme>()!
-                                                    .buttonIconColor ??
-                                                Colors.white),
-                                      ),
+            child: SizedBox(
+                height: expandedH,
+                child: OverflowBox(
+                  alignment: Alignment.topCenter,
+                  minHeight: 0,
+                  maxHeight: double.infinity,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // 拖拽区域 + ••• 按钮（覆盖折叠状态的完整可见高度）
+                      // 此区域应该在底层，内容在此之上操作优先级更高
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        right: 0,
+                        height: _collapsedHeight,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onVerticalDragStart: _onVerticalDragStart,
+                          onVerticalDragUpdate: _onVerticalDragUpdate,
+                          onVerticalDragCancel: _onVerticalDragCancel,
+                          onVerticalDragEnd: _onVerticalDragEnd,
+                          onTap: () {
+                            if (useExpandedChrome)
+                              _closeMenu();
+                            else
+                              _toggleMenu();
+                          },
+                          child: Stack(
+                            children: [
+                              //if (_canExpand)
+                              Positioned(
+                                top: 11.875 * 0.8,
+                                right: 23.75 * 0.8,
+                                child: SizedBox(
+                                  width: 41 * 0.625 * 0.8,
+                                  height: 9 * 0.625 * 0.8,
+                                  child: FittedBox(
+                                    // 自动等比缩放并居中
+                                    fit: BoxFit.contain,
+                                    child: CustomPaint(
+                                      size: const Size(41, 9),
+                                      painter: _ThreeDotsP(
+                                          color: Theme.of(context)
+                                                  .extension<
+                                                      MetroAppBarTheme>()!
+                                                  .buttonIconColor ??
+                                              Colors.white),
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
+                      ),
 
-                        // 内容列（撑开 Stack 的完整布局高度）
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // 按钮行
-                            if (widget.bar.buttons.isNotEmpty)
-                              SlideTransition(
-                                position: buttonSlide,
-                                child: FadeTransition(
-                                  opacity: isRowExiting
-                                      ? _buttonVisAnim
-                                      : const AlwaysStoppedAnimation(1.0),
-                                  child: _AppBarLabelVisibility(
-                                    show: showLabel,
-                                    child: SizedBox(
-                                      height: kMetroAppBarNormalHeight,
-                                      child: Center(
+                      // 内容列（撑开 Stack 的完整布局高度）
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // 按钮行
+                          if (widget.bar.buttons.isNotEmpty)
+                            SlideTransition(
+                              position: buttonSlide,
+                              child: FadeTransition(
+                                opacity: isRowExiting
+                                    ? _buttonVisAnim
+                                    : const AlwaysStoppedAnimation(1.0),
+                                child: _AppBarLabelVisibility(
+                                  show: showLabel,
+                                  child: SizedBox(
+                                    height: kMetroAppBarButtonRowHeight,
+                                    child: Padding(
+                                      // 圆环贴按钮顶部，用固定顶部间距定位圆环，
+                                      // 按钮行高度变化（文字显隐）不会使圆环上移
+                                      padding: EdgeInsets.only(
+                                          top: kMetroAppBarButtonTopInset),
+                                      child: Align(
+                                        alignment: Alignment.topCenter,
                                         child: Builder(
                                           builder: (context) {
                                             // --- 自动计算 ---
@@ -860,7 +895,10 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                                                   : KeyedSubtree(
                                                       key: buttonsContentKey,
                                                       child: Row(
-                                                        spacing: 36.25 * 0.8,
+                                                        // 按钮之间无额外间隔：
+                                                        // 按钮宽度 = 圆环直径 + 原间距，
+                                                        // 圆环在按钮内居中，
+                                                        // 圆环中心距由按钮自身宽度自然形成
                                                         mainAxisSize:
                                                             MainAxisSize.min,
                                                         children:
@@ -875,39 +913,41 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                                   ),
                                 ),
                               ),
-
-                            SizedBox(
-                                height: widget.bar.buttons.isNotEmpty
-                                    ? 24 * 0.8
-                                    : 66.25 * 0.8),
-
-                            // 菜单项列
-                            ...widget.bar.menuItems.map(
-                              (item) => SizedBox(
-                                height: _menuItemHeight,
-                                child: _MetroMenuItemTile(
-                                  item: item,
-                                  fgColor: widget.bar.menuItemTextColor ??
-                                      Theme.of(context)
-                                          .extension<MetroAppBarTheme>()!
-                                          .menuItemColor ??
-                                      Colors.white,
-                                  onTap: () {
-                                    _closeMenu();
-                                    item.onPressed?.call();
-                                  },
-                                ),
-                              ),
                             ),
 
-                            if (widget.bar.menuItems.isNotEmpty)
-                              const SizedBox(height: 16),
-                          ],
-                        ),
-                      ],
-                    ),
-                  )),
-            ),
+                          SizedBox(
+                              height: widget.bar.buttons.isNotEmpty
+                                  ? 24 * 0.8 -
+                                      (kMetroAppBarButtonRowHeight -
+                                          kMetroAppBarNormalHeight)
+                                  : 66.25 * 0.8),
+
+                          // 菜单项列
+                          ...widget.bar.menuItems.map(
+                            (item) => SizedBox(
+                              height: _menuItemHeight,
+                              child: _MetroMenuItemTile(
+                                item: item,
+                                fgColor: widget.bar.menuItemTextColor ??
+                                    Theme.of(context)
+                                        .extension<MetroAppBarTheme>()!
+                                        .menuItemColor ??
+                                    Colors.white,
+                                onTap: () {
+                                  _closeMenu();
+                                  item.onPressed?.call();
+                                },
+                              ),
+                            ),
+                          ),
+
+                          if (widget.bar.menuItems.isNotEmpty)
+                            const SizedBox(height: 16),
+                        ],
+                      ),
+                    ],
+                  ),
+                )),
           ),
         );
       },
@@ -997,11 +1037,6 @@ class _ThreeDotsP extends CustomPainter {
   @override
   bool shouldRepaint(_ThreeDotsP oldDelegate) => oldDelegate.color != color;
 }
-
-
-
-
-
 
 /// 手指停留检测组件（对应 Windows Phone 原版图标按钮的按压行为）。
 ///
