@@ -48,7 +48,7 @@ class StackPanel extends StatelessWidget {
             child: top??const SizedBox.shrink(),
           ),
         ),
-        const SizedBox(height: 9.5),
+        //const SizedBox(height: 9.5),
         if(bottom != null)...[
         Transform.translate(
           offset: const Offset(14, 0),

@@ -220,6 +220,12 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
   
   bool _isHidden = false;
 
+  /// 实测的菜单真实高度（首帧布局完成后通过不可见的测量副本获取）
+  double? _menuHeight;
+
+  /// 用于测量菜单真实高度的副本 key
+  final GlobalKey _menuMeasureKey = GlobalKey();
+
   void hideMenu() {
     if (!mounted) return;
     setState(() {
@@ -252,6 +258,20 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
     );
 
     _controller.forward();
+
+    // 首帧结束后测量菜单真实高度，用真实尺寸决定展开方向。
+    // 首帧时横线与菜单的动画值均为 0（不渲染任何内容），
+    // 因此方向在第一帧后被修正对用户完全不可见。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final RenderBox? box =
+          _menuMeasureKey.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.hasSize) return;
+      final double h = box.size.height;
+      if (h > 0 && h != _menuHeight) {
+        setState(() => _menuHeight = h);
+      }
+    });
   }
 
   @override
@@ -262,11 +282,12 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
 
   @override
   Widget build(BuildContext context) {
-    // 简单预估菜单高度占用
-    const double estimatedMenuHeight = 200.0;
+    // 使用实测的菜单真实高度决定展开方向；
+    // 首帧测量完成前回退为 200（首帧不渲染任何内容，用户无感知）。
+    final double menuHeight = _menuHeight ?? 200.0;
     // 使用传入的准确 overlay 范围判定边界以解决 DPI 冲突问题
     final bool isUpward =
-        widget.targetRect.bottom + estimatedMenuHeight > widget.overlaySize.height;
+        widget.targetRect.bottom + menuHeight > widget.overlaySize.height;
 
     // 线条高度位置
     final double lineTop =
@@ -289,6 +310,21 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
           top: widget.targetRect.top,
           child: IgnorePointer(
             child: widget.childClone,
+          ),
+        ),
+
+        // 不可见的菜单测量副本：与可见菜单相同的宽度约束、不限制高度，
+        // 首帧后读取其真实高度来决定展开方向（offstage 不绘制、不响应点击）。
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          child: Offstage(
+            offstage: true,
+            child: KeyedSubtree(
+              key: _menuMeasureKey,
+              child: widget.menu,
+            ),
           ),
         ),
 
