@@ -14,6 +14,9 @@ class MetroButton extends StatefulWidget {
   /// 边框内边距
   final EdgeInsetsGeometry padding;
 
+  /// 外边距，默认 [EdgeInsets.all(8.0)]
+  final EdgeInsetsGeometry margin;
+
   /// 边框颜色，为null时使用主题主色调
   final Color? borderColor;
 
@@ -28,6 +31,7 @@ class MetroButton extends StatefulWidget {
     this.child,
     this.onTap,
     this.padding = const EdgeInsets.all(4.6),
+    this.margin = const EdgeInsets.all(8.0),
     this.borderColor,
     this.textColor,
     this.borderWidth = 2.5,
@@ -68,7 +72,7 @@ class MetroButtoState extends State<MetroButton> {
         });
       },
       child: Container(
-        margin: const EdgeInsets.all(8.0),
+        margin: widget.margin,
         padding: widget.padding,
         decoration: BoxDecoration(
           color: currentBgColor,

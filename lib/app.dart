@@ -911,7 +911,16 @@ class _MetroAppState extends State<MetroApp> {
               left: 0,
               right: 0,
               bottom: 0,
-              child: MetroApplicationBarOverlay(controller: _appBarController),
+              // AppBar Overlay 挂在 Navigator 之外，没有 Material 祖先，
+              // DefaultTextStyle 会穿透到 WidgetsApp 的 fallback 错误样式
+              // （红字 + 黄双下划线）。这里提供中性底座，
+              // 让 AppBar 内的文字（内置按钮/菜单项/自定义内容）正常渲染。
+              child: DefaultTextStyle(
+                style: theme.textTheme.bodyMedium ??
+                    const TextStyle(color: Colors.white),
+                child:
+                    MetroApplicationBarOverlay(controller: _appBarController),
+              ),
             ),
           ],
         ),

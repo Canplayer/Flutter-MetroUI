@@ -74,10 +74,16 @@ int _buttonsVisualSignature(List<Widget> buttons) {
 }
 
 int _barStructureKey(MetroApplicationBar bar) {
+  // 只反映 AppBar 的“外壳”结构（背景色、mini 模式），不包含 menuItems：
+  // menuItems 是展开后才可见的内容。若算进 key，跨页面跳转时
+  // （不同页面的 menuItems 往往不同）会触发整条 AppBar 的切换淡入淡出
+  // （旧条下降 + 新条弹出），而不是连贯的“外壳不动、按钮行切换”。
+  // 按钮行/菜单项变化由 MetroApplicationBarView 内部的 AnimatedSwitcher
+  // （按钮行）与 Column 重建（菜单项，折叠时不可见）处理。
   return Object.hashAll([
-    bar.backgroundColor?.value,
-    bar.menuItems.length,
-    ...bar.menuItems.map((item) => item.label),
+    // bar.backgroundColor?.value,
+    // bar.expandedBackgroundColor?.value,
+    // bar.mini,
   ]);
 }
 
