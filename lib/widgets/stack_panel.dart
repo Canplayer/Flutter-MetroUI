@@ -48,8 +48,8 @@ class StackPanel extends StatelessWidget {
             child: top??const SizedBox.shrink(),
           ),
         ),
-        if(bottom != null)...[
         const SizedBox(height: 9.5),
+        if(bottom != null)...[
         Transform.translate(
           offset: const Offset(14, 0),
           child: DefaultTextStyle.merge(
@@ -66,6 +66,7 @@ class StackPanel extends StatelessWidget {
             child: bottom??const SizedBox.shrink(),
           ),
         ),
+        const SizedBox(height: 32*0.8),
         ],
       ],
     );

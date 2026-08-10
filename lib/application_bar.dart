@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:metro_ui/animations.dart';
 import 'package:metro_ui/metro_theme_extensions.dart';
+import 'package:metro_ui/widgets/metro_circle_button.dart';
 import 'package:metro_ui/widgets/tile.dart';
 
 // ---------------- 配置常量 ----------------
@@ -66,7 +67,7 @@ int _barStructureKey(MetroApplicationBar bar) {
 ///
 /// 对应 WP 原版的 ApplicationBarIconButton，按钮会显示在底部菜单栏的左侧。
 /// 最多建议放置 4 个按钮，超出的按钮在小屏设备上可能被遮挡。
-class MetroAppBarButton extends StatefulWidget {
+class MetroAppBarButton extends StatelessWidget {
   const MetroAppBarButton({
     super.key,
     required this.icon,
@@ -92,83 +93,69 @@ class MetroAppBarButton extends StatefulWidget {
   final VoidCallback? onPressed;
 
   @override
-  State<MetroAppBarButton> createState() => _MetroAppBarButtonState();
-}
-
-class _MetroAppBarButtonState extends State<MetroAppBarButton> {
-  bool _isTouch = false;
-
-  @override
   Widget build(BuildContext context) {
     final double circleSize = 48.125 * 0.8;
-    return Semantics(
-      label: widget.label,
-      button: true,
-      child: Tile(
-        onTap: widget.onPressed,
-        onTouch: (isTouch) {
-          setState(() {
-            _isTouch = isTouch;
-          });
-        },
-        child: Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
-            // 圆环主体：在 Stack 中居中
-            Container(
-              height: circleSize,
-              width: circleSize,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _isTouch ? Theme.of(context).colorScheme.primary : null,
-                border: Border.all(
-                  color: widget.color ??
-                      Theme.of(context)
-                          .extension<MetroAppBarTheme>()!
-                          .buttonColor ??
-                      Colors.white,
-                  width: 5 * 0.625 * 0.8,
-                ),
+    final bool isDisabled = onPressed == null;
+    final bool labelVisible = _AppBarLabelVisibility.of(context);
+    // 文字区域高度（圆环底部间距 + 文字行高），用于撑大按钮的命中区域
+    final double labelAreaHeight = labelVisible ? 7 * 0.8 + 14 : 0.0;
+
+    return Tile(
+      // Tile 不再承担点击事件（保留其 3D 回弹/旋转动画），
+      // 点击与按压状态由内部 MetroPressDetector 负责。
+      child: MetroPressDetector(
+        onPressed: onPressed,
+        child: SizedBox(
+          width: circleSize,
+          height: circleSize + labelAreaHeight,
+          child: Stack(
+            alignment: Alignment.topCenter,
+            clipBehavior: Clip.none,
+            children: [
+              // 透明占位：撑高 Stack 的命中区域（覆盖下方文字），圆环贴顶位置不变
+              SizedBox(
+                width: circleSize,
+                height: circleSize + labelAreaHeight,
               ),
-            ),
-            // 第二层：负责渲染 Icon，独占完整的 circleSize
-            SizedBox(
-              height: circleSize,
-              width: circleSize,
-              child: IconTheme(
-                data: IconThemeData(
-                  color: Theme.of(context)
-                          .extension<MetroAppBarTheme>()!
-                          .buttonIconColor ??
-                      Colors.white,
-                  size: 24,
-                ),
-                child: widget.icon,
+              MetroCircleButton(
+                icon: icon,
+                borderColor: color,
+                iconColor: iconColor,
+                semanticLabel: label,
+                // 纯图标模式：不嵌套自己的 Tile；通过 MetroPressScope 自动跟随
+                // 外层 MetroPressDetector 的按压状态（手指在按钮上则亮）
+                iconMode: true,
+                // 禁用时强制不高亮，其余情况交给 MetroPressScope
+                pressed: isDisabled ? false : null,
               ),
-            ),
-            // 文字部分：定位在圆环下方，偏移固定距离（仅菜单展开时显示）
-            if (_AppBarLabelVisibility.of(context))
-              Positioned(
-                top: circleSize + 7 * 0.8, // 圆环底部再往下 11.875*0.8 的位置
-                child: DefaultTextStyle(
-                  style: (Theme.of(context).textTheme.bodyMedium ??
-                          const TextStyle())
-                      .copyWith(
-                    color: Theme.of(context)
-                            .extension<MetroAppBarTheme>()!
-                            .buttonIconColor ??
-                        Colors.white,
-                    fontSize: 13 * 0.8,
-                    fontWeight: FontWeight.w400,
-                    letterSpacing: 0.3,
-                  ),
-                  child: Text(
-                    widget.label,
+              // 文字部分：位于圆环下方（仅菜单展开时显示），
+              // 与圆环同属 MetroPressDetector 的命中区域，点击文字也会触发点击
+              if (labelVisible)
+                Positioned(
+                  top: circleSize + 7 * 0.8, // 圆环底部再往下 11.875*0.8 的位置
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: DefaultTextStyle(
+                      style: (Theme.of(context).textTheme.bodyMedium ??
+                              const TextStyle())
+                          .copyWith(
+                        color: Theme.of(context)
+                                .extension<MetroAppBarTheme>()!
+                                .buttonIconColor ??
+                            Colors.white,
+                        fontSize: 13 * 0.8,
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: 0.3,
+                      ),
+                      child: Text(
+                        label,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -341,12 +328,12 @@ class MetroApplicationBarOverlay extends StatelessWidget {
             switchOutCurve: MetroCurves.appBarTranslateIn,
             transitionBuilder: (child, animation) {
               return SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 1),
-                    end: Offset.zero,
-                  ).animate(animation),
-                  child: child,
-                );
+                position: Tween<Offset>(
+                  begin: const Offset(0, 1),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              );
             },
             child: bar != null
                 ? MetroApplicationBarView(
@@ -382,14 +369,18 @@ class MetroApplicationBarView extends StatefulWidget {
 class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
     with TickerProviderStateMixin {
   // --- AppBar 按钮切换 & 初始载入的动画体系配置 ---
-  static const Duration btnOutgoingDuration = Duration(milliseconds: 100); // 退出时间
-  static const Curve btnOutgoingCurve = Curves.easeIn;                     // 退出曲线
-  static const double btnOutgoingDistance = 40.0;                          // 退出垂直距离 (向上移动)
-  
-  static const Duration btnIncomingDelay = Duration(milliseconds: 100);    // 进入延迟时间
-  static const Duration btnIncomingDuration = Duration(milliseconds: 400); // 进入动画时间
-  static const Curve btnIncomingCurve = MetroCurves.appBarButtonTranslateIn; // 进入动画曲线
-  static const double btnIncomingDistance = 50.0;                          // 进入垂直起始距离 (距下方)
+  static const Duration btnOutgoingDuration =
+      Duration(milliseconds: 100); // 退出时间
+  static const Curve btnOutgoingCurve = Curves.easeIn; // 退出曲线
+  static const double btnOutgoingDistance = 40.0; // 退出垂直距离 (向上移动)
+
+  static const Duration btnIncomingDelay =
+      Duration(milliseconds: 100); // 进入延迟时间
+  static const Duration btnIncomingDuration =
+      Duration(milliseconds: 400); // 进入动画时间
+  static const Curve btnIncomingCurve =
+      MetroCurves.appBarButtonTranslateIn; // 进入动画曲线
+  static const double btnIncomingDistance = 50.0; // 进入垂直起始距离 (距下方)
   // ------------------------------------------------
 
   // --- Menu菜单展开/收起时(如向上滑引出更多项)，按钮行动画配置 ---
@@ -403,11 +394,14 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
   // ------------------------------------------------
 
   // --- 从 Mini 到非 Mini (或反之) 状态切换时，按钮行动画配置 ---
-  static const Duration miniSwitchIncomingDuration = Duration(milliseconds: 400);
-  static const Curve miniSwitchIncomingCurve = MetroCurves.appBarButtonTranslateIn;
+  static const Duration miniSwitchIncomingDuration =
+      Duration(milliseconds: 400);
+  static const Curve miniSwitchIncomingCurve =
+      MetroCurves.appBarButtonTranslateIn;
   static const double miniSwitchIncomingDistance = 50;
 
-  static const Duration miniSwitchOutgoingDuration = Duration(milliseconds: 400);
+  static const Duration miniSwitchOutgoingDuration =
+      Duration(milliseconds: 400);
   static const Curve miniSwitchOutgoingCurve = Curves.easeIn;
   static const double miniSwitchOutgoingDistance = kMetroAppBarMiniHeight;
   // ------------------------------------------------
@@ -444,12 +438,12 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
     }
     if (widget.bar.menuItems.isNotEmpty) {
       // 有buttons和没有的时候，菜单抬起的高度并不一致
-      h += widget.bar.menuItems.length * _menuItemHeight + (widget.bar.buttons.isNotEmpty ? 118.75 * 0.8 : 161.25* 0.8);
-    }
-    else {
+      h += widget.bar.menuItems.length * _menuItemHeight +
+          (widget.bar.buttons.isNotEmpty ? 118.75 * 0.8 : 161.25 * 0.8);
+    } else {
       // 就算没有菜单项，mini 模式下也要抬起一点高度以露出按钮
       h += 30 * 0.8;
-     }
+    }
     return h;
   }
 
@@ -486,7 +480,7 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
       reverseDuration: menuOutgoingDuration,
       value: _isMiniMode ? 0.0 : 1.0, // 把控制行显隐的系统复原，其不应干扰子组件进场
     );
-    
+
     _buttonsSignature = _buttonsVisualSignature(widget.bar.buttons);
   }
 
@@ -548,7 +542,7 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
       _useExpandedChrome = visible;
     });
     if (!_isMiniMode) return;
-    
+
     _isTriggeredByMiniSwitch = false;
     _buttonVisAnim.duration = menuIncomingDuration;
     _buttonVisAnim.reverseDuration = menuOutgoingDuration;
@@ -565,10 +559,16 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
     _setExpandedChromeVisible(expand);
 
     final theme = Theme.of(context).extension<MetroAppBarTheme>();
-    final Curve eCurve = widget.bar.expandCurve ?? theme?.expandCurve ?? Curves.easeOut;
-    final Curve cCurve = widget.bar.collapseCurve ?? theme?.collapseCurve ?? Curves.easeIn;
-    final Duration eDur = widget.bar.expandDuration ?? theme?.expandDuration ?? const Duration(milliseconds: 250);
-    final Duration cDur = widget.bar.collapseDuration ?? theme?.collapseDuration ?? const Duration(milliseconds: 250);
+    final Curve eCurve =
+        widget.bar.expandCurve ?? theme?.expandCurve ?? Curves.easeOut;
+    final Curve cCurve =
+        widget.bar.collapseCurve ?? theme?.collapseCurve ?? Curves.easeIn;
+    final Duration eDur = widget.bar.expandDuration ??
+        theme?.expandDuration ??
+        const Duration(milliseconds: 250);
+    final Duration cDur = widget.bar.collapseDuration ??
+        theme?.collapseDuration ??
+        const Duration(milliseconds: 250);
 
     if (expand) {
       _animationController.animateTo(1.0, duration: eDur, curve: eCurve);
@@ -648,22 +648,35 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
 
         final Color bgColor = useExpandedChrome ? expandedBg : collapsedBg;
 
-        final double expandedH = _collapsedHeight +
-            _animationController.value * _maxExpansionHeight;
+        final double expandedH =
+            _collapsedHeight + _animationController.value * _maxExpansionHeight;
         final Key buttonsContentKey = ValueKey<int>(_buttonsAnimRevision);
 
-        final bool isRowExiting = _buttonVisAnim.status == AnimationStatus.reverse || 
-                                  _buttonVisAnim.status == AnimationStatus.dismissed;
+        final bool isRowExiting =
+            _buttonVisAnim.status == AnimationStatus.reverse ||
+                _buttonVisAnim.status == AnimationStatus.dismissed;
 
         // 获取当前的各类参数
-        final Curve incomingCurve = _isTriggeredByMiniSwitch ? miniSwitchIncomingCurve : menuIncomingCurve;
-        final Curve outgoingCurve = _isTriggeredByMiniSwitch ? miniSwitchOutgoingCurve : menuOutgoingCurve;
-        final double incomingDistance = _isTriggeredByMiniSwitch ? miniSwitchIncomingDistance : menuIncomingDistance;
-        final double outgoingDistance = _isTriggeredByMiniSwitch ? miniSwitchOutgoingDistance : menuOutgoingDistance;
+        final Curve incomingCurve = _isTriggeredByMiniSwitch
+            ? miniSwitchIncomingCurve
+            : menuIncomingCurve;
+        final Curve outgoingCurve = _isTriggeredByMiniSwitch
+            ? miniSwitchOutgoingCurve
+            : menuOutgoingCurve;
+        final double incomingDistance = _isTriggeredByMiniSwitch
+            ? miniSwitchIncomingDistance
+            : menuIncomingDistance;
+        final double outgoingDistance = _isTriggeredByMiniSwitch
+            ? miniSwitchOutgoingDistance
+            : menuOutgoingDistance;
 
         // 按钮行滑入/滑出动画（向上飞入，向下飞出）
         final Animation<Offset> buttonSlide = Tween<Offset>(
-          begin: Offset(0, isRowExiting ? (outgoingDistance / kMetroAppBarNormalHeight) : (incomingDistance / kMetroAppBarNormalHeight)),
+          begin: Offset(
+              0,
+              isRowExiting
+                  ? (outgoingDistance / kMetroAppBarNormalHeight)
+                  : (incomingDistance / kMetroAppBarNormalHeight)),
           end: Offset.zero,
         ).animate(CurvedAnimation(
           parent: _buttonVisAnim,
@@ -700,33 +713,35 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                             onVerticalDragCancel: _onVerticalDragCancel,
                             onVerticalDragEnd: _onVerticalDragEnd,
                             onTap: () {
-                              if (useExpandedChrome) _closeMenu();
-                              else _toggleMenu();
+                              if (useExpandedChrome)
+                                _closeMenu();
+                              else
+                                _toggleMenu();
                             },
                             child: Stack(
                               children: [
                                 //if (_canExpand)
-                                  Positioned(
-                                    top: 11.875 * 0.8,
-                                    right: 23.75 * 0.8,
-                                    child: SizedBox(
-                                      width: 41* 0.625 * 0.8,
-                                      height: 9 * 0.625 * 0.8,
-                                      child: FittedBox(
-                                        // 自动等比缩放并居中
-                                        fit: BoxFit.contain,
-                                        child: CustomPaint(
-                                          size: const Size(41, 9),
-                                          painter: _ThreeDotsP(
-                                              color: Theme.of(context)
-                                                      .extension<
-                                                          MetroAppBarTheme>()!
-                                                      .buttonIconColor ??
-                                                  Colors.white),
-                                        ),
+                                Positioned(
+                                  top: 11.875 * 0.8,
+                                  right: 23.75 * 0.8,
+                                  child: SizedBox(
+                                    width: 41 * 0.625 * 0.8,
+                                    height: 9 * 0.625 * 0.8,
+                                    child: FittedBox(
+                                      // 自动等比缩放并居中
+                                      fit: BoxFit.contain,
+                                      child: CustomPaint(
+                                        size: const Size(41, 9),
+                                        painter: _ThreeDotsP(
+                                            color: Theme.of(context)
+                                                    .extension<
+                                                        MetroAppBarTheme>()!
+                                                    .buttonIconColor ??
+                                                Colors.white),
                                       ),
                                     ),
                                   ),
+                                ),
                               ],
                             ),
                           ),
@@ -742,7 +757,9 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                               SlideTransition(
                                 position: buttonSlide,
                                 child: FadeTransition(
-                                  opacity: isRowExiting ? _buttonVisAnim : const AlwaysStoppedAnimation(1.0),
+                                  opacity: isRowExiting
+                                      ? _buttonVisAnim
+                                      : const AlwaysStoppedAnimation(1.0),
                                   child: _AppBarLabelVisibility(
                                     show: showLabel,
                                     child: SizedBox(
@@ -752,14 +769,22 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                                           builder: (context) {
                                             // --- 自动计算 ---
                                             // AnimatedSwitcher的duration控制进场，reverseDuration控制退场
-                                            final Duration totalIncomingDuration = btnIncomingDelay + btnIncomingDuration;
-                                            final double incomingStartRatio = btnIncomingDelay.inMilliseconds / totalIncomingDuration.inMilliseconds;
+                                            final Duration
+                                                totalIncomingDuration =
+                                                btnIncomingDelay +
+                                                    btnIncomingDuration;
+                                            final double incomingStartRatio =
+                                                btnIncomingDelay
+                                                        .inMilliseconds /
+                                                    totalIncomingDuration
+                                                        .inMilliseconds;
 
                                             return AnimatedSwitcher(
                                               duration: totalIncomingDuration,
-                                              reverseDuration: btnOutgoingDuration,
-                                              layoutBuilder:
-                                                  (currentChild, previousChildren) {
+                                              reverseDuration:
+                                                  btnOutgoingDuration,
+                                              layoutBuilder: (currentChild,
+                                                  previousChildren) {
                                                 return Stack(
                                                   alignment: Alignment.center,
                                                   children: [
@@ -772,7 +797,8 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                                               transitionBuilder:
                                                   (child, animation) {
                                                 final bool isIncoming =
-                                                    child.key == buttonsContentKey;
+                                                    child.key ==
+                                                        buttonsContentKey;
                                                 if (isIncoming) {
                                                   return FadeTransition(
                                                     opacity: Tween<double>(
@@ -781,7 +807,8 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                                                     ).animate(
                                                       CurvedAnimation(
                                                         parent: animation,
-                                                        curve: Threshold(incomingStartRatio),
+                                                        curve: Threshold(
+                                                            incomingStartRatio),
                                                       ),
                                                     ),
                                                     child: SlideTransition(
@@ -797,7 +824,8 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                                                           curve: Interval(
                                                             incomingStartRatio,
                                                             1.0,
-                                                            curve: btnIncomingCurve,
+                                                            curve:
+                                                                btnIncomingCurve,
                                                           ),
                                                         ),
                                                       ),
@@ -825,17 +853,20 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                                                   ),
                                                 );
                                               },
-                              
-                                              child: _isFirstLoad 
-                                                  ? const SizedBox.shrink(key: ValueKey('__initial_empty__'))
+                                              child: _isFirstLoad
+                                                  ? const SizedBox.shrink(
+                                                      key: ValueKey(
+                                                          '__initial_empty__'))
                                                   : KeyedSubtree(
-                                                key: buttonsContentKey,
-                                                child: Row(
-                                                  spacing: 36.25 * 0.8,
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: widget.bar.buttons,
-                                                ),
-                                              ),
+                                                      key: buttonsContentKey,
+                                                      child: Row(
+                                                        spacing: 36.25 * 0.8,
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children:
+                                                            widget.bar.buttons,
+                                                      ),
+                                                    ),
                                             );
                                           },
                                         ),
@@ -845,7 +876,10 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                                 ),
                               ),
 
-                            SizedBox(height: widget.bar.buttons.isNotEmpty ? 24 * 0.8: 66.25 * 0.8),
+                            SizedBox(
+                                height: widget.bar.buttons.isNotEmpty
+                                    ? 24 * 0.8
+                                    : 66.25 * 0.8),
 
                             // 菜单项列
                             ...widget.bar.menuItems.map(
@@ -926,7 +960,8 @@ class _MetroMenuItemTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 0),
         alignment: Alignment.centerLeft,
         child: DefaultTextStyle(
-          style: (Theme.of(context).textTheme.bodyMedium ?? const TextStyle()).copyWith(
+          style: (Theme.of(context).textTheme.bodyMedium ?? const TextStyle())
+              .copyWith(
             color: fgColor,
             fontSize: 32 * 0.8,
             fontWeight: FontWeight.w300,
@@ -961,4 +996,119 @@ class _ThreeDotsP extends CustomPainter {
 
   @override
   bool shouldRepaint(_ThreeDotsP oldDelegate) => oldDelegate.color != color;
+}
+
+
+
+
+
+
+/// 手指停留检测组件（对应 Windows Phone 原版图标按钮的按压行为）。
+///
+/// 行为规则：
+/// - 手指按下 → 亮起（[MetroPressScope] 广播 true）
+/// - 手指滑动离开组件范围（未抬起）→ 熄灭（广播 false）
+/// - 手指未抬起、重新滑回组件范围 → 再次亮起
+/// - 亮起状态下抬起手指 → 触发 [onPressed]
+///
+/// 通常与 [Tile] 搭配使用：Tile 负责 3D 回弹动画，本组件负责
+/// 按压状态与点击事件，两者互不干扰（本组件使用原始指针事件 [Listener]，
+/// 不参与手势竞技场，因此不会与外层 Tile 的手势竞争）。
+class MetroPressDetector extends StatefulWidget {
+  const MetroPressDetector({
+    super.key,
+    this.onPressed,
+    required this.child,
+  });
+
+  /// 亮起状态下抬起手指时触发。
+  final VoidCallback? onPressed;
+
+  final Widget child;
+
+  @override
+  State<MetroPressDetector> createState() => _MetroPressDetectorState();
+}
+
+class _MetroPressDetectorState extends State<MetroPressDetector> {
+  /// 当前跟踪的手指（多指时只跟踪第一个）。
+  int? _activePointer;
+
+  /// 手指是否停留在组件范围内（亮起状态）。
+  bool _isPressed = false;
+
+  void _setPressed(bool value) {
+    if (_isPressed == value) return;
+    setState(() {
+      _isPressed = value;
+    });
+  }
+
+  bool _contains(Offset localPosition) {
+    final RenderBox? box = context.findRenderObject() as RenderBox?;
+    if (box == null) return false;
+    return localPosition.dx >= 0 &&
+        localPosition.dx <= box.size.width &&
+        localPosition.dy >= 0 &&
+        localPosition.dy <= box.size.height;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (event) {
+        if (_activePointer != null) return; // 已有手指在跟踪
+        _activePointer = event.pointer;
+        _setPressed(true);
+      },
+      onPointerMove: (event) {
+        if (event.pointer != _activePointer) return;
+        _setPressed(_contains(event.localPosition));
+      },
+      onPointerUp: (event) {
+        if (event.pointer != _activePointer) return;
+        if (_isPressed) {
+          widget.onPressed?.call();
+        }
+        _setPressed(false);
+        _activePointer = null;
+      },
+      onPointerCancel: (event) {
+        if (event.pointer != _activePointer) return;
+        _setPressed(false);
+        _activePointer = null;
+      },
+      child: MetroPressScope(
+        isPressed: _isPressed,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+/// 向 [MetroPressDetector] 子树暴露按压状态的 InheritedWidget。
+///
+/// 子组件可通过 [maybeOf] 感知手指是否停留在组件范围内，
+/// 从而实现按压高亮联动（如 [MetroCircleButton] 的 iconMode）。
+class MetroPressScope extends InheritedWidget {
+  const MetroPressScope({
+    super.key,
+    required this.isPressed,
+    required super.child,
+  });
+
+  /// 手指当前是否停留在组件范围内。
+  final bool isPressed;
+
+  /// 获取最近的按压状态；不在任何 [MetroPressDetector] 内时返回 null。
+  static bool? maybeOf(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<MetroPressScope>()
+        ?.isPressed;
+  }
+
+  @override
+  bool updateShouldNotify(MetroPressScope oldWidget) =>
+      oldWidget.isPressed != isPressed;
 }
