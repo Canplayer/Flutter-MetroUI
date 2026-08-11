@@ -679,6 +679,9 @@ class _MetroAppState extends State<MetroApp> {
     // Default Colors
     final Color whiteColor = const Color.fromARGB(255, 255, 255, 255);
     final Color blackColor = const Color.fromARGB(255, 0, 0, 0);
+    final Color surfaceColor = useWhiteTheme
+        ? const Color.fromARGB(255, 221, 221, 221)
+        : const Color.fromARGB(255, 31, 31, 31);
     final Color textBlackColor = const ui.Color.fromARGB(255, 0, 0, 0);
     final Color primaryColor =
         widget.metroColor ?? const Color.fromARGB(255, 27, 161, 226);
@@ -732,18 +735,14 @@ class _MetroAppState extends State<MetroApp> {
           ),
         ),
         MetroAppBarTheme(
-          backgroundColor: useWhiteTheme
-              ? const Color.fromARGB(255, 221, 221, 221)
-              : blackColor.withAlpha(150),
-          expandedBackgroundColor: useWhiteTheme
-              ? const Color.fromARGB(255, 221, 221, 221)
-              : blackColor,
+          backgroundColor: surfaceColor,
+          expandedBackgroundColor: surfaceColor,
           buttonColor: useWhiteTheme ? blackColor : whiteColor,
           buttonIconColor: useWhiteTheme
               ? const Color.fromARGB(255, 29, 29, 29)
               : whiteColor,
           disabledButtonIconColor: useWhiteTheme ? textBlackColor : whiteColor,
-          pressedButtonIconColor: useWhiteTheme ? textBlackColor : whiteColor,
+          pressedButtonIconColor: whiteColor,
           menuItemColor: useWhiteTheme ? textBlackColor : whiteColor,
           disabledMenuItemColor: useWhiteTheme ? textBlackColor : whiteColor,
           expandCurve: appBarExpandCurve,
@@ -858,6 +857,7 @@ class _MetroAppState extends State<MetroApp> {
       colorScheme: metroTheme.colorScheme.copyWith(
         primary: primaryColor,
         onSurface: onSurface,
+        surfaceContainer: surfaceColor
       ),
       textTheme: metroTheme.textTheme.apply(
         fontFamily: widget.fontFamily ?? 'Segoe WP',

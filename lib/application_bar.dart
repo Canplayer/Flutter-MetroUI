@@ -45,6 +45,18 @@ double _collapsedHeightFor(MetroApplicationBar bar) {
       : kMetroAppBarNormalHeight;
 }
 
+/// 返回 Application Bar 在折叠状态下的高度。
+///
+/// mini 模式（[MetroApplicationBar.mini] 为 true 或 [MetroApplicationBar.buttons] 为空）
+/// 返回 [kMetroAppBarMiniHeight]，否则返回 [kMetroAppBarNormalHeight]。
+///
+/// 该高度不包含手动拖拽展开后的高度，也不包含底部安全区高度。
+/// 需要计算 Application Bar 在屏幕上占据的总高度时，请自行加上
+/// `MediaQuery.paddingOf(context).bottom`。
+double metroAppBarCollapsedHeight(MetroApplicationBar bar) {
+  return _collapsedHeightFor(bar);
+}
+
 int _widgetVisualSignature(Widget widget) {
   if (widget is MetroAppBarButton) {
     return Object.hash(
@@ -676,12 +688,12 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
 
         final Color collapsedBg = widget.bar.backgroundColor ??
             Theme.of(context).extension<MetroAppBarTheme>()!.backgroundColor ??
-            Colors.black;
+            Theme.of(context).colorScheme.surfaceContainer;
         final Color expandedBg = widget.bar.expandedBackgroundColor ??
             Theme.of(context)
                 .extension<MetroAppBarTheme>()!
                 .expandedBackgroundColor ??
-            Colors.black.withAlpha(200);
+            Theme.of(context).colorScheme.surfaceContainer;
 
         final Color bgColor = useExpandedChrome ? expandedBg : collapsedBg;
 

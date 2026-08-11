@@ -169,6 +169,8 @@ class MetroPageScaffold extends StatefulWidget {
     this.onDidPopNext,
     this.backButtonAlignment = Alignment.topLeft,
     this.applicationBar,
+    this.extendBodyToApplicationBar = true,
+    this.enableZAxisEffect = false,
   });
 
   /// 返回按钮的对齐方式，当页面被推入导航栈具有上层页面时，会自动显示返回按钮。
@@ -224,6 +226,25 @@ class MetroPageScaffold extends StatefulWidget {
   /// 当页面成为顶层路由时，此菜单会自动显示并渐变淘入。
   /// 切换到其他页面时，该菜单会渐变消失，新页面的菜单在动画完成后显示。
   final MetroApplicationBar? applicationBar;
+
+  /// 是否将 [body] 延伸到 Application Bar 下方。
+  ///
+  /// 默认值为 true，此时 [body] 的底部会被 Application Bar 覆盖。
+  ///
+  /// 设置为 false 后，当且仅当当前页面存在 Application Bar 时，
+  /// 页面会自动在底部让出 Application Bar 折叠状态的高度（含底部安全区），
+  /// 避免内容被遮挡。手动拖拽展开 Application Bar 时的高度不计算在内。
+  final bool extendBodyToApplicationBar;
+
+  /// 是否启用背景 Z 轴位移 + 半透明的推远效果。
+  ///
+  /// 启用后，[MetroContextMenu] 长按推远背景、或调用
+  /// [MetroPageScaffoldState.pushBackBackground] 时，页面会沿 Z 轴向屏幕
+  /// 深处平移并逐渐半透明（透出底色跟随主题背景）。
+  ///
+  /// 默认为 false（不启用）：页面保持普通 2D 布局，调用
+  /// [MetroPageScaffoldState.pushBackBackground] 不会产生任何视觉变化。
+  final bool enableZAxisEffect;
 
   /// 从最接近的此类实例中查找 [MetroPageScaffoldState]。
   ///
@@ -340,22 +361,28 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
 
   /// 触发背景向后推的动画，支持传递自定义动画曲线。
   /// [duration] 默认 500ms（也就是横线展开的时间）。
+  ///
+  /// 仅在 [MetroPageScaffold.enableZAxisEffect] 为 true 时生效，
+  /// 否则该方法直接返回，不产生任何视觉变化。
   void pushBackBackground({
     Curve curve = Curves.linear,
     Duration duration = const Duration(milliseconds: 500),
   }) {
-    if (!mounted) return;
+    if (!mounted || !widget.enableZAxisEffect) return;
     _zAxisController.duration = duration;
     _zAxisAnimation = CurvedAnimation(parent: _zAxisController, curve: curve);
     _zAxisController.forward();
   }
 
   /// 恢复原始层级
+  ///
+  /// 仅在 [MetroPageScaffold.enableZAxisEffect] 为 true 时生效，
+  /// 否则该方法直接返回，不产生任何视觉变化。
   void restoreBackground({
     Curve curve = Curves.easeOutCubic,
     Duration duration = const Duration(milliseconds: 350),
   }) {
-    if (!mounted) return;
+    if (!mounted || !widget.enableZAxisEffect) return;
     _zAxisController.duration = duration;
     // 使用 reverseCurve 保证倒退时的动画曲线也是平滑的
     _zAxisAnimation = CurvedAnimation(
@@ -454,6 +481,18 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
     MetroAppBarScope.controllerOf(context)?.setAppBar(widget.applicationBar);
   }
 
+  /// 当前页面 Application Bar 折叠状态下占据的屏幕高度（含底部安全区）。
+  ///
+  /// 只有当 [MetroAppBarScope] 存在且当前存在 Application Bar 时才返回实际高度，
+  /// 否则返回 0。手动拖拽展开的高度不参与计算。
+  double _applicationBarHeight(BuildContext context) {
+    final MetroApplicationBar? bar =
+        MetroAppBarScope.maybeOf(context)?.currentBar;
+    if (bar == null) return 0.0;
+    return metroAppBarCollapsedHeight(bar) +
+        MediaQuery.paddingOf(context).bottom;
+  }
+
   @override
   Widget build(BuildContext context) {
     assert(debugCheckHasMediaQuery(context));
@@ -503,8 +542,26 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
           : 0.0,
     );
 
-    return ScrollNotificationObserver(
-      child: AnimatedBuilder(
+    // 底部需要让出的总高度：在键盘/系统 inset 的基础上，
+    // 若要求不延伸至 Application Bar 下方且当前页面存在 Application Bar，
+    // 则再加上其折叠高度（含底部安全区）。
+    double bottomInset = math.max(0.0, minInsets.bottom);
+    if (!widget.extendBodyToApplicationBar) {
+      bottomInset += _applicationBarHeight(context);
+    }
+
+    // 默认构建的内容：仅 Material + 底部让出，无任何变换/透明度层
+    Widget scaffoldContent = Material(
+      color: widget.backgroundColor ?? themeData.scaffoldBackgroundColor,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: body,
+      ),
+    );
+
+    // 仅在启用 Z 轴推远特性时，才包裹 3D 变换 + 半透明 + 背景垫层
+    if (widget.enableZAxisEffect) {
+      scaffoldContent = AnimatedBuilder(
         animation: _zAxisAnimation,
         builder: (context, child) {
           final double z = _zAxisAnimation.value * 200.0;
@@ -514,24 +571,34 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
             //解决该死的Flutter不认为这是个3D图形的问题，必须设置一个非常小的值来欺骗它，否则即使设置了Z轴偏移，Flutter也会认为它是个2D图形，导致z轴动画失效
             ..rotateX(z==0?0: 0.000000000000001);
 
-          return Transform(
-            transform: matrix,
-            alignment: FractionalOffset.center,
-            child: Opacity(
-              opacity: 1.0 - (_zAxisAnimation.value * 0.4),
-              child: child,
-            ),
+          // 页面被推远并半透明时，透出的底色必须与页面自身背景一致：
+          // 页面之下（如桌面端 FlutterView 黑底 / Web 端浏览器白底）的原生底色
+          // 与主题无关，会造成半透明背景色在不同平台上不一致。
+          // 这里在 3D 变换层之下垫一层与页面背景同色的底，保证跟随主题、平台无关；
+          // z=0（未推远）时页面完全不透明，该底色被完全遮挡，无任何影响。
+          final Color pageBackground =
+              widget.backgroundColor ?? themeData.scaffoldBackgroundColor;
+
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              ColoredBox(color: pageBackground),
+              Transform(
+                transform: matrix,
+                alignment: FractionalOffset.center,
+                child: Opacity(
+                  opacity: 1.0 - (_zAxisAnimation.value * 0.4),
+                  child: child,
+                ),
+              ),
+            ],
           );
         },
-        child: Material(
-          color: widget.backgroundColor ?? themeData.scaffoldBackgroundColor,
-          child: Padding(
-            padding: EdgeInsets.only(bottom: math.max(0.0, minInsets.bottom)),
-            child: body,
-          ),
-        ),
-      ),
-    );
+        child: scaffoldContent,
+      );
+    }
+
+    return ScrollNotificationObserver(child: scaffoldContent);
   }
 }
 

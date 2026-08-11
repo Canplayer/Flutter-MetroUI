@@ -168,16 +168,29 @@ class _MetroCircleButtonState extends State<MetroCircleButton> {
             SizedBox(
               height: size,
               width: size,
-              child: IconTheme(
-                data: IconThemeData(
-                  color: widget.iconColor ??
-                      Theme.of(context)
-                          .extension<MetroAppBarTheme>()!
-                          .buttonIconColor ??
-                      Colors.white,
-                  size: widget.iconSize,
+              child: ColorFiltered(
+                // 使用 srcIn 滤镜控制图标颜色（而非 IconTheme.color）：
+                // 即使传入的 icon 内部自带颜色，也能被强制统一覆盖。
+                // 按下时（背景填充主题色）图标切换为 pressedButtonIconColor
+                // （未配置则纯白），保证与高亮背景的对比度。
+                colorFilter: ColorFilter.mode(
+                  _isPressed
+                      ? Theme.of(context)
+                              .extension<MetroAppBarTheme>()!
+                              .pressedButtonIconColor ??
+                          Colors.white
+                      : widget.iconColor ??
+                          Theme.of(context)
+                              .extension<MetroAppBarTheme>()!
+                              .buttonIconColor ??
+                          Colors.white,
+                  BlendMode.srcIn,
                 ),
-                child: widget.icon,
+                child: IconTheme(
+                  // IconTheme 仅保留尺寸控制，颜色交给上方滤镜
+                  data: IconThemeData(size: widget.iconSize),
+                  child: widget.icon,
+                ),
               ),
             ),
           ],
