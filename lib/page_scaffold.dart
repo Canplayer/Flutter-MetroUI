@@ -123,7 +123,7 @@ class _BodyBuilderState extends State<_BodyBuilder> {
           if (shouldPop) {
             // 如果允许退出，则播放退出动画
             if (widget.onDidPop != null) {
-              debugPrint('开始退出动画');
+              //debugPrint('开始退出动画');
               await widget.onDidPop!();
             } else {
               await widget.animatedPageKey.currentState?.didPop();
@@ -470,8 +470,14 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
   void didPopNext() {
     // 从下一页返回到本页，把本页的 Application Bar 重新显示
     _updateApplicationBar();
-    widget.onDidPopNext?.call();
-    _metroAnimatedPageKey.currentState?.didPopNext();
+    // 与 onDidPush / onDidPop 一致的二选一语义：
+    // 设置了 onDidPopNext → 播自定义回调，不再播默认动画；
+    // onDidPopNext 为 null → 才播放默认翻页动画。
+    if (widget.onDidPopNext != null) {
+      widget.onDidPopNext?.call();
+    } else {
+      _metroAnimatedPageKey.currentState?.didPopNext();
+    }
     super.didPopNext();
   }
 
