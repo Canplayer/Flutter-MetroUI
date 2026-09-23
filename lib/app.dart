@@ -882,6 +882,21 @@ class _MetroAppState extends State<MetroApp> {
 
     Widget childWidget = child ?? const SizedBox.shrink();
 
+    // Navigator（以及其内的所有路由/页面）之下垫一层主题背景色。
+    //
+    // 这里基于 WidgetsApp 而非 MaterialApp，路由之下并没有主题背景层，
+    // 页面被平移离开后露出的是「平台原生底色」：桌面端 FlutterView 黑底、
+    // Web 端浏览器白底。该底色与主题无关，于是同一段位移动画（例如页面推入/
+    // 推出时整体上浮、下滑）在不同平台会露出不同颜色，表现为 Web 上露白。
+    //
+    // 在路由之下统一下垫一层 scaffoldBackgroundColor，让露出区域始终跟随主题，
+    // 与 [MetroPageScaffold] 内部 Material 的背景色保持一致，实现跨平台表现统一。
+    // 页面不透明且铺满整个路由时，该层被完全遮挡，不会产生任何视觉影响。
+    childWidget = ColoredBox(
+      color: theme.scaffoldBackgroundColor,
+      child: childWidget,
+    );
+
     if (widget.themeAnimationStyle != AnimationStyle.noAnimation) {
       if (widget.builder != null) {
         childWidget = Builder(

@@ -19,6 +19,7 @@ class _BodyBuilder extends StatefulWidget {
     this.stackPanel,
     this.onWillPop,
     this.onDidPop,
+    this.disableDefaultPopAnimation = false,
     required this.animatedPageKey,
     required this.backButtonAlignment,
   });
@@ -27,6 +28,7 @@ class _BodyBuilder extends StatefulWidget {
   final Widget? stackPanel;
   final Future<bool> Function()? onWillPop;
   final Future<void> Function()? onDidPop;
+  final bool disableDefaultPopAnimation;
   final GlobalKey<MetroAnimatedPageState> animatedPageKey;
   final AlignmentGeometry backButtonAlignment;
 
@@ -121,12 +123,16 @@ class _BodyBuilderState extends State<_BodyBuilder> {
           final bool shouldPop =
               widget.onWillPop != null ? await widget.onWillPop!() : true;
           if (shouldPop) {
-            // 如果允许退出，则播放退出动画
+            // 决定是否播放默认退出（didPop）动画
+            final bool playDefault = !widget.disableDefaultPopAnimation;
+            if (playDefault) {
+              // 保留默认退出动画
+              await widget.animatedPageKey.currentState?.didPop();
+            }
+            // 同时调用用户传入的自定义退出动画回调（若提供）
             if (widget.onDidPop != null) {
               //debugPrint('开始退出动画');
               await widget.onDidPop!();
-            } else {
-              await widget.animatedPageKey.currentState?.didPop();
             }
 
             // 动画完成后，手动退出页面
@@ -171,6 +177,10 @@ class MetroPageScaffold extends StatefulWidget {
     this.applicationBar,
     this.extendBodyToApplicationBar = true,
     this.enableZAxisEffect = false,
+    this.disableDefaultPushAnimation = false,
+    this.disableDefaultPopAnimation = false,
+    this.disableDefaultPushNextAnimation = false,
+    this.disableDefaultPopNextAnimation = false,
   });
 
   /// 返回按钮的对齐方式，当页面被推入导航栈具有上层页面时，会自动显示返回按钮。
@@ -245,6 +255,38 @@ class MetroPageScaffold extends StatefulWidget {
   /// 默认为 false（不启用）：页面保持普通 2D 布局，调用
   /// [MetroPageScaffoldState.pushBackBackground] 不会产生任何视觉变化。
   final bool enableZAxisEffect;
+
+  /// 是否禁用默认的"进入（didPush）"翻页动画。
+  ///
+  /// 默认为 false：即使设置了 [onDidPush]，默认动画仍会播放，随后再调用
+  /// [onDidPush] 回调。
+  /// 设置为 true 时，将只播放 [onDidPush] 回调中的自定义动画（或直接完成），
+  /// 不再播放默认的进入动画。
+  final bool disableDefaultPushAnimation;
+
+  /// 是否禁用默认的"退出（didPop）"翻页动画。
+  ///
+  /// 默认为 false：即使设置了 [onDidPop]，默认动画仍会播放，随后再调用
+  /// [onDidPop] 回调。
+  /// 设置为 true 时，将只播放 [onDidPop] 回调中的自定义动画（或直接退出），
+  /// 不再播放默认的退出动画。
+  final bool disableDefaultPopAnimation;
+
+  /// 是否禁用默认的"跳转到下一页（didPushNext）"翻页动画。
+  ///
+  /// 默认为 false：即使设置了 [onDidPushNext]，默认动画仍会播放，随后再调用
+  /// [onDidPushNext] 回调。
+  /// 设置为 true 时，将只播放 [onDidPushNext] 回调中的自定义动画（或直接跳转），
+  /// 不再播放默认的 pushNext 动画。
+  final bool disableDefaultPushNextAnimation;
+
+  /// 是否禁用默认的"从下一页返回（didPopNext）"翻页动画。
+  ///
+  /// 默认为 false：即使设置了 [onDidPopNext]，默认动画仍会播放，随后再调用
+  /// [onDidPopNext] 回调。
+  /// 设置为 true 时，将只播放 [onDidPopNext] 回调中的自定义动画（或直接完成），
+  /// 不再播放默认的 popNext 动画。
+  final bool disableDefaultPopNextAnimation;
 
   /// 从最接近的此类实例中查找 [MetroPageScaffoldState]。
   ///
@@ -407,13 +449,17 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
       // 登记当前页面的 Application Bar
       _updateApplicationBar();
 
-      if (widget.onDidPush != null) {
-        playNonePushAnimation();
-        widget.onDidPush?.call();
-      } else {
-        // 播放默认的进入动画
+      // 决定是否播放默认进入（didPush）动画
+      final bool playDefault = !widget.disableDefaultPushAnimation;
+      if (playDefault) {
+        // 保留默认进入动画
         playDefaultPushAnimation();
+      } else {
+        // 已禁用默认进入动画：先把页面归位到最终（静止）状态
+        playNonePushAnimation();
       }
+      // 同时调用用户传入的自定义进入动画回调（若提供）
+      widget.onDidPush?.call();
     });
   }
 
@@ -470,14 +516,15 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
   void didPopNext() {
     // 从下一页返回到本页，把本页的 Application Bar 重新显示
     _updateApplicationBar();
-    // 与 onDidPush / onDidPop 一致的二选一语义：
-    // 设置了 onDidPopNext → 播自定义回调，不再播默认动画；
-    // onDidPopNext 为 null → 才播放默认翻页动画。
-    if (widget.onDidPopNext != null) {
-      widget.onDidPopNext?.call();
-    } else {
+
+    // 决定是否播放默认 popNext（从下一页返回）动画
+    final bool playDefault = !widget.disableDefaultPopNextAnimation;
+    if (playDefault) {
       _metroAnimatedPageKey.currentState?.didPopNext();
     }
+    // 同时调用用户传入的自定义回调（若提供）
+    widget.onDidPopNext?.call();
+
     super.didPopNext();
   }
 
@@ -522,6 +569,7 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
               stackPanel: widget.stackPanel,
               onWillPop: widget.onWillPop,
               onDidPop: widget.onDidPop,
+              disableDefaultPopAnimation: widget.disableDefaultPopAnimation,
               animatedPageKey: _metroAnimatedPageKey,
               backButtonAlignment: widget.backButtonAlignment,
             ),
@@ -575,7 +623,7 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
             //..setEntry(3, 2, 0.002) // perspective
             ..setEntry(2, 3, z)
             //解决该死的Flutter不认为这是个3D图形的问题，必须设置一个非常小的值来欺骗它，否则即使设置了Z轴偏移，Flutter也会认为它是个2D图形，导致z轴动画失效
-            ..rotateX(z==0?0: 0.000000000000001);
+            ..rotateX(z == 0 ? 0 : 0.000000000000001);
 
           // 页面被推远并半透明时，透出的底色必须与页面自身背景一致：
           // 页面之下（如桌面端 FlutterView 黑底 / Web 端浏览器白底）的原生底色

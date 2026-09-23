@@ -21,14 +21,18 @@ Future<void> _runPrePushAnimation(
   // 2) 否则尝试常规查找（如果 context 合适）
   currentScaffoldState ??= MetroPageScaffold.maybeOf(context);
 
-  // 如果当前页面有 MetroPageScaffold 并且设置了 onDidPushNext 回调
+  // 如果当前页面有 MetroPageScaffold
   if (currentScaffoldState != null) {
-    if (currentScaffoldState.widget.onDidPushNext != null) {
-      // 调用当前页面的 onDidPushNext 回调，并等待其完成
-      await currentScaffoldState.widget.onDidPushNext!(dataToPass);
-    } else {
-      // 播放默认动画
+    // 决定是否播放默认 pushNext（跳转到下一页）动画
+    final bool playDefault =
+        !currentScaffoldState.widget.disableDefaultPushNextAnimation;
+    if (playDefault) {
+      // 保留默认 pushNext 动画
       await currentScaffoldState.playDefaultPushNextAnimation();
+    }
+    // 同时调用用户传入的自定义回调，并等待其完成（若提供）
+    if (currentScaffoldState.widget.onDidPushNext != null) {
+      await currentScaffoldState.widget.onDidPushNext!(dataToPass);
     }
   } else {
     // 可选：日志或降级策略
