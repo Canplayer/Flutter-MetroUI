@@ -114,10 +114,16 @@ class _BodyBuilderState extends State<_BodyBuilder> {
         ),
       ),
       child: PopScope(
-        canPop: widget.onWillPop != null,
+        canPop: widget.onWillPop != null &&
+            !(MetroAppBarScope.maybeOf(context)?.isExpanded ?? false),
         onPopInvokedWithResult: (didPop, result) async {
           if (didPop) {
             return; // Pop 已发生，我们不做任何事
+          }
+          final appBar = MetroAppBarScope.controllerOf(context);
+          if (appBar?.isExpanded ?? false) {
+            appBar!.closeMenu();
+            return;
           }
           // 拦截返回事件
           final bool shouldPop =
@@ -531,7 +537,7 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
   /// 将当前页面的 Application Bar 注册到全局控制器。
   void _updateApplicationBar() {
     if (!mounted) return;
-    MetroAppBarScope.controllerOf(context)?.setAppBar(widget.applicationBar);
+    MetroAppBarScope.controllerOf(context)?.setAppBar(widget.applicationBar, owner: this);
   }
 
   /// 当前页面 Application Bar 折叠状态下占据的屏幕高度（含底部安全区）。

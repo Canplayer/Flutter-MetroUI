@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:metro_ui/animations.dart';
@@ -49,8 +50,9 @@ class _MeasureSizeRenderObject extends RenderProxyBox {
     super.performLayout();
     if (size == _oldSize) return;
     _oldSize = size;
+    final measuredSize = size;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      onChange(size);
+      if (attached && _oldSize == measuredSize) onChange(measuredSize);
     });
   }
 }
@@ -121,14 +123,18 @@ class PanoramaConfig {
   /// 旋转中心相对组件宽度的比例（WP8 CenterPointPercent.X = −0.5）。
   final double rotationCenterXPercent;
 
+  /// 可选的本地透视矩阵 (3, 2) 项。为 null 时沿用外层投影。
+  /// WP8 相机坐标与 Flutter 的精确换算尚未验证。
+  final double? rotationPerspective;
+
   /// 3D 旋转入场曲线（WP8: Log，权重 10）。
   final Curve rotationCurve;
 
   // ── 大标题布局 ───────────────────────────────────────────────────────────────
   /// 副本周期的额外余量（像素，加在 `文本排版宽度 + 屏宽` 之后，默认 0）。
   ///
-  /// 结构依据：WP8 标题文本的右 margin = ScreenWidth，因此相邻副本间距为
-  /// `文本宽度 + 屏宽`。若实测发现周期不符，用该字段微调。
+  /// Flutter 近似采用 `文本宽度 + 屏宽`；WP8 标题右 margin 包含
+  /// ScreenWidth，但实际循环周期尚未完成验证，可使用该字段调整。
   final double titleRepeatSpacingExtra;
 
   /// 大标题层（PanoTitleLayer）相对顶部的偏移（WP8: margin.top = −75）。
@@ -213,6 +219,7 @@ class PanoramaConfig {
     this.titleEntryTranslate = 2000 * 0.8,
     this.contentEntryTranslate = 1500 * 0.8,
     this.rotationCenterXPercent = -0.5,
+    this.rotationPerspective,
     this.rotationCurve = MetroCurves.panoramaForwardIn,
     this.titleRepeatSpacingExtra = 0.0,
     this.titleLayerTop = -75 * 0.8,
@@ -221,7 +228,8 @@ class PanoramaConfig {
     this.titleOverflowRight = 2000.0,
     this.titleTextLeftMargin = 0.0,
     this.paneTopPadding = 198 * 0.8,
-    this.paneHeaderFontSize = 50 * 0.8,
+    //this.paneHeaderFontSize = 50 * 0.8,
+    this.paneHeaderFontSize = 66 * 0.8,
     this.snapCurve = const UixLog(300),
     this.snapDuration = const Duration(milliseconds: 800),
     this.paneHeaderForwardRate = 1 / 1.18,
@@ -289,8 +297,7 @@ class _CurvedScrollSimulation extends Simulation {
 
   @override
   bool isDone(double time) {
-    return time >= _durationSeconds ||
-        (x(time) - _end).abs() < tolerance.distance;
+    return time >= _durationSeconds;
   }
 }
 
@@ -350,9 +357,8 @@ class PanoramaScrollPhysics extends ScrollPhysics {
       target = target.clamp(position.minScrollExtent, position.maxScrollExtent);
     }
 
-    if ((target - pixels).abs() < tolerance.distance) return null;
-
     onTargetCalculated?.call(target);
+    if ((target - pixels).abs() < tolerance.distance) return null;
 
     if (snapCurve != null) {
       return _CurvedScrollSimulation(
@@ -435,9 +441,43 @@ class _MetroPanoramaState extends State<MetroPanorama>
     if (_resolvedConfig != newConfig) {
       _resolvedConfig = newConfig;
       _paneHeaderSnapController.duration = newConfig.snapDuration;
+      _parallaxOnlySnapController.duration = newConfig.snapDuration;
       _rotationController.duration = newConfig.rotationDuration;
       _translationController.duration = newConfig.translationDuration;
       _rotationTween.begin = newConfig.rotationStartDegrees;
+      if (_rotationProgress.curve != newConfig.rotationCurve) {
+        _rotationProgress.dispose();
+        _rotationProgress = CurvedAnimation(
+          parent: _rotationController,
+          curve: newConfig.rotationCurve,
+        );
+        _rotationAnimation = _rotationTween.animate(_rotationProgress);
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant MetroPanorama oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.config != widget.config) {
+      _resolvedConfig =
+          widget.config ??
+          Theme.of(context).extension<MetroPanoramaThemeData>()?.config ??
+          const PanoramaConfig();
+      final config = _config;
+      _paneHeaderSnapController.duration = config.snapDuration;
+      _parallaxOnlySnapController.duration = config.snapDuration;
+      _rotationController.duration = config.rotationDuration;
+      _translationController.duration = config.translationDuration;
+      _rotationTween.begin = config.rotationStartDegrees;
+      if (_rotationProgress.curve != config.rotationCurve) {
+        _rotationProgress.dispose();
+        _rotationProgress = CurvedAnimation(
+          parent: _rotationController,
+          curve: config.rotationCurve,
+        );
+        _rotationAnimation = _rotationTween.animate(_rotationProgress);
+      }
     }
   }
 
@@ -452,6 +492,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
 
   late AnimationController _rotationController;
   late AnimationController _translationController;
+  late CurvedAnimation _rotationProgress;
   late Animation<double> _rotationAnimation;
   late Animation<double> _translationAnimation;
   late final Tween<double> _rotationTween;
@@ -493,6 +534,8 @@ class _MetroPanoramaState extends State<MetroPanorama>
 
   /// Pane 标题归位补间动画控制器。
   late AnimationController _paneHeaderSnapController;
+  late AnimationController _parallaxOnlySnapController;
+  bool _parallaxOnlySnapping = false;
   Map<int, double> _paneHeaderSnapFrom = {};
   Map<int, double> _paneHeaderSnapTo = {};
 
@@ -507,7 +550,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
   /// `min(屏宽 − 左侧锁定 − 间距 − 右侧预露, PanoramaDefaultPaneMaxWidth)`。
   double _defaultPaneWidth = 0.0;
 
-  /// 每个 Pane 占用的 item 宽度（Pane 内容宽 + 左侧锁定偏移）。
+  /// 每个 Pane 占用的 item 宽度（Pane 内容宽 + 页间距）。
   List<double> _paneItemWidths = [];
 
   /// 每个 Pane 的内容宽度（= WP8 Pane MaxWidth）。
@@ -550,14 +593,17 @@ class _MetroPanoramaState extends State<MetroPanorama>
 
   /// 大标题相邻副本的间距（即循环周期）。
   ///
-  /// WP8 在标题文本的右 margin 上追加一个 ScreenWidth，因此相邻副本间距为
-  /// `文本排版宽度 + 屏宽`（+ 可调余量）。两份副本始终按该周期摆放，
+  /// 目前使用 `文本排版宽度 + 屏宽`（+ 可调余量）作为近似，
+  /// 不能仅凭标题的右 margin 推断 WP8 实际循环周期。两份副本按该周期摆放，
   /// 输入越过周期时由相邻代副本接替，等价于 `RepeatAllowDuplicates=true`
   /// 的视觉近似（不保证与 WP8 引擎的视觉对象复用完全一致）。
   double get _titleRepeatSpacing =>
       _titleTextWidth + _viewportWidth + _config.titleRepeatSpacingExtra;
 
   int _currentPaneIndex = 0;
+
+  List<double>? _lastItemWidths;
+  PanoramaConfig? _lastLayoutConfig;
 
   /// 根据视口宽度和 config 统一计算所有布局派生值。
   /// 仅当视口宽度或默认 Pane 宽度变化时才重新计算，并在非首次构建时把滚动位置校正到当前 Pane。
@@ -569,12 +615,17 @@ class _MetroPanoramaState extends State<MetroPanorama>
           _config.rightEdgeBleedIn,
       _config.defaultPaneMaxWidth,
     );
-    final bool isFirstBuild = _contentCycleLength == 0;
+    final bool isFirstBuild = _lastItemWidths == null;
+    final itemWidths = widget.items.map((item) => item.width).toList();
     if (!isFirstBuild &&
         defaultPaneWidth == _defaultPaneWidth &&
-        viewportWidth == _viewportWidth) {
+        viewportWidth == _viewportWidth &&
+        _lastLayoutConfig == _config &&
+        listEquals(_lastItemWidths, itemWidths)) {
       return;
     }
+    _lastItemWidths = itemWidths;
+    _lastLayoutConfig = _config;
 
     if (_paneHeaderWidths.length != widget.items.length) {
       final List<double> next = List<double>.filled(widget.items.length, 0.0);
@@ -593,7 +644,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
     });
     _paneItemWidths = List<double>.generate(
       widget.items.length,
-      (i) => _paneContentWidths[i] + _config.leftLockAlignmentOffset,
+      (i) => _paneContentWidths[i] + _config.contentSpacing,
     );
     _isWidePane = List<bool>.generate(
       widget.items.length,
@@ -619,7 +670,13 @@ class _MetroPanoramaState extends State<MetroPanorama>
         widthSum +
         math.max(0, widget.items.length - 1) * _config.contentSpacing;
 
-    if (!isFirstBuild) {
+    if (!isFirstBuild && _paneStartLockPoints.isEmpty) {
+      _currentPaneIndex = 0;
+      _titleScrollOffset = 0;
+      _backgroundScrollOffset = 0;
+      _parallaxNotifier.value = const PanoramaParallax(0, 0);
+      _paneHeaderOffsetNotifier.value = {};
+    } else if (!isFirstBuild) {
       // 窗口变化：跳回当前 Pane 的起始锁定点
       final double newS =
           _paneStartLockPoints[_currentPaneIndex.clamp(
@@ -646,7 +703,8 @@ class _MetroPanoramaState extends State<MetroPanorama>
       _isBallistic = false;
       _isInterruptingBallistic = false;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) _scrollController.jumpTo(newS);
+        if (mounted && _scrollController.hasClients)
+          _scrollController.jumpTo(newS);
       });
     }
   }
@@ -657,7 +715,10 @@ class _MetroPanoramaState extends State<MetroPanorama>
   double _paneInternalRange(int index) {
     final double rightLockedScrollExtent =
         _viewportWidth - _config.rightLockAlignmentOffset;
-    final double extent = _paneItemWidths[index] - rightLockedScrollExtent;
+    final double extent =
+        _config.leftLockAlignmentOffset +
+        _paneContentWidths[index] -
+        rightLockedScrollExtent;
     // 恰好等于锁定宽度时（默认 Pane）会留下浮点残差，按 0 处理
     return extent > _epsilon ? extent : 0.0;
   }
@@ -777,7 +838,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
 
   /// 大标题排版宽度变化时更新，并按新宽度重算三层视差。
   void _updateTitleTextWidth(double width) {
-    if (width <= 0) return;
+    if (!mounted || width <= 0) return;
     if ((width - (_measuredTitleTextWidth ?? 0)).abs() < 0.5) return;
 
     setState(() => _measuredTitleTextWidth = width);
@@ -800,6 +861,13 @@ class _MetroPanoramaState extends State<MetroPanorama>
       duration: initialConfig.snapDuration,
     );
     _paneHeaderSnapController.addListener(_onPaneHeaderSnapTick);
+    _parallaxOnlySnapController = AnimationController(
+      vsync: this,
+      duration: initialConfig.snapDuration,
+    )..addListener(_onParallaxOnlySnapTick);
+    _parallaxOnlySnapController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) _parallaxOnlySnapping = false;
+    });
 
     _rotationController = AnimationController(
       vsync: this,
@@ -814,12 +882,11 @@ class _MetroPanoramaState extends State<MetroPanorama>
       begin: initialConfig.rotationStartDegrees,
       end: 0,
     );
-    _rotationAnimation = _rotationTween.animate(
-      CurvedAnimation(
-        parent: _rotationController,
-        curve: _config.rotationCurve,
-      ),
+    _rotationProgress = CurvedAnimation(
+      parent: _rotationController,
+      curve: initialConfig.rotationCurve,
     );
+    _rotationAnimation = _rotationTween.animate(_rotationProgress);
 
     _translationTween = Tween<double>(begin: 1, end: 0);
     _translationAnimation = _translationTween.animate(
@@ -833,6 +900,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       // 告诉可能存在的上级 Scaffold 我是个全景视图组件，不用播普通动画！
       const MetroPanoramaDetectNotification().dispatch(context);
 
@@ -881,10 +949,26 @@ class _MetroPanoramaState extends State<MetroPanorama>
     _paneHeaderOffsetNotifier.value = newMap;
   }
 
+  void _onParallaxOnlySnapTick() {
+    final raw = _parallaxOnlySnapController.value;
+    final t = _config.snapCurve?.transform(raw) ?? raw;
+    _titleScrollOffset =
+        _releaseTitleOffset + t * (_targetTitleOffset - _releaseTitleOffset);
+    _backgroundScrollOffset =
+        _releaseBackgroundOffset +
+        t * (_targetBackgroundOffset - _releaseBackgroundOffset);
+    _parallaxNotifier.value = PanoramaParallax(
+      _titleScrollOffset,
+      _backgroundScrollOffset,
+    );
+  }
+
   @override
   void dispose() {
     _ballisticInterruptTimer?.cancel();
+    _parallaxOnlySnapController.dispose();
     _paneHeaderSnapController.dispose();
+    _rotationProgress.dispose();
     _rotationController.dispose();
     _translationController.dispose();
     _scrollController.dispose();
@@ -1002,9 +1086,9 @@ class _MetroPanoramaState extends State<MetroPanorama>
           ]),
           builder: (context, child) {
             return Transform(
-              transform: Matrix4.rotationY(
-                _degreesToRadians(_rotationAnimation.value),
-              ),
+              transform: Matrix4.identity()
+                ..setEntry(3, 2, _config.rotationPerspective ?? 0.0)
+                ..rotateY(_degreesToRadians(_rotationAnimation.value)),
               origin: Offset(_rotationOriginX, 0),
               child: OverflowBox(
                 maxWidth: double.infinity,
@@ -1158,6 +1242,8 @@ class _MetroPanoramaState extends State<MetroPanorama>
                 if (notification is ScrollStartNotification) {
                   if (notification.dragDetails != null) {
                     _paneHeaderSnapController.stop();
+                    _parallaxOnlySnapController.stop();
+                    _parallaxOnlySnapping = false;
                     _dragStartPixels = notification.metrics.pixels;
                     // 计时器仍在运行 → 在归位动画期间被手指打断
                     if (_ballisticInterruptTimer != null) {
@@ -1194,7 +1280,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
                     _firePageChangeIfNeeded(_paneIndexFromPosition(S));
                   }
                   // 大标题 / 背景：归位结束时落到目标偏移（下一次拖动从该值继续累计）
-                  if (wasBallistic) {
+                  if (wasBallistic && !_parallaxOnlySnapping) {
                     _titleScrollOffset = _targetTitleOffset;
                     _backgroundScrollOffset = _targetBackgroundOffset;
                     _parallaxNotifier.value = PanoramaParallax(
@@ -1308,7 +1394,9 @@ class _MetroPanoramaState extends State<MetroPanorama>
                   },
                 ),
                 center: const ValueKey('center_sliver'),
-                physics: widget.items.length <= 1
+                physics:
+                    widget.items.isEmpty ||
+                        (widget.items.length == 1 && !_isWidePane.first)
                     ? const NeverScrollableScrollPhysics()
                     : PanoramaScrollPhysics(
                         isInfinite: isInfinite,
@@ -1316,6 +1404,9 @@ class _MetroPanoramaState extends State<MetroPanorama>
                         snapCurve: _config.snapCurve,
                         snapDuration: _config.snapDuration,
                         onTargetCalculated: (target) {
+                          // A keyed ScrollView can briefly coexist with its
+                          // replacement during a geometry update.
+                          if (_scrollController.positions.length != 1) return;
                           _targetS = target;
                           _releaseS = _scrollController.position.pixels;
                           _releaseTitleOffset = _titleScrollOffset;
@@ -1334,7 +1425,28 @@ class _MetroPanoramaState extends State<MetroPanorama>
                           _releasePaneHeaderOffsets = Map.from(
                             _paneHeaderOffsetNotifier.value,
                           );
-                          _isBallistic = true;
+                          final positionTolerance = _scrollController
+                              .position
+                              .physics
+                              .toleranceFor(_scrollController.position)
+                              .distance;
+                          final noContentMotion =
+                              (target - _releaseS).abs() < positionTolerance;
+                          _isBallistic = !noContentMotion;
+                          if (noContentMotion) {
+                            final needsParallax =
+                                (_targetTitleOffset - _releaseTitleOffset)
+                                        .abs() >
+                                    _epsilon ||
+                                (_targetBackgroundOffset -
+                                            _releaseBackgroundOffset)
+                                        .abs() >
+                                    _epsilon;
+                            if (needsParallax) {
+                              _parallaxOnlySnapping = true;
+                              _parallaxOnlySnapController.forward(from: 0);
+                            }
+                          }
                           // 启动计时器：归位动画时长内若手指再次按下，视为打断惯性
                           _ballisticInterruptTimer?.cancel();
                           _ballisticInterruptTimer = Timer(
@@ -1374,6 +1486,19 @@ class _MetroPanoramaState extends State<MetroPanorama>
                       );
                     }, childCount: isInfinite ? null : widget.items.length),
                   ),
+                  if (!isInfinite &&
+                      widget.items.isNotEmpty &&
+                      _isWidePane.first)
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        width: math.max(
+                          0,
+                          _config.leftLockAlignmentOffset +
+                              _config.rightLockAlignmentOffset -
+                              _config.contentSpacing,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -1417,32 +1542,38 @@ class _MetroPanoramaState extends State<MetroPanorama>
         left: _config.leftLockAlignmentOffset,
         top: _config.paneTopPadding + topPadding,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ValueListenableBuilder<Map<int, double>>(
-            valueListenable: _paneHeaderOffsetNotifier,
-            builder: (context, dxMap, child) {
-              final double dx = _isWidePane[realIndex]
-                  ? dxMap[realIndex] ?? 0.0
-                  : 0.0;
-              return Transform.translate(offset: Offset(dx, 0), child: child);
-            },
-            child: _MeasureSize(
-              onChange: (size) => _updatePaneHeaderWidth(realIndex, size.width),
-              child: DefaultTextStyle.merge(
-                style: TextStyle(
-                  fontWeight: FontWeight.w200,
-                  fontSize: _config.paneHeaderFontSize,
-                  //color: Colors.white,
+      child: OverflowBox(
+        alignment: Alignment.topLeft,
+        minWidth: _paneContentWidths[realIndex],
+        maxWidth: _paneContentWidths[realIndex],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ValueListenableBuilder<Map<int, double>>(
+              valueListenable: _paneHeaderOffsetNotifier,
+              builder: (context, dxMap, child) {
+                final double dx = _isWidePane[realIndex]
+                    ? dxMap[realIndex] ?? 0.0
+                    : 0.0;
+                return Transform.translate(offset: Offset(dx, 0), child: child);
+              },
+              child: _MeasureSize(
+                onChange: (size) =>
+                    _updatePaneHeaderWidth(realIndex, size.width),
+                child: DefaultTextStyle.merge(
+                  style: TextStyle(
+                    fontWeight: FontWeight.w200,
+                    fontSize: _config.paneHeaderFontSize,
+                    //color: Colors.white,
+                  ),
+                  child: item.title,
                 ),
-                child: item.title,
               ),
             ),
-          ),
-          const SizedBox(height: 26 * 0.8),
-          Expanded(child: item.child),
-        ],
+            const SizedBox(height: 26 * 0.8),
+            Expanded(child: item.child),
+          ],
+        ),
       ),
     );
   }

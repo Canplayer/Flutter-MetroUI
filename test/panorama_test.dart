@@ -347,4 +347,153 @@ void main() {
     await tester.pumpAndSettle();
     expect(_pixels(tester), closeTo(691.2 + 819.2, 1.0));
   });
+  testWidgets('updates pane geometry when item count and widths change', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(384, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    Widget build(List<MetroPanoramaItem> items) => MaterialApp(
+      home: Scaffold(
+        body: MetroPanorama(title: const Text('photos'), items: items),
+      ),
+    );
+    await tester.pumpWidget(build(_items()));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(build(_items(wideWidth: 600)));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(build(_items().take(2).toList()));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(build([]));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(build(_items()));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('recalculates spacing when configuration changes', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(384, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    Widget build(double left) => MaterialApp(
+      home: Scaffold(
+        body: MetroPanorama(
+          title: const Text('photos'),
+          items: _items(),
+          config: PanoramaConfig(leftLockAlignmentOffset: left),
+        ),
+      ),
+    );
+    await tester.pumpWidget(build(19.2));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(build(30));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(find.text('header0')).dx, closeTo(30, 0.5));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('can unmount before a queued size measurement', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MetroPanorama(title: const Text('photos'), items: _items()),
+      ),
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('title settles even when content is already at its target', (
+    tester,
+  ) async {
+    await _pump(tester, _items());
+    final gesture = await tester.startGesture(const Offset(300, 400));
+    await gesture.moveBy(const Offset(-240, 0));
+    await tester.pump();
+    await gesture.moveBy(Offset(-(345.6 - _pixels(tester)), 0));
+    await tester.pump();
+    expect(_pixels(tester), closeTo(345.6, .1));
+    final before = _visibleTitleLeft(tester);
+    await gesture.up();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    final during = _visibleTitleLeft(tester);
+    await tester.pumpAndSettle();
+    final after = _visibleTitleLeft(tester);
+    expect(during, greaterThan(before));
+    expect(after, greaterThan(during));
+    expect(_pixels(tester), closeTo(345.6, .1));
+  });
+
+  testWidgets('configurable perspective is applied to the entry transform', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(384, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MetroPanorama(
+            title: const Text('photos'),
+            items: _items(),
+            config: const PanoramaConfig(rotationPerspective: .001),
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester
+          .widgetList<Transform>(find.byType(Transform))
+          .any((transform) => transform.transform.entry(3, 2).abs() > .0001),
+      isTrue,
+    );
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('pane spacing and left lock are independent', (tester) async {
+    tester.view.physicalSize = const Size(384, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MetroPanorama(
+            title: const Text('photos'),
+            items: _items(),
+            config: const PanoramaConfig(contentSpacing: 10),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final first = tester.getTopLeft(find.text('header0')).dx;
+    final second = tester.getTopLeft(find.text('header1')).dx;
+    expect(first, closeTo(19.2, .5));
+    expect(second - first, closeTo(326.4 + 10, .5));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a single wide pane supports scrolling and its right lock', (
+    tester,
+  ) async {
+    await _pump(tester, [
+      MetroPanoramaItem(
+        title: const Text('wide'),
+        child: const Text('body'),
+        width: 800,
+      ),
+    ]);
+    await tester.fling(find.byType(MetroPanorama), const Offset(-100, 0), 1200);
+    await tester.pumpAndSettle();
+    expect(_pixels(tester), closeTo(473.6, 1));
+    await tester.fling(find.byType(MetroPanorama), const Offset(100, 0), 1200);
+    await tester.pumpAndSettle();
+    expect(_pixels(tester), closeTo(0, 1));
+    expect(tester.takeException(), isNull);
+  });
 }

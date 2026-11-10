@@ -11,6 +11,7 @@ import 'package:metro_ui/widgets/panorama.dart';
 import 'package:metro_ui/metro_scroll_behavior.dart';
 import 'package:metro_ui/page_scaffold.dart';
 import './application_bar.dart';
+import './animations.dart' show UixLog;
 import './route_aware_provider.dart';
 import './metro_theme_extensions.dart';
 
@@ -689,9 +690,9 @@ class _MetroAppState extends State<MetroApp> {
     // Metro Extensions Builder
     List<ThemeExtension<dynamic>> buildMetroExtensions(
         Color textColor, Color onSurface) {
-      Curve appBarExpandCurve = Curves.easeOut; // wp8 default
-      Curve appBarCollapseCurve = Curves.easeIn;
-      Duration appBarExpandDuration = const Duration(milliseconds: 300);
+      Curve appBarExpandCurve = const UixLog(150);
+      Curve appBarCollapseCurve = const UixLog(150);
+      Duration appBarExpandDuration = const Duration(milliseconds: 400);
       Duration appBarCollapseDuration = const Duration(milliseconds: 200);
 
       double panoramaTitleEntryTranslate = 2000 * 0.8;
@@ -708,6 +709,7 @@ class _MetroAppState extends State<MetroApp> {
       if (widget.version == MetroDesignVersion.wp7) {
         appBarExpandCurve = Curves.bounceOut;
         appBarCollapseCurve = Curves.easeIn;
+        appBarExpandDuration = const Duration(milliseconds: 300);
         appBarExpandDuration =
             const Duration(milliseconds: 400); // Exaggerated bounce
         appBarCollapseDuration = const Duration(milliseconds: 250);
@@ -729,7 +731,8 @@ class _MetroAppState extends State<MetroApp> {
             fontFamily: 'Segoe WP',
             package: 'metro_ui',
             // WP8 PanoramaTitleFontSize = 128、CharacterSpacing = −6（480 资源，×0.8）
-            fontSize: 128 * 0.8,
+            //fontSize: 128 * 0.8,
+            fontSize: 135,
             fontWeight: FontWeight.w300,
             letterSpacing: -6 * 0.8,
             color: textColor,
@@ -923,6 +926,17 @@ class _MetroAppState extends State<MetroApp> {
         child: Stack(
           children: [
             childWidget,
+            AnimatedBuilder(
+              animation: _appBarController,
+              builder: (context, child) => _appBarController.isExpanded
+                  ? Positioned.fill(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _appBarController.closeMenu,
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
             Positioned(
               left: 0,
               right: 0,
