@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:metro_ui/animations.dart';
 import 'package:metro_ui/uix_metrics.dart';
 import 'package:metro_ui/widgets/tile.dart';
-import 'package:metro_ui/widgets/uix_text.dart';
 
 /// Windows Phone 8.0 native (UIX) ListPicker.
 ///
@@ -152,7 +151,7 @@ class _ListPickerState<T> extends State<ListPicker<T>>
               return ListTile(
                 title: Text(
                   widget.itemLabel(item),
-                  style: TextStyle(fontSize: _fontSize, height: uixLineHeight),
+                  style: TextStyle(fontSize: _fontSize),
                 ),
                 onTap: () => Navigator.pop(context, item),
               );
@@ -305,18 +304,11 @@ class _ListPickerState<T> extends State<ListPicker<T>>
       padding: const EdgeInsets.only(top: 3 * 0.8),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: UixOpticalText(
-          fontSize: _fontSize,
-          child: Text(
-            text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: _fontSize,
-              height: uixLineHeight,
-              color: textColor,
-            ),
-          ),
+        child: Text(
+          text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: _fontSize, color: textColor),
         ),
       ),
     );
@@ -372,18 +364,11 @@ class _ListPickerState<T> extends State<ListPicker<T>>
               final next = down ? index : null;
               if (_pressedRow != next) setState(() => _pressedRow = next);
             },
-            child: UixOpticalText(
-              fontSize: _fontSize,
-              child: Text(
-                widget.itemLabel(item),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: _fontSize,
-                  height: uixLineHeight,
-                  color: color,
-                ),
-              ),
+            child: Text(
+              widget.itemLabel(item),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: _fontSize, color: color),
             ),
           ),
         ),

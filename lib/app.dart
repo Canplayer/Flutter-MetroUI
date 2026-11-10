@@ -14,6 +14,7 @@ import './application_bar.dart';
 import './animations.dart' show UixLog;
 import './route_aware_provider.dart';
 import './metro_theme_extensions.dart';
+import './uix_typography.dart';
 
 // 示例可以假设：
 // typedef GlobalWidgetsLocalizations = DefaultWidgetsLocalizations;
@@ -857,6 +858,7 @@ class _MetroAppState extends State<MetroApp> {
     final Color defaultTextColor = useWhiteTheme ? textBlackColor : whiteColor;
 
     return metroTheme.copyWith(
+      typography: uixTypography(metroTheme.typography),
       colorScheme: metroTheme.colorScheme.copyWith(
         primary: primaryColor,
         onSurface: onSurface,

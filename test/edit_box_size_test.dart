@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:metro_ui/app.dart';
 import 'package:metro_ui/uix_metrics.dart';
 import 'package:metro_ui/widgets/button.dart';
 import 'package:metro_ui/widgets/metro_list_picker.dart';
@@ -90,7 +91,7 @@ void main() {
     // `EditBoxPadding` (4 top / 10 bottom) is applied inside a horizontal
     // ScrollViewer, which centres its content on the cross axis.
     await tester.pumpWidget(
-      const MaterialApp(
+      const MetroApp(
         home: Scaffold(
           body: Center(child: EditBox(hintText: 'x')),
         ),

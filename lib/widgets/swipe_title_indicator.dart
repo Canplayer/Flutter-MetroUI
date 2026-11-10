@@ -625,8 +625,6 @@ class _SwipePageIndicatorState extends State<SwipePageIndicator>
             child: DefaultTextStyle.merge(
               style: TextStyle(
                 fontSize: 57,
-                //行间距
-                height: 1,
                 fontWeight: FontWeight.w300,
                 overflow: TextOverflow.visible,
                 color: Theme.of(context).textTheme.bodyLarge?.color,

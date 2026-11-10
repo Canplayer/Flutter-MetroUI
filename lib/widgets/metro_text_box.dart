@@ -82,13 +82,7 @@ class _EditBoxState extends State<EditBox> {
               obscureText: widget.obscureText,
               keyboardType: widget.keyboardType,
               maxLines: widget.maxLines,
-              // UIX line boxes are 1 em; Material's 1.43 leading would overflow
-              // the 48-unit frame once the 4/3 font correction is applied.
-              style: TextStyle(
-                fontSize: uixFontSize(19),
-                height: uixLineHeight,
-                color: foreground,
-              ),
+              style: TextStyle(fontSize: uixFontSize(19), color: foreground),
               // The hint uses its own style, otherwise it keeps Material's
               // small default size instead of the UIX font.
               //
@@ -102,7 +96,6 @@ class _EditBoxState extends State<EditBox> {
                 hintText: widget.hintText,
                 hintStyle: TextStyle(
                   fontSize: uixFontSize(19),
-                  height: uixLineHeight,
                   color: placeholderColor,
                 ),
               ),

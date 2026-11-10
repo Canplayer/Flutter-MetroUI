@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:metro_ui/uix_metrics.dart';
 import 'package:metro_ui/widgets/tile.dart';
-import 'package:metro_ui/widgets/uix_text.dart';
 import 'package:metro_ui/metro_theme_extensions.dart';
 
 //Windows Phone 核心风格的按钮设计组件
@@ -106,16 +105,11 @@ class MetroButtoState extends State<MetroButton> {
             fontSize: uixFontSize(17),
             fontWeight: FontWeight.w600,
             color: currentTextColor,
-            // UIX line boxes are 1 em; Material's 1.43 would inflate the box.
-            height: uixLineHeight,
           ),
           child: Center(
             widthFactor: 1,
             heightFactor: 1,
-            child: UixOpticalText(
-              fontSize: uixFontSize(17),
-              child: widget.child ?? const SizedBox.shrink(),
-            ),
+            child: widget.child ?? const SizedBox.shrink(),
           ),
         ),
       ),

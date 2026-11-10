@@ -55,8 +55,6 @@ class StackPanel extends StatelessWidget {
               maxLines: 1,
               style: TextStyle(
                 fontSize: 57,
-                //行间距
-                height: 1,
                 fontWeight: const FontWeight(350),
                 overflow: TextOverflow.visible,
                 color: Theme.of(context).textTheme.bodyLarge?.color,

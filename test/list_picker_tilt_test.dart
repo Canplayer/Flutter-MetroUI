@@ -5,9 +5,6 @@ import 'package:metro_ui/widgets/tile.dart';
 
 /// True when any `Transform` inside [scope] rotates or skews, i.e. the UIX 3D
 /// tilt is currently applied.
-///
-/// A pure translation does not count: `UixOpticalText` shifts labels by a
-/// fraction of a pixel to centre their cap box, which is not a tilt.
 bool _isTilted(WidgetTester tester, Finder scope) {
   final transforms = tester.widgetList<Transform>(
     find.descendant(of: scope, matching: find.byType(Transform)),
