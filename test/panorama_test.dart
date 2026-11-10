@@ -496,4 +496,13 @@ void main() {
     expect(_pixels(tester), closeTo(0, 1));
     expect(tester.takeException(), isNull);
   });
+  testWidgets('中断前一次吸附后继续拖动，应按可见区域进入下一页', (tester) async {
+    await _pump(tester, _items());
+    await tester.drag(find.byType(MetroPanorama), const Offset(-220, 0));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 40));
+    await tester.drag(find.byType(MetroPanorama), const Offset(-300, 0));
+    await tester.pumpAndSettle();
+    expect(_pixels(tester), closeTo(691.2, 1));
+  });
 }

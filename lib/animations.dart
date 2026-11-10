@@ -276,6 +276,9 @@ abstract final class MetroCurves {
   /// 返回时，当前页面消失
   static const UixExp backwardOut = UixExp(150);
 
+  /// UIX `SCurve(10.0)`，ListPicker 展开等使用的 S 形缓动
+  static const UixSCurve sCurve = UixSCurve(10);
+
   /// AppBar弹出时的动画曲线
   /// { x: 0, y: 72 },
   /// { x: 1, y: 49 },
@@ -313,20 +316,20 @@ abstract final class MetroCurves {
   static const KeyframeInterpolatedCurve appBarButtonTranslateIn =
       KeyframeInterpolatedCurve(
     [
-      Offset(0.000000, 0.000000),
-      Offset(0.043478, 0.340000),
-      Offset(0.086957, 0.620000),
-      Offset(0.130435, 0.820000),
-      Offset(0.173913, 0.960000),
-      Offset(0.217391, 1.060000),
-      Offset(0.260870, 1.120000),
-      Offset(0.304348, 1.180000),
-      Offset(0.347826, 1.200000),
-      Offset(0.478261, 1.180000),
-      Offset(0.565217, 1.160000),
-      Offset(0.782609, 1.060000),
-      Offset(0.913043, 1.020000),
-      Offset(1.000000, 1.000000),
+        Offset(0.000000, 0.000000),
+        Offset(0.043478, 0.340000),
+        Offset(0.086957, 0.620000),
+        Offset(0.130435, 0.820000),
+        Offset(0.173913, 0.960000),
+        Offset(0.217391, 1.060000),
+        Offset(0.260870, 1.120000),
+        Offset(0.304348, 1.180000),
+        Offset(0.347826, 1.200000),
+        Offset(0.478261, 1.180000),
+        Offset(0.565217, 1.160000),
+        Offset(0.782609, 1.060000),
+        Offset(0.913043, 1.020000),
+        Offset(1.000000, 1.000000),
     ],
   );
 }
@@ -386,7 +389,29 @@ class UixExp extends Curve {
   @override
   double transformInternal(double t) {
     return (math.pow(base, t).toDouble() - 1.0) /
-        (base - 1.0);
+    (base - 1.0);
+  }
+}
+
+/// UIX `SCurve(w)`：前后两半各自是一次指数/对数缓动，在中点 0.5 处相接。
+///
+/// 来源 `UIXRender.dll` VA `0x10026202`（x87 代码）：
+/// - `t < 0.5`  → `0.5 * F(2t, w)`
+/// - `t >= 0.5` → `0.5 * F(2t - 1, 1/w) + 0.5`
+///
+/// 其中 `F(x, b) = (b^x - 1) / (b - 1)`，与 [UixExp]/[UixLog] 同一个归一化幂
+/// 函数（`0x10026193`）。首尾斜率为 0、中点最陡，且关于中心对称。
+class UixSCurve extends Curve {
+  const UixSCurve(this.base) : assert(base > 1.0);
+
+  final double base;
+
+  @override
+  double transformInternal(double t) {
+    if (t <= 0.0) return 0.0;
+    if (t >= 1.0) return 1.0;
+    if (t < 0.5) return 0.5 * UixExp(base).transformInternal(2 * t);
+    return 0.5 + 0.5 * UixLog(base).transformInternal(2 * t - 1);
   }
 }
 

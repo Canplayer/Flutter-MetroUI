@@ -730,9 +730,8 @@ class _MetroAppState extends State<MetroApp> {
           titleTextStyle: TextStyle(
             fontFamily: 'Segoe WP',
             package: 'metro_ui',
-            // WP8 PanoramaTitleFontSize = 128、CharacterSpacing = −6（480 资源，×0.8）
-            //fontSize: 128 * 0.8,
-            fontSize: 135,
+            // WP8 PanoramaTitleFontSize = 128、CharacterSpacing = −6（480 资源，×0.8）字体大小pt换算还要*4/3
+            fontSize: 128 * 0.8 * 4 / 3,
             fontWeight: FontWeight.w300,
             letterSpacing: -6 * 0.8,
             color: textColor,

@@ -21,8 +21,12 @@ void main() {
   }) async {
     tester.view.physicalSize = const Size(800, 600);
     tester.view.devicePixelRatio = 1.0;
-    tester.view.padding =
-        FakeViewPadding(left: 0, top: 0, right: 0, bottom: bottomPadding);
+    tester.view.padding = FakeViewPadding(
+      left: 0,
+      top: 0,
+      right: 0,
+      bottom: bottomPadding,
+    );
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
@@ -56,20 +60,23 @@ void main() {
   }
 
   MetroApplicationBar normalBar() => MetroApplicationBar(
-        buttons: [
-          const MetroAppBarButton(
-            icon: Icon(Icons.add),
-            label: '新建',
-            onPressed: null,
-          ),
-        ],
-      );
+    buttons: [
+      const MetroAppBarButton(
+        icon: Icon(Icons.add),
+        label: '新建',
+        onPressed: null,
+      ),
+    ],
+  );
 
   testWidgets('默认 true：body 延伸到 AppBar 下方，不抬升', (tester) async {
     await pumpHost(tester, applicationBar: normalBar());
 
-    expect(markerBottomY(tester), closeTo(screenHeight, 0.01),
-        reason: '默认 true 时 body 底部应贴屏，不被 AppBar 让出');
+    expect(
+      markerBottomY(tester),
+      closeTo(screenHeight, 0.01),
+      reason: '默认 true 时 body 底部应贴屏，不被 AppBar 让出',
+    );
   });
 
   testWidgets('false + 非 mini：抬升到正常折叠高度', (tester) async {
@@ -79,8 +86,11 @@ void main() {
       extendBodyToApplicationBar: false,
     );
 
-    expect(markerBottomY(tester), closeTo(screenHeight - 57.6, 0.01),
-        reason: '非 mini 折叠高度 kMetroAppBarNormalHeight = 72*0.8 = 57.6');
+    expect(
+      markerBottomY(tester),
+      closeTo(screenHeight - 57.6, 0.01),
+      reason: '非 mini 折叠高度 kMetroAppBarNormalHeight = 72*0.8 = 57.6',
+    );
   });
 
   testWidgets('false + mini：抬升到 mini 折叠高度', (tester) async {
@@ -93,20 +103,25 @@ void main() {
       extendBodyToApplicationBar: false,
     );
 
-    expect(markerBottomY(tester), closeTo(screenHeight - 24.0, 0.01),
-        reason: 'mini 折叠高度 kMetroAppBarMiniHeight = 30*0.8 = 24.0');
+    expect(
+      markerBottomY(tester),
+      closeTo(screenHeight - 24.0, 0.01),
+      reason: 'mini 折叠高度 kMetroAppBarMiniHeight = 30*0.8 = 24.0',
+    );
   });
 
-  testWidgets('false + 无按钮（自动按 mini 处理）：抬升到 mini 折叠高度',
-      (tester) async {
+  testWidgets('false + 无按钮（自动按 mini 处理）：抬升到 mini 折叠高度', (tester) async {
     await pumpHost(
       tester,
       applicationBar: const MetroApplicationBar(),
       extendBodyToApplicationBar: false,
     );
 
-    expect(markerBottomY(tester), closeTo(screenHeight - 24.0, 0.01),
-        reason: 'buttons 为空时自动按 mini 模式处理');
+    expect(
+      markerBottomY(tester),
+      closeTo(screenHeight - 24.0, 0.01),
+      reason: 'buttons 为空时自动按 mini 模式处理',
+    );
   });
 
   testWidgets('false + 当前页面无 AppBar：不生效，不抬升', (tester) async {
@@ -116,8 +131,11 @@ void main() {
       extendBodyToApplicationBar: false,
     );
 
-    expect(markerBottomY(tester), closeTo(screenHeight, 0.01),
-        reason: '当前页面不存在 Application Bar 时不应抬升');
+    expect(
+      markerBottomY(tester),
+      closeTo(screenHeight, 0.01),
+      reason: '当前页面不存在 Application Bar 时不应抬升',
+    );
   });
 
   testWidgets('false + 非 mini + 底部安全区：抬升高度含安全区', (tester) async {
@@ -128,7 +146,10 @@ void main() {
       bottomPadding: 34.0,
     );
 
-    expect(markerBottomY(tester), closeTo(screenHeight - 57.6 - 34.0, 0.01),
-        reason: '抬升高度 = 折叠高度 + 底部安全区（34）');
+    expect(
+      markerBottomY(tester),
+      closeTo(screenHeight - 57.6 - 34.0, 0.01),
+      reason: '抬升高度 = 折叠高度 + 底部安全区（34）',
+    );
   });
 }

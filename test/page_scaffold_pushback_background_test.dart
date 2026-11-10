@@ -66,8 +66,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600)); // 500ms 动画
 
-    expect(backgroundLayerColor(tester), white,
-        reason: '白色主题下推远动画透出的底色应为白色');
+    expect(backgroundLayerColor(tester), white, reason: '白色主题下推远动画透出的底色应为白色');
   });
 
   testWidgets('黑色主题：推远时透出的背景层为黑色', (tester) async {
@@ -80,8 +79,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600)); // 500ms 动画
 
-    expect(backgroundLayerColor(tester), black,
-        reason: '黑色主题下推远动画透出的底色应为黑色');
+    expect(backgroundLayerColor(tester), black, reason: '黑色主题下推远动画透出的底色应为黑色');
   });
 
   testWidgets('默认 false：不启用 Z 轴推远，无背景垫层且动画不生效', (tester) async {
@@ -95,14 +93,20 @@ void main() {
 
     // 未启用时不应存在背景垫层（纯白/纯黑 ColoredBox 是 Z 轴推远特性独有，
     // 页面自身的进入动画（MetroAnimatedPage 的 Transform）不会产生它）
-    expect(backgroundLayerColor(tester), isNull,
-        reason: 'enableZAxisEffect=false 时不应存在背景垫层');
+    expect(
+      backgroundLayerColor(tester),
+      isNull,
+      reason: 'enableZAxisEffect=false 时不应存在背景垫层',
+    );
 
     // 调用推远动画后依然没有任何变化（不产生视觉效果）
     key.currentState!.pushBackBackground();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
-    expect(backgroundLayerColor(tester), isNull,
-        reason: 'enableZAxisEffect=false 时调用 pushBackBackground 不应产生背景垫层');
+    expect(
+      backgroundLayerColor(tester),
+      isNull,
+      reason: 'enableZAxisEffect=false 时调用 pushBackBackground 不应产生背景垫层',
+    );
   });
 }

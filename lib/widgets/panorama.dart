@@ -228,8 +228,7 @@ class PanoramaConfig {
     this.titleOverflowRight = 2000.0,
     this.titleTextLeftMargin = 0.0,
     this.paneTopPadding = 198 * 0.8,
-    //this.paneHeaderFontSize = 50 * 0.8,
-    this.paneHeaderFontSize = 66 * 0.8,
+    this.paneHeaderFontSize = 50 * 0.8 * 4 / 3,
     this.snapCurve = const UixLog(300),
     this.snapDuration = const Duration(milliseconds: 800),
     this.paneHeaderForwardRate = 1 / 1.18,
@@ -1013,7 +1012,9 @@ class _MetroPanoramaState extends State<MetroPanorama>
     final double localS = _wrapScroll(pixels);
 
     // WP8 始终围绕手势开始时所在的 Pane 判断
-    final int current = _paneIndexFromPosition(_dragStartPixels ?? pixels);
+    final int current = _isInterruptingBallistic
+        ? _currentPaneIndex
+        : _paneIndexFromPosition(_dragStartPixels ?? pixels);
     final int prevIndex = (current - 1 + paneCount) % paneCount;
     final int nextIndex = (current + 1) % paneCount;
     // 当前 Pane 在手指附近的那个副本（循环时同一个 Pane 会重复出现）

@@ -62,7 +62,9 @@ void main() {
     expect(progresses.last, 0.0);
   });
 
-  testWidgets('位移达到阈值：松手立即触发 onPageChanged，动画结束后触发 onTransitionEnd', (tester) async {
+  testWidgets('位移达到阈值：松手立即触发 onPageChanged，动画结束后触发 onTransitionEnd', (
+    tester,
+  ) async {
     final changed = <String>[];
     final transitionEnded = <String>[];
     await tester.pumpWidget(
@@ -94,9 +96,7 @@ void main() {
   testWidgets('拖动距离被钳制在 150px（归一化 progress 不超 1）', (tester) async {
     final progresses = <double>[];
     await tester.pumpWidget(
-      buildHost(
-        onSlideProgress: (p) => progresses.add(p),
-      ),
+      buildHost(onSlideProgress: (p) => progresses.add(p)),
     );
 
     final g = await tester.startGesture(const Offset(200, 300));
@@ -160,9 +160,7 @@ void main() {
   testWidgets('向左滑换到下一页：松手即触发换页事件', (tester) async {
     final changed = <String>[];
     await tester.pumpWidget(
-      buildHost(
-        onPageChanged: (o, n) => changed.add('$o->$n'),
-      ),
+      buildHost(onPageChanged: (o, n) => changed.add('$o->$n')),
     );
 
     final g = await tester.startGesture(const Offset(200, 300));

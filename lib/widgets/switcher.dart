@@ -1,43 +1,51 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
+class _UixLog150 extends Curve {
+  const _UixLog150();
+  @override
+  double transformInternal(double t) => (1 - math.pow(150, -t)) / (1 - 1 / 150);
+}
 
 class CustomSwitch extends StatefulWidget {
   /// 开关的值
   final bool value;
-  
+
   /// 值改变时的回调
   final ValueChanged<bool>? onChanged;
-  
+
   /// 激活状态的颜色（左侧颜色），为null时使用主题主色调
   final Color? activeColor;
-  
+
   /// 非激活状态的颜色（右侧颜色）
   final Color inactiveColor;
-  
-  /// 滑块宽度
+
+  /// 滑块宽度：`Constants.ToggleSwitchThumbSize.Width` = 20
   final double thumbWidth;
-  
-  /// 滑块高度
+
+  /// 滑块高度：`Constants.ToggleSwitchThumbSize.Height` = 38
   final double thumbHeight;
-  
+
   /// 滑块颜色
   final Color? thumbColor;
-  
-  /// 背景外框宽度
+
+  /// 背景外框宽度：`Constants.ToggleSwitchSize.Width` = 97
   final double switchWidth;
-  
-  /// 背景外框高度
+
+  /// 背景外框高度：`Constants.ToggleSwitchSize.Height` = 34
   final double switchHeight;
-  
-  /// 外框线条粗细
+
+  /// 外框线条粗细：`Constants.ToggleSwitchBorder` = 3
   final double borderWidth;
-  
+
   /// 外框颜色
   final Color? borderColor;
-  
-  /// 背景内部纯色距离边框的padding
+
+  /// 背景内部纯色距离边框的padding：`Constants.ToggleSwitchInnerBorder` = 4
   final double innerPadding;
-  
-  /// 滑块和背景左右间隙的宽度
+
+  /// 滑块和背景左右间隙的宽度：`ToggleSwitchInnerBorder / 2 + ToggleSwitchBorder` = 5
   final double gap;
 
   const CustomSwitch({
@@ -46,15 +54,15 @@ class CustomSwitch extends StatefulWidget {
     this.onChanged,
     this.activeColor,
     this.inactiveColor = Colors.grey,
-    this.thumbWidth = 16.0,
-    this.thumbHeight = 30.0,
+    this.thumbWidth = 20 * 0.8,
+    this.thumbHeight = 38 * 0.8,
     this.thumbColor,
-    this.switchWidth = 72.0,
-    this.switchHeight = 27.0,
-    this.borderWidth = 2.5,
+    this.switchWidth = 97 * 0.8,
+    this.switchHeight = 34 * 0.8,
+    this.borderWidth = 3 * 0.8,
     this.borderColor,
-    this.innerPadding = 3.0,
-    this.gap = 3.0,
+    this.innerPadding = 4 * 0.8,
+    this.gap = 5 * 0.8,
   });
 
   @override
@@ -64,12 +72,21 @@ class CustomSwitch extends StatefulWidget {
 class _CustomSwitchState extends State<CustomSwitch>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  double? _dragStart;
+
+  void _settle(bool value) {
+    _controller.animateTo(
+      value ? 1 : 0,
+      duration: const Duration(milliseconds: 100),
+      curve: const _UixLog150(),
+    );
+  }
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 100),
       vsync: this,
     );
 
@@ -82,11 +99,7 @@ class _CustomSwitchState extends State<CustomSwitch>
   void didUpdateWidget(CustomSwitch oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.value != widget.value) {
-      if (widget.value) {
-        _controller.forward();
-      } else {
-        _controller.reverse();
-      }
+      if (_dragStart == null) _settle(widget.value);
     }
   }
 
@@ -106,57 +119,75 @@ class _CustomSwitchState extends State<CustomSwitch>
   Widget build(BuildContext context) {
     // 检查控件是否可交互
     final isInteractive = widget.onChanged != null;
-    
-    return GestureDetector(
-      onTap: isInteractive ? _handleTap : null,
-      onPanUpdate: isInteractive ? (details) {
-        // 计算拖动位置
-        final RenderBox renderBox = context.findRenderObject() as RenderBox;
-        final localPosition = renderBox.globalToLocal(details.globalPosition);
-        final progress = (localPosition.dx - widget.thumbWidth / 2) / (widget.switchWidth - widget.thumbWidth);
-        final clampedProgress = progress.clamp(0.0, 1.0);
-        
-        _controller.value = clampedProgress;
-      } : null,
-      onPanEnd: isInteractive ? (details) {
-        // 根据当前位置决定最终状态
-        final shouldBeOn = _controller.value > 0.5;
-        
-        // 先播放动画归位
-        if (shouldBeOn) {
-          _controller.forward();
-        } else {
-          _controller.reverse();
-        }
-        
-        // 然后通知状态变化
-        if (widget.onChanged != null) {
-          widget.onChanged!(shouldBeOn);
-        }
-      } : null,
-      child: SizedBox(
-        width: widget.switchWidth,
-        height: widget.thumbHeight, // 使用滑块高度作为整个控件的高度
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return CustomPaint(
-              painter: _SwitchPainter(
-                progress: _controller.value,
-                activeColor: widget.activeColor ?? Theme.of(context).colorScheme.primary,
-                inactiveColor: widget.inactiveColor,
-                thumbWidth: widget.thumbWidth,
-                thumbHeight: widget.thumbHeight,
-                thumbColor: isInteractive ? Theme.of(context).colorScheme.onSurface : Colors.grey,
-                switchWidth: widget.switchWidth,
-                switchHeight: widget.switchHeight,
-                borderWidth: widget.borderWidth,
-                borderColor: isInteractive ? Theme.of(context).colorScheme.onSurface : Colors.grey,
-                innerPadding: widget.innerPadding,
-                gap: widget.gap,
-              ),
-            );
-          },
+
+    return Opacity(
+      opacity: isInteractive ? 1.0 : 0.4,
+      child: GestureDetector(
+        onTap: isInteractive ? _handleTap : null,
+        onHorizontalDragStart: isInteractive
+            ? (_) {
+                _controller.stop();
+                _dragStart = widget.value ? 1.0 : 0.0;
+              }
+            : null,
+        onHorizontalDragUpdate: isInteractive
+            ? (details) {
+                final travel = widget.switchWidth - widget.thumbWidth;
+                if (travel > 0) {
+                  _controller.value =
+                      (_controller.value + details.delta.dx / travel).clamp(
+                        0.0,
+                        1.0,
+                      );
+                }
+              }
+            : null,
+        onHorizontalDragEnd: isInteractive
+            ? (_) {
+                final start = _dragStart ?? (widget.value ? 1.0 : 0.0);
+                final changed = (_controller.value - start).abs() > 0.000001;
+                final target = changed ? !widget.value : widget.value;
+                _dragStart = null;
+                _settle(target);
+                if (changed) widget.onChanged?.call(target);
+              }
+            : null,
+        onHorizontalDragCancel: isInteractive
+            ? () {
+                _dragStart = null;
+                _settle(widget.value);
+              }
+            : null,
+        child: SizedBox(
+          width: widget.switchWidth,
+          height: widget.thumbHeight, // 使用滑块高度作为整个控件的高度
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return CustomPaint(
+                painter: _SwitchPainter(
+                  progress: _controller.value,
+                  activeColor:
+                      widget.activeColor ??
+                      Theme.of(context).colorScheme.primary,
+                  inactiveColor: widget.inactiveColor,
+                  thumbWidth: widget.thumbWidth,
+                  thumbHeight: widget.thumbHeight,
+                  thumbColor:
+                      widget.thumbColor ??
+                      Theme.of(context).colorScheme.onSurface,
+                  switchWidth: widget.switchWidth,
+                  switchHeight: widget.switchHeight,
+                  borderWidth: widget.borderWidth,
+                  borderColor:
+                      widget.borderColor ??
+                      Theme.of(context).colorScheme.onSurface,
+                  innerPadding: widget.innerPadding,
+                  gap: widget.gap,
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -205,7 +236,7 @@ class _SwitchPainter extends CustomPainter {
     // 绘制外框 - 使用矩形实现精确裁切
     final leftFrameEndX = (thumbLeftEdge - gap).clamp(0.0, switchWidth);
     final rightFrameStartX = (thumbRightEdge + gap).clamp(0.0, switchWidth);
-    
+
     final framePaint = Paint()
       ..color = borderColor
       ..style = PaintingStyle.fill;
@@ -213,24 +244,36 @@ class _SwitchPainter extends CustomPainter {
     // 绘制左侧边框（使用矩形）- 根据裁切点调整宽度
     if (leftFrameEndX > 0) {
       // 左边框 - 根据裁切点调整宽度，最大为borderWidth
-      final leftBorderWidth = (leftFrameEndX < borderWidth) ? leftFrameEndX : borderWidth;
+      final leftBorderWidth = (leftFrameEndX < borderWidth)
+          ? leftFrameEndX
+          : borderWidth;
       canvas.drawRect(
         Rect.fromLTWH(0, backgroundY, leftBorderWidth, switchHeight),
         framePaint,
       );
-      
+
       // 上边框 - 从左边到裁切点的矩形
       if (leftFrameEndX > borderWidth) {
         canvas.drawRect(
-          Rect.fromLTWH(borderWidth, backgroundY, leftFrameEndX - borderWidth, borderWidth),
+          Rect.fromLTWH(
+            borderWidth,
+            backgroundY,
+            leftFrameEndX - borderWidth,
+            borderWidth,
+          ),
           framePaint,
         );
       }
-      
+
       // 下边框 - 从左边到裁切点的矩形
       if (leftFrameEndX > borderWidth) {
         canvas.drawRect(
-          Rect.fromLTWH(borderWidth, backgroundY + switchHeight - borderWidth, leftFrameEndX - borderWidth, borderWidth),
+          Rect.fromLTWH(
+            borderWidth,
+            backgroundY + switchHeight - borderWidth,
+            leftFrameEndX - borderWidth,
+            borderWidth,
+          ),
           framePaint,
         );
       }
@@ -239,30 +282,45 @@ class _SwitchPainter extends CustomPainter {
     // 绘制右侧边框（使用矩形）- 根据裁切点调整位置和宽度
     if (rightFrameStartX < switchWidth) {
       // 右边框 - 根据裁切点从右往左调整宽度和位置
-      final rightBorderLeft = (rightFrameStartX > switchWidth - borderWidth) 
-          ? rightFrameStartX 
+      final rightBorderLeft = (rightFrameStartX > switchWidth - borderWidth)
+          ? rightFrameStartX
           : switchWidth - borderWidth;
       final rightBorderWidth = switchWidth - rightBorderLeft;
-      
+
       if (rightBorderWidth > 0) {
         canvas.drawRect(
-          Rect.fromLTWH(rightBorderLeft, backgroundY, rightBorderWidth, switchHeight),
+          Rect.fromLTWH(
+            rightBorderLeft,
+            backgroundY,
+            rightBorderWidth,
+            switchHeight,
+          ),
           framePaint,
         );
       }
-      
+
       // 上边框 - 从裁切点到右边的矩形
       if (rightFrameStartX < switchWidth - borderWidth) {
         canvas.drawRect(
-          Rect.fromLTWH(rightFrameStartX, backgroundY, switchWidth - borderWidth - rightFrameStartX, borderWidth),
+          Rect.fromLTWH(
+            rightFrameStartX,
+            backgroundY,
+            switchWidth - borderWidth - rightFrameStartX,
+            borderWidth,
+          ),
           framePaint,
         );
       }
-      
+
       // 下边框 - 从裁切点到右边的矩形
       if (rightFrameStartX < switchWidth - borderWidth) {
         canvas.drawRect(
-          Rect.fromLTWH(rightFrameStartX, backgroundY + switchHeight - borderWidth, switchWidth - borderWidth - rightFrameStartX, borderWidth),
+          Rect.fromLTWH(
+            rightFrameStartX,
+            backgroundY + switchHeight - borderWidth,
+            switchWidth - borderWidth - rightFrameStartX,
+            borderWidth,
+          ),
           framePaint,
         );
       }
@@ -277,7 +335,10 @@ class _SwitchPainter extends CustomPainter {
     );
 
     // 绘制内部填充 - 左侧红色部分（在滑块左侧，留出间隙）
-    final leftEndX = (thumbLeftEdge - gap).clamp(innerRect.left, innerRect.right);
+    final leftEndX = (thumbLeftEdge - gap).clamp(
+      innerRect.left,
+      innerRect.right,
+    );
     if (leftEndX > innerRect.left) {
       final leftRect = Rect.fromLTWH(
         innerRect.left,
@@ -292,7 +353,10 @@ class _SwitchPainter extends CustomPainter {
     }
 
     // 绘制内部填充 - 右侧灰色部分（在滑块右侧，留出间隙）
-    final rightStartX = (thumbRightEdge + gap).clamp(innerRect.left, innerRect.right);
+    final rightStartX = (thumbRightEdge + gap).clamp(
+      innerRect.left,
+      innerRect.right,
+    );
     if (rightStartX < innerRect.right) {
       final rightRect = Rect.fromLTWH(
         rightStartX,
@@ -344,8 +408,8 @@ class _SwitchPainter extends CustomPainter {
 
   @override
   int get hashCode => Object.hash(
-    progress, 
-    activeColor, 
+    progress,
+    activeColor,
     inactiveColor,
     thumbWidth,
     thumbHeight,

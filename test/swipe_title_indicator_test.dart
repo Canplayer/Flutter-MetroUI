@@ -15,7 +15,8 @@ void main() {
     return MaterialApp(
       home: Scaffold(
         body: SwipePages(
-          items: items ??
+          items:
+              items ??
               [
                 const SwipePageItem(
                   title: Text('A'),
@@ -23,11 +24,17 @@ void main() {
                 ),
                 const SwipePageItem(
                   title: Text('B'),
-                  page: ColoredBox(color: Colors.green, child: SizedBox.expand()),
+                  page: ColoredBox(
+                    color: Colors.green,
+                    child: SizedBox.expand(),
+                  ),
                 ),
                 const SwipePageItem(
                   title: Text('C'),
-                  page: ColoredBox(color: Colors.blue, child: SizedBox.expand()),
+                  page: ColoredBox(
+                    color: Colors.blue,
+                    child: SizedBox.expand(),
+                  ),
                 ),
               ],
           // 显式指定参数，与默认值解耦
@@ -64,12 +71,16 @@ void main() {
   });
 
   testWidgets('单页：只显示一个标题', (tester) async {
-    await tester.pumpWidget(buildHost(items: [
-      const SwipePageItem(
-        title: Text('A'),
-        page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
+    await tester.pumpWidget(
+      buildHost(
+        items: [
+          const SwipePageItem(
+            title: Text('A'),
+            page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
+          ),
+        ],
       ),
-    ]));
+    );
     await tester.pump();
 
     expect(find.text('A'), findsOneWidget);
@@ -78,16 +89,20 @@ void main() {
   });
 
   testWidgets('双页：当前 A 时显示 B A B', (tester) async {
-    await tester.pumpWidget(buildHost(items: [
-      const SwipePageItem(
-        title: Text('A'),
-        page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
+    await tester.pumpWidget(
+      buildHost(
+        items: [
+          const SwipePageItem(
+            title: Text('A'),
+            page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
+          ),
+          const SwipePageItem(
+            title: Text('B'),
+            page: ColoredBox(color: Colors.green, child: SizedBox.expand()),
+          ),
+        ],
       ),
-      const SwipePageItem(
-        title: Text('B'),
-        page: ColoredBox(color: Colors.green, child: SizedBox.expand()),
-      ),
-    ]));
+    );
     await tester.pump();
 
     expect(find.text('A'), findsOneWidget); // 中心
@@ -119,13 +134,11 @@ void main() {
     expect(tester.getTopLeft(find.text('A')).dx, closeTo(0, 1));
     // C 在 A 左侧：C 右边缘 ≈ A 左边缘 - titleGap(24)
     final aLeft = tester.getTopLeft(find.text('A')).dx;
-    expect(tester.getTopRight(find.text('C')).dx,
-        closeTo(aLeft - 24, 1));
+    expect(tester.getTopRight(find.text('C')).dx, closeTo(aLeft - 24, 1));
 
     // B 在 A 右侧：B 左边缘 ≈ A 右边缘 + titleGap(24)
     final aRight = tester.getTopRight(find.text('A')).dx;
-    expect(tester.getTopLeft(find.text('B')).dx,
-        closeTo(aRight + 24, 1));
+    expect(tester.getTopLeft(find.text('B')).dx, closeTo(aRight + 24, 1));
   });
 
   testWidgets('SwipePages 默认整体内边距：水平 18', (tester) async {
@@ -166,8 +179,10 @@ void main() {
     // 左侧标题 C 在 A 左侧（间隔 gap），右侧标题 B 在 A 右侧
     final aLeft = tester.getTopLeft(find.text('A')).dx;
     expect(tester.getTopRight(find.text('C')).dx, closeTo(aLeft - 24, 1));
-    expect(tester.getTopLeft(find.text('B')).dx,
-        closeTo(tester.getTopRight(find.text('A')).dx + 24, 1));
+    expect(
+      tester.getTopLeft(find.text('B')).dx,
+      closeTo(tester.getTopRight(find.text('A')).dx + 24, 1),
+    );
   });
 
   testWidgets('end 模式：当前标题右对齐父容器右侧', (tester) async {
@@ -276,9 +291,7 @@ void main() {
         matching: find.text(text),
       );
       final opacity = tester.widget<Opacity>(
-        find
-            .ancestor(of: textFinder, matching: find.byType(Opacity))
-            .first,
+        find.ancestor(of: textFinder, matching: find.byType(Opacity)).first,
       );
       return opacity.opacity;
     }
@@ -290,9 +303,13 @@ void main() {
 
   testWidgets('松手换页后标题组更新，新标题条停在中心', (tester) async {
     final changed = <String>[];
-    await tester.pumpWidget(buildHost(onPageChanged: (o, n) {
-      changed.add('$o->$n');
-    }));
+    await tester.pumpWidget(
+      buildHost(
+        onPageChanged: (o, n) {
+          changed.add('$o->$n');
+        },
+      ),
+    );
     await tester.pump();
 
     final g = await tester.startGesture(const Offset(200, 300));
@@ -316,32 +333,34 @@ void main() {
 
   testWidgets('SwipeStackPages：标题悬浮在页面顶部，拖动换页同步', (tester) async {
     final changed = <String>[];
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: SwipeStackPages(
-          items: const [
-            SwipePageItem(
-              title: Text('A'),
-              page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
-            ),
-            SwipePageItem(
-              title: Text('B'),
-              page: ColoredBox(color: Colors.green, child: SizedBox.expand()),
-            ),
-            SwipePageItem(
-              title: Text('C'),
-              page: ColoredBox(color: Colors.blue, child: SizedBox.expand()),
-            ),
-          ],
-          swipeThreshold: 50,
-          maxDragDistance: 150,
-          flyDuration: const Duration(milliseconds: 100),
-          fadeDuration: const Duration(milliseconds: 50),
-          snapBackDuration: const Duration(milliseconds: 120),
-          onPageChanged: (o, n) => changed.add('$o->$n'),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SwipeStackPages(
+            items: const [
+              SwipePageItem(
+                title: Text('A'),
+                page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
+              ),
+              SwipePageItem(
+                title: Text('B'),
+                page: ColoredBox(color: Colors.green, child: SizedBox.expand()),
+              ),
+              SwipePageItem(
+                title: Text('C'),
+                page: ColoredBox(color: Colors.blue, child: SizedBox.expand()),
+              ),
+            ],
+            swipeThreshold: 50,
+            maxDragDistance: 150,
+            flyDuration: const Duration(milliseconds: 100),
+            fadeDuration: const Duration(milliseconds: 50),
+            snapBackDuration: const Duration(milliseconds: 120),
+            onPageChanged: (o, n) => changed.add('$o->$n'),
+          ),
         ),
       ),
-    ));
+    );
     await tester.pump(); // 等待宽度测量
 
     // 三个标题同时显示（悬浮在页面之上）
@@ -367,25 +386,27 @@ void main() {
   });
 
   testWidgets('SwipeStackPages：indicatorAlign 控制标题悬浮位置', (tester) async {
-    await tester.pumpWidget(const MaterialApp(
-      home: Scaffold(
-        body: SwipeStackPages(
-          items: [
-            SwipePageItem(
-              title: Text('A'),
-              page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
-            ),
-            SwipePageItem(
-              title: Text('B'),
-              page: ColoredBox(color: Colors.green, child: SizedBox.expand()),
-            ),
-          ],
-          align: SwipeTitleAlign.start,
-          indicatorAlign: Alignment.topLeft,
-          indicatorPadding: EdgeInsets.zero,
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SwipeStackPages(
+            items: [
+              SwipePageItem(
+                title: Text('A'),
+                page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
+              ),
+              SwipePageItem(
+                title: Text('B'),
+                page: ColoredBox(color: Colors.green, child: SizedBox.expand()),
+              ),
+            ],
+            align: SwipeTitleAlign.start,
+            indicatorAlign: Alignment.topLeft,
+            indicatorPadding: EdgeInsets.zero,
+          ),
         ),
       ),
-    ));
+    );
     await tester.pump();
 
     // 左对齐 + topLeft：当前标题 A 左边缘贴容器左上角
@@ -419,32 +440,34 @@ void main() {
 
   testWidgets('SwipeStackPages：点击悬浮标题切换到对应页', (tester) async {
     final changed = <String>[];
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: SwipeStackPages(
-          items: const [
-            SwipePageItem(
-              title: Text('A'),
-              page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
-            ),
-            SwipePageItem(
-              title: Text('B'),
-              page: ColoredBox(color: Colors.green, child: SizedBox.expand()),
-            ),
-            SwipePageItem(
-              title: Text('C'),
-              page: ColoredBox(color: Colors.blue, child: SizedBox.expand()),
-            ),
-          ],
-          swipeThreshold: 50,
-          maxDragDistance: 150,
-          flyDuration: const Duration(milliseconds: 100),
-          fadeDuration: const Duration(milliseconds: 50),
-          snapBackDuration: const Duration(milliseconds: 120),
-          onPageChanged: (o, n) => changed.add('$o->$n'),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SwipeStackPages(
+            items: const [
+              SwipePageItem(
+                title: Text('A'),
+                page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
+              ),
+              SwipePageItem(
+                title: Text('B'),
+                page: ColoredBox(color: Colors.green, child: SizedBox.expand()),
+              ),
+              SwipePageItem(
+                title: Text('C'),
+                page: ColoredBox(color: Colors.blue, child: SizedBox.expand()),
+              ),
+            ],
+            swipeThreshold: 50,
+            maxDragDistance: 150,
+            flyDuration: const Duration(milliseconds: 100),
+            fadeDuration: const Duration(milliseconds: 50),
+            snapBackDuration: const Duration(milliseconds: 120),
+            onPageChanged: (o, n) => changed.add('$o->$n'),
+          ),
         ),
       ),
-    ));
+    );
     await tester.pump(); // 等待宽度测量
 
     // 当前 A（start 对齐下 prev 标题 C 在屏幕外），点击下一页标题 B
@@ -482,26 +505,30 @@ void main() {
 
     // 旧条渐隐（opacity < 1）、新条渐显（opacity > 0 且 < 1）
     final oldOpacity = tester
-        .widget<Opacity>(find
-            .ancestor(
-              of: find.descendant(
-                of: find.byKey(const ValueKey('bar-0-old')),
-                matching: find.text('A'),
-              ),
-              matching: find.byType(Opacity),
-            )
-            .first)
+        .widget<Opacity>(
+          find
+              .ancestor(
+                of: find.descendant(
+                  of: find.byKey(const ValueKey('bar-0-old')),
+                  matching: find.text('A'),
+                ),
+                matching: find.byType(Opacity),
+              )
+              .first,
+        )
         .opacity;
     final newOpacity = tester
-        .widget<Opacity>(find
-            .ancestor(
-              of: find.descendant(
-                of: find.byKey(const ValueKey('bar-2-new')),
-                matching: find.text('C'),
-              ),
-              matching: find.byType(Opacity),
-            )
-            .first)
+        .widget<Opacity>(
+          find
+              .ancestor(
+                of: find.descendant(
+                  of: find.byKey(const ValueKey('bar-2-new')),
+                  matching: find.text('C'),
+                ),
+                matching: find.byType(Opacity),
+              )
+              .first,
+        )
         .opacity;
     expect(oldOpacity, lessThan(1.0)); // 旧条渐隐（C 渐变消失）
     expect(newOpacity, greaterThan(0.0)); // 新条渐显（D 渐变显示）

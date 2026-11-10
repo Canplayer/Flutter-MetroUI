@@ -155,10 +155,11 @@ class _MetroCircleButtonState extends State<MetroCircleButton> {
                     ? widget.themeColor ?? Theme.of(context).colorScheme.primary
                     : null,
                 border: Border.all(
-                  color: widget.borderColor ??
+                  color:
+                      widget.borderColor ??
                       Theme.of(context)
-                          .extension<MetroAppBarTheme>()!
-                          .buttonColor ??
+                          .extension<MetroAppBarTheme>()
+                          ?.buttonColor ??
                       Colors.white,
                   width: borderWidth,
                 ),
@@ -176,14 +177,14 @@ class _MetroCircleButtonState extends State<MetroCircleButton> {
                 colorFilter: ColorFilter.mode(
                   _isPressed
                       ? Theme.of(context)
-                              .extension<MetroAppBarTheme>()!
-                              .pressedButtonIconColor ??
-                          Colors.white
+                                .extension<MetroAppBarTheme>()
+                                ?.pressedButtonIconColor ??
+                            Colors.white
                       : widget.iconColor ??
-                          Theme.of(context)
-                              .extension<MetroAppBarTheme>()!
-                              .buttonIconColor ??
-                          Colors.white,
+                            Theme.of(context)
+                                .extension<MetroAppBarTheme>()
+                                ?.buttonIconColor ??
+                            Colors.white,
                   BlendMode.srcIn,
                 ),
                 child: IconTheme(
