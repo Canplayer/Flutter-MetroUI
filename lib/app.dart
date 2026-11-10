@@ -694,16 +694,16 @@ class _MetroAppState extends State<MetroApp> {
       Duration appBarExpandDuration = const Duration(milliseconds: 300);
       Duration appBarCollapseDuration = const Duration(milliseconds: 200);
 
-      double panoramaTitleEntryTranslate = 1460 * 0.8;
-      double panoramaBgEntryTranslate = 840 * 0.8;
-      double panoramaContentEntryTranslate = 1090 * 0.8;
-      Duration panoramaRotationDuration = const Duration(milliseconds: 450);
+      double panoramaTitleEntryTranslate = 2000 * 0.8;
+      double panoramaBgEntryTranslate = 1200 * 0.8;
+      double panoramaContentEntryTranslate = 1500 * 0.8;
+      Duration panoramaRotationDuration = const Duration(milliseconds: 500);
 
       Color buttonPressedBg = primaryColor;
       Color buttonPressedText = whiteColor;
 
       Color contextMenuBg = useWhiteTheme ? blackColor : whiteColor;
-      Color contextMenuLine = useWhiteTheme ? blackColor : whiteColor ;
+      Color contextMenuLine = useWhiteTheme ? blackColor : whiteColor;
 
       if (widget.version == MetroDesignVersion.wp7) {
         appBarExpandCurve = Curves.bounceOut;
@@ -728,9 +728,10 @@ class _MetroAppState extends State<MetroApp> {
           titleTextStyle: TextStyle(
             fontFamily: 'Segoe WP',
             package: 'metro_ui',
-            fontSize: 135,
+            // WP8 PanoramaTitleFontSize = 128、CharacterSpacing = −6（480 资源，×0.8）
+            fontSize: 128 * 0.8,
             fontWeight: FontWeight.w300,
-            letterSpacing: -4,
+            letterSpacing: -6 * 0.8,
             color: textColor,
           ),
         ),
@@ -760,7 +761,7 @@ class _MetroAppState extends State<MetroApp> {
         MetroPanoramaThemeData(
           config: PanoramaConfig(
             titleEntryTranslate: panoramaTitleEntryTranslate,
-            bgEntryTranslate: panoramaBgEntryTranslate,
+            backgroundEntryTranslate: panoramaBgEntryTranslate,
             contentEntryTranslate: panoramaContentEntryTranslate,
             rotationDuration: panoramaRotationDuration,
           ),

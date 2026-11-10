@@ -155,7 +155,7 @@ class _MetroSpinnerPainter extends CustomPainter {
           // 当前点正在飞入
           final double flyInProgress = (progress - flyInStartProgress) / intervalPerDot;
           // 使用 Metro 动画曲线：从 -flyDistance 到 0
-          final double curvedProgress = MetroCurves.normalPageRotateIn.transform(flyInProgress);
+          final double curvedProgress = MetroCurves.forwardIn.transform(flyInProgress);
           flyOffset = -flyDistance * (1.0 - curvedProgress);
         }
         // 否则，飞入已完成，flyOffset = 0
@@ -178,7 +178,7 @@ class _MetroSpinnerPainter extends CustomPainter {
           // 当前点正在飞出
           final double flyOutProgress = (progress - flyOutStartProgress) / intervalPerDot;
           // 使用 Metro 动画曲线：从 0 到 +flyDistance（向右加速）
-          final double curvedProgress = MetroCurves.normalPageRotateOut.transform(flyOutProgress);
+          final double curvedProgress = MetroCurves.forwardOut.transform(flyOutProgress);
           flyOffset = flyDistance * curvedProgress;
         } else {
           // 飞出已完成
