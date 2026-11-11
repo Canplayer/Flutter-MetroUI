@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:metro_ui/widgets/swipe_page_view.dart';
+import 'package:metro_ui/widgets/pivot_pane_view.dart';
 
 /// 换页过程的两段动画：`SlideFull*FadeOut`(300ms) → 换内容 → `SlideFull*FadeIn`(500ms)。
 ///
@@ -10,7 +10,8 @@ import 'package:metro_ui/widgets/swipe_page_view.dart';
 /// `Animations.uix` 的 `SlideFullLeftFadeOut/In`（`0x1283–0x1347`）。
 Widget _host(OnTransitionEnd? onTransitionEnd) => MaterialApp(
   home: Scaffold(
-    body: SwipePageView(
+    body: PivotPaneView(
+      transition: PivotTransition.sequential,
       onTransitionEnd: onTransitionEnd,
       itemBuilder: (context, index) => SizedBox.expand(
         key: ValueKey('page-$index'),
@@ -80,7 +81,7 @@ void main() {
     Opacity fade() => tester.widget<Opacity>(
       find
           .descendant(
-            of: find.byType(SwipePageView),
+            of: find.byType(PivotPaneView),
             matching: find.byType(Opacity),
           )
           .first,

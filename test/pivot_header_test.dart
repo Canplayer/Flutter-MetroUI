@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:metro_ui/widgets/swipe_page_view.dart';
-import 'package:metro_ui/widgets/swipe_title_indicator.dart';
+import 'package:metro_ui/widgets/pivot_pane_view.dart';
+import 'package:metro_ui/widgets/pivot.dart';
 
 void main() {
   Widget buildHost({
-    List<SwipePageItem>? items,
-    SwipeTitleAlign align = SwipeTitleAlign.start,
+    List<PivotItem>? items,
+    PivotHeaderAlignment align = PivotHeaderAlignment.start,
     double titleGap = 24.0,
     EdgeInsetsGeometry padding = EdgeInsets.zero,
     OnPageChanged? onPageChanged,
@@ -14,22 +14,22 @@ void main() {
   }) {
     return MaterialApp(
       home: Scaffold(
-        body: SwipePages(
+        body: Pivot(
           items:
               items ??
               [
-                const SwipePageItem(
+                const PivotItem(
                   title: Text('A'),
                   page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
                 ),
-                const SwipePageItem(
+                const PivotItem(
                   title: Text('B'),
                   page: ColoredBox(
                     color: Colors.green,
                     child: SizedBox.expand(),
                   ),
                 ),
-                const SwipePageItem(
+                const PivotItem(
                   title: Text('C'),
                   page: ColoredBox(
                     color: Colors.blue,
@@ -44,7 +44,7 @@ void main() {
           fadeDuration: const Duration(milliseconds: 50),
           snapBackDuration: const Duration(milliseconds: 120),
           // 换页是「隐藏 → 换内容 → 显示」两段，缩短以便单次 pump 覆盖；
-          // 源码值在 swipe_page_pivot_test.dart 里校验。
+          // 源码值在 pivot_transition_test.dart 里校验。
           hideDuration: const Duration(milliseconds: 100),
           showDuration: const Duration(milliseconds: 100),
           align: align,
@@ -63,6 +63,33 @@ void main() {
     return t.transform.getTranslation().x;
   }
 
+  testWidgets('松手提交换页立即改变标题颜色，位置继续动画', (tester) async {
+    await tester.pumpWidget(buildHost());
+    await tester.pumpAndSettle();
+    Color? color(String title) =>
+        DefaultTextStyle.of(tester.element(find.text(title).first)).style.color;
+    final active = color('A');
+    final inactive = color('B');
+    expect(active, isNot(inactive));
+    final gesture = await tester.startGesture(const Offset(400, 300));
+    await gesture.moveBy(const Offset(-100, 0));
+    await tester.pump();
+    expect(color('A'), active);
+    expect(color('B'), inactive);
+    final releaseOffset = barOffset(tester, 'bar-0');
+    await gesture.up();
+    await tester.pump();
+    expect(color('B'), active);
+    expect(color('A'), inactive);
+    expect(barOffset(tester, 'bar-0'), closeTo(releaseOffset, .001));
+    await tester.pump(const Duration(milliseconds: 40));
+    expect(color('B'), active);
+    expect(find.byKey(const ValueKey('bar-0')), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(color('B'), active);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('三页：同时显示上一页/当前页/下一页三个标题', (tester) async {
     await tester.pumpWidget(buildHost());
     await tester.pump(); // 等待宽度测量
@@ -78,7 +105,7 @@ void main() {
     await tester.pumpWidget(
       buildHost(
         items: [
-          const SwipePageItem(
+          const PivotItem(
             title: Text('A'),
             page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
           ),
@@ -96,11 +123,11 @@ void main() {
     await tester.pumpWidget(
       buildHost(
         items: [
-          const SwipePageItem(
+          const PivotItem(
             title: Text('A'),
             page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
           ),
-          const SwipePageItem(
+          const PivotItem(
             title: Text('B'),
             page: ColoredBox(color: Colors.green, child: SizedBox.expand()),
           ),
@@ -145,20 +172,18 @@ void main() {
     expect(tester.getTopLeft(find.text('B')).dx, closeTo(aRight + 24, 1));
   });
 
-  testWidgets('SwipePages 默认整体内边距：水平 19.2（HorizontalPagePadding）', (
-    tester,
-  ) async {
+  testWidgets('Pivot 默认整体内边距：水平 19.2（HorizontalPagePadding）', (tester) async {
     // 不指定 padding → 使用默认 EdgeInsets.symmetric(horizontal: 24*0.8)
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
-          body: SwipePages(
+          body: Pivot(
             items: [
-              SwipePageItem(
+              PivotItem(
                 title: Text('A'),
                 page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
               ),
-              SwipePageItem(
+              PivotItem(
                 title: Text('B'),
                 page: ColoredBox(color: Colors.green, child: SizedBox.expand()),
               ),
@@ -174,12 +199,12 @@ void main() {
     // 整体内缩 19.2：当前标题 A 左边缘 = 19.2（而非 0）
     expect(
       tester.getTopLeft(find.text('A')).dx,
-      closeTo(kSwipePagesPadding.resolve(TextDirection.ltr).left, 0.6),
+      closeTo(kPivotPadding.resolve(TextDirection.ltr).left, 0.6),
     );
   });
 
   testWidgets('center 模式：当前标题水平居中于父容器', (tester) async {
-    await tester.pumpWidget(buildHost(align: SwipeTitleAlign.center));
+    await tester.pumpWidget(buildHost(align: PivotHeaderAlignment.center));
     await tester.pump(); // 等待宽度测量
 
     // 测试屏幕宽 800，当前标题 A 的中心应在 400 附近
@@ -195,7 +220,7 @@ void main() {
   });
 
   testWidgets('end 模式：当前标题右对齐父容器右侧', (tester) async {
-    await tester.pumpWidget(buildHost(align: SwipeTitleAlign.end));
+    await tester.pumpWidget(buildHost(align: PivotHeaderAlignment.end));
     await tester.pump(); // 等待宽度测量
 
     // 测试屏幕宽 800，当前标题 A 右边缘应在 800 附近
@@ -208,7 +233,7 @@ void main() {
   });
 
   testWidgets('center 模式：换页动画结束后新标题仍居中', (tester) async {
-    await tester.pumpWidget(buildHost(align: SwipeTitleAlign.center));
+    await tester.pumpWidget(buildHost(align: PivotHeaderAlignment.center));
     await tester.pump();
 
     final g = await tester.startGesture(const Offset(200, 300));
@@ -225,7 +250,7 @@ void main() {
   });
 
   testWidgets('end 模式：换页动画结束后新标题仍右对齐', (tester) async {
-    await tester.pumpWidget(buildHost(align: SwipeTitleAlign.end));
+    await tester.pumpWidget(buildHost(align: PivotHeaderAlignment.end));
     await tester.pump();
 
     final g = await tester.startGesture(const Offset(200, 300));
@@ -312,8 +337,8 @@ void main() {
                   Colors.white,
             ) ==
             Brightness.dark
-        ? kSwipePageIndicatorIdleColorDark
-        : kSwipePageIndicatorIdleColorLight;
+        ? kPivotHeaderIdleColorDark
+        : kPivotHeaderIdleColorLight;
     expect(colorOf('B'), idle);
     expect(colorOf('C'), idle);
     expect(colorOf('A'), isNot(idle));
@@ -349,22 +374,22 @@ void main() {
     expect(barOffset(tester, 'bar-2'), 0);
   });
 
-  testWidgets('SwipeStackPages：标题悬浮在页面顶部，拖动换页同步', (tester) async {
+  testWidgets('PivotStack：标题悬浮在页面顶部，拖动换页同步', (tester) async {
     final changed = <String>[];
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: SwipeStackPages(
+          body: PivotStack(
             items: const [
-              SwipePageItem(
+              PivotItem(
                 title: Text('A'),
                 page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
               ),
-              SwipePageItem(
+              PivotItem(
                 title: Text('B'),
                 page: ColoredBox(color: Colors.green, child: SizedBox.expand()),
               ),
-              SwipePageItem(
+              PivotItem(
                 title: Text('C'),
                 page: ColoredBox(color: Colors.blue, child: SizedBox.expand()),
               ),
@@ -403,22 +428,22 @@ void main() {
     expect(find.text('C'), findsOneWidget);
   });
 
-  testWidgets('SwipeStackPages：indicatorAlign 控制标题悬浮位置', (tester) async {
+  testWidgets('PivotStack：indicatorAlign 控制标题悬浮位置', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
-          body: SwipeStackPages(
+          body: PivotStack(
             items: [
-              SwipePageItem(
+              PivotItem(
                 title: Text('A'),
                 page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
               ),
-              SwipePageItem(
+              PivotItem(
                 title: Text('B'),
                 page: ColoredBox(color: Colors.green, child: SizedBox.expand()),
               ),
             ],
-            align: SwipeTitleAlign.start,
+            align: PivotHeaderAlignment.start,
             indicatorAlign: Alignment.topLeft,
             indicatorPadding: EdgeInsets.zero,
           ),
@@ -432,7 +457,7 @@ void main() {
     expect(tester.getTopLeft(find.text('A')).dy, closeTo(0, 1));
   });
 
-  testWidgets('点击半透明标题切换到对应页（SwipePages）', (tester) async {
+  testWidgets('点击半透明标题切换到对应页（Pivot）', (tester) async {
     final changed = <String>[];
     await tester.pumpWidget(
       buildHost(onPageChanged: (o, n) => changed.add('$o->$n')),
@@ -457,22 +482,22 @@ void main() {
     expect(changed, ['0->1', '1->2']);
   });
 
-  testWidgets('SwipeStackPages：点击悬浮标题切换到对应页', (tester) async {
+  testWidgets('PivotStack：点击悬浮标题切换到对应页', (tester) async {
     final changed = <String>[];
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: SwipeStackPages(
+          body: PivotStack(
             items: const [
-              SwipePageItem(
+              PivotItem(
                 title: Text('A'),
                 page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
               ),
-              SwipePageItem(
+              PivotItem(
                 title: Text('B'),
                 page: ColoredBox(color: Colors.green, child: SizedBox.expand()),
               ),
-              SwipePageItem(
+              PivotItem(
                 title: Text('C'),
                 page: ColoredBox(color: Colors.blue, child: SizedBox.expand()),
               ),

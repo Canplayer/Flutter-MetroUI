@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:metro_ui/uix_metrics.dart';
-import 'package:metro_ui/widgets/swipe_page_view.dart';
+import 'package:metro_ui/widgets/pivot_pane_view.dart';
+
+export 'pivot_pane_view.dart' show PivotTransition, PivotController;
 
 /// 标题指示器的对齐方式。
-enum SwipeTitleAlign {
+enum PivotHeaderAlignment {
   /// 左对齐：当前标题左边缘对齐父容器左侧（默认）。
   start,
 
@@ -16,8 +18,8 @@ enum SwipeTitleAlign {
 }
 
 /// 页面条目：一个标题 + 一个页面内容。
-class SwipePageItem {
-  const SwipePageItem({required this.title, required this.page});
+class PivotItem {
+  const PivotItem({required this.title, required this.page});
 
   /// 标题（任意 Widget，例如 Text）。
   final Widget title;
@@ -30,57 +32,56 @@ class SwipePageItem {
 ///
 /// `PIVOT 0x45–0x66`：标题条的 `FlowLayout.Spacing` 与 `RepeatGap` 都取这个值。
 /// 东亚语言版本改用 `PivotEAHeaderSpacing` = 40（× 0.8 = 32）。
-const double kSwipePageIndicatorTitleGap = 24 * uixScale;
+const double kPivotHeaderTitleGap = 24 * uixScale;
 
 /// `Constants.PivotEAHeaderSpacing` = 40 × 0.8 [读出]。
-const double kSwipePageIndicatorEATitleGap = 40 * uixScale;
+const double kPivotHeaderEATitleGap = 40 * uixScale;
 
 /// `Constants.PivotHeaderFontSize` = 54（点）× 4/3 × 0.8 [读出]。
 ///
 /// `PivotStyle.HeaderFont` = `FontFaceSemiLight` @ 该字号；项目字体把
 /// SemiLight 注册在 `w300`。
-const double kSwipePageIndicatorFontSize = 54 * (4 / 3) * uixScale;
+const double kPivotHeaderFontSize = 54 * (4 / 3) * uixScale;
 
-/// `ThemeResources.PivotColorDark` = `0x67FFFFFF`（白 40%）[读出]。
+/// `ThemeResources.PivotColorDark` = `0x66FFFFFF`（白 40%）[读出]。
 ///
 /// 未选中标题的颜色；选中项用 `SystemColors.TextHighColor`。
-const Color kSwipePageIndicatorIdleColorDark = Color(0x67FFFFFF);
+const Color kPivotHeaderIdleColorDark = Color(0x66FFFFFF);
 
 /// `ThemeResources.PivotColorLight` = `0x33000000`（黑 20%）[读出]。
-const Color kSwipePageIndicatorIdleColorLight = Color(0x33000000);
+const Color kPivotHeaderIdleColorLight = Color(0x33000000);
 
-/// [SwipePageIndicator] 的默认标题对齐方式。
-const SwipeTitleAlign kSwipePageIndicatorAlign = SwipeTitleAlign.start;
+/// [PivotHeader] 的默认标题对齐方式。
+const PivotHeaderAlignment kPivotHeaderAlign = PivotHeaderAlignment.start;
 
-/// [SwipePageIndicator] 独立使用时的默认飞出/飞入动画时长。
-/// 注意：被 [SwipePagesBase] 组合时以 [SwipePageView] 的时长为准
-/// （[kSwipePageViewFlyDuration]），以保证标题与页面动画同步。
-const Duration kSwipePageIndicatorFlyDuration = Duration(milliseconds: 2000);
+/// [PivotHeader] 独立使用时的默认飞出/飞入动画时长。
+/// 注意：被 [PivotBase] 组合时以 [PivotPaneView] 的时长为准
+/// （[kPivotPaneViewMoveDuration]），以保证标题与页面动画同步。
+const Duration kPivotHeaderFlyDuration = kPivotPaneViewMoveDuration;
 
-/// [SwipePageIndicator] 独立使用时的默认渐隐/渐显动画时长。
-const Duration kSwipePageIndicatorFadeDuration = Duration(milliseconds: 200);
+/// [PivotHeader] 独立使用时的默认渐隐/渐显动画时长。
+const Duration kPivotHeaderFadeDuration = Duration(milliseconds: 200);
 
 /// `Constants.HorizontalPagePadding` = 24 × 0.8 = 19.2 [读出]。
 ///
-/// `Styles.PageMargins` 的左右内缩都取自它。
-const EdgeInsetsGeometry kSwipePagesPadding = EdgeInsets.symmetric(
-  horizontal: 24 * uixScale,
-);
+/// `Styles.PageMargins` 只设置 Left；Right 是另一个独立资源。
+const EdgeInsetsGeometry kPivotPadding = EdgeInsets.only(left: 24 * uixScale);
 
 /// 组合组件（标题指示器 + 滑动翻页）的公共基类。
 ///
 /// 持有标题/页面列表与全部动画、布局、回调参数。
 /// 子类决定两者的布局方式：
-/// - [SwipePages]：Column 上下布局（标题在页面上方）；
-/// - [SwipeStackPages]：Stack 叠放布局（标题悬浮在页面顶部）。
+/// - [Pivot]：Column 上下布局（标题在页面上方）；
+/// - [PivotStack]：Stack 叠放布局（标题悬浮在页面顶部）。
 ///
-/// 动画/布局参数均为可空，未指定时透传回落为子组件（[SwipePageView] /
-/// [SwipePageIndicator]）各自的默认值常量，修改子组件默认值无需在此重复维护。
-abstract class SwipePagesBase extends StatefulWidget {
-  const SwipePagesBase({
+/// 动画/布局参数均为可空，未指定时透传回落为子组件（[PivotPaneView] /
+/// [PivotHeader]）各自的默认值常量，修改子组件默认值无需在此重复维护。
+abstract class PivotBase extends StatefulWidget {
+  const PivotBase({
     super.key,
     required this.items,
     this.initialPage,
+    this.transition = PivotTransition.contentChange,
     this.swipeThreshold,
     this.maxDragDistance,
     this.flyDistance,
@@ -97,40 +98,42 @@ abstract class SwipePagesBase extends StatefulWidget {
   });
 
   /// 页面条目列表（标题 + 页面）。
-  final List<SwipePageItem> items;
+  final List<PivotItem> items;
 
-  /// 初始页码（可为负数），透传给 [SwipePageView]。
+  final PivotTransition transition;
+
+  /// 初始页码（可为负数），透传给 [PivotPaneView]。
   final int? initialPage;
 
-  /// 松手触发换页的最小位移（像素），透传给 [SwipePageView]。
+  /// 松手触发换页的最小位移（像素），透传给 [PivotPaneView]。
   final double? swipeThreshold;
 
-  /// 拖动过程中页面允许的最大位移（像素），透传给 [SwipePageView]。
+  /// 拖动过程中页面允许的最大位移（像素），透传给 [PivotPaneView]。
   final double? maxDragDistance;
 
-  /// 换页时页面飞出/飞入的位移（像素），透传给 [SwipePageView]。
+  /// 换页时页面飞出/飞入的位移（像素），透传给 [PivotPaneView]。
   final double? flyDistance;
 
-  /// 飞出/飞入动画时长，透传给 [SwipePageView] 与标题指示器。
+  /// 飞出/飞入动画时长，透传给 [PivotPaneView] 与标题指示器。
   final Duration? flyDuration;
 
-  /// 渐隐/渐显动画时长，透传给 [SwipePageView] 与标题指示器。
+  /// 渐隐/渐显动画时长，透传给 [PivotPaneView] 与标题指示器。
   final Duration? fadeDuration;
 
-  /// 归位动画时长，透传给 [SwipePageView]。
+  /// 归位动画时长，透传给 [PivotPaneView]。
   final Duration? snapBackDuration;
 
-  /// 旧内容飞出时长，透传给 [SwipePageView]（`SlideFull*FadeOut`，300 ms）。
+  /// 旧内容飞出时长，透传给 [PivotPaneView]（`SlideFull*FadeOut`，300 ms）。
   final Duration? hideDuration;
 
-  /// 新内容飞入时长，透传给 [SwipePageView]（`SlideFull*FadeIn`，500 ms）。
+  /// 新内容飞入时长，透传给 [PivotPaneView]（`SlideFull*FadeIn`，500 ms）。
   final Duration? showDuration;
 
   /// 标题之间的间距，透传给标题指示器。
   final double? titleGap;
 
   /// 标题对齐方式（左/中/右），透传给标题指示器。
-  final SwipeTitleAlign? align;
+  final PivotHeaderAlignment? align;
 
   /// 翻页回调（松手触发换页的瞬间），透传。
   final OnPageChanged? onPageChanged;
@@ -144,9 +147,9 @@ abstract class SwipePagesBase extends StatefulWidget {
 
 /// 组合组件：标题指示器 + 滑动翻页（Column 上下布局）。
 ///
-/// 顶部是标题指示器，下方是 [SwipePageView]，两者自动同步：
+/// 顶部是标题指示器，下方是 [PivotPaneView]，两者自动同步：
 /// - 拖动页面（不松手）时，标题条整体移动「对应方向目标标题的归位距离
-///   × progress」，与 [SwipePageView.onSlideProgress] 对齐。
+///   × progress」，与 [PivotPaneView.onSlideProgress] 对齐。
 ///   例：左对齐下向右滑（去上一页）移动量 = 上一页标题宽度（+间距），
 ///   向左滑（去下一页）移动量 = 当前标题宽度（+间距）；
 /// - 松手触发换页时，下一个标题使用从快到慢的减速动画滑入
@@ -155,13 +158,14 @@ abstract class SwipePagesBase extends StatefulWidget {
 /// - 只有两个页面（A、B，A 为当前）时显示 B A B；
 /// - 只有一个页面时只显示一个标题。
 ///
-/// 整个组件（标题 + 主体）默认带水平 18 的内边距（见 [kSwipePagesPadding]），
+/// 默认左侧内缩19.2，标题与内容之间留22.4（480资源×0.8），
 /// 可通过 [padding] 覆盖。
-class SwipePages extends SwipePagesBase {
-  const SwipePages({
+class Pivot extends PivotBase {
+  const Pivot({
     super.key,
     required super.items,
     super.initialPage,
+    super.transition,
     super.swipeThreshold,
     super.maxDragDistance,
     super.flyDistance,
@@ -175,14 +179,14 @@ class SwipePages extends SwipePagesBase {
     super.onPageChanged,
     super.onTransitionEnd,
     super.onSlideProgress,
-    this.padding = kSwipePagesPadding,
+    this.padding = kPivotPadding,
   });
 
   /// 整体内边距（标题与主体统一内缩），默认水平 18。
   final EdgeInsetsGeometry padding;
 
   @override
-  State<SwipePages> createState() => _SwipePagesState();
+  State<Pivot> createState() => _PivotState();
 }
 
 /// 组合组件：标题指示器 + 滑动翻页（Stack 叠放布局）。
@@ -192,12 +196,13 @@ class SwipePages extends SwipePagesBase {
 /// 点击上一页/下一页标题可切换到对应页面；标题之外的空白区域
 /// 触摸穿透到页面（不会挡住拖动）。
 ///
-/// 页面与标题的同步行为与 [SwipePages] 完全一致。
-class SwipeStackPages extends SwipePagesBase {
-  const SwipeStackPages({
+/// 页面与标题的同步行为与 [Pivot] 完全一致。
+class PivotStack extends PivotBase {
+  const PivotStack({
     super.key,
     required super.items,
     super.initialPage,
+    super.transition,
     super.swipeThreshold,
     super.maxDragDistance,
     super.flyDistance,
@@ -222,26 +227,26 @@ class SwipeStackPages extends SwipePagesBase {
   final EdgeInsetsGeometry indicatorPadding;
 
   @override
-  State<SwipeStackPages> createState() => _SwipeStackPagesState();
+  State<PivotStack> createState() => _PivotStackState();
 }
 
-/// 页面与标题同步逻辑（[SwipePages] 与 [SwipeStackPages] 共用）。
+/// 页面与标题同步逻辑（[Pivot] 与 [PivotStack] 共用）。
 ///
-/// 维护当前页索引、换页目标、滑动进度，并把 [SwipePageView] 的回调
-/// 同步给 [SwipePageIndicator]。
-mixin _SwipeSyncState<T extends SwipePagesBase> on State<T> {
+/// 维护当前页索引、换页目标、滑动进度，并把 [PivotPaneView] 的回调
+/// 同步给 [PivotHeader]。
+mixin _PivotSyncState<T extends PivotBase> on State<T> {
   late int _currentIndex;
   int? _swapTarget;
   double _progress = 0;
   bool _swapping = false;
 
-  /// 编程式换页控制器：点击标题时驱动 [SwipePageView] 播放换页动画。
-  final SwipePageController _viewController = SwipePageController();
+  /// 编程式换页控制器：点击标题时驱动 [PivotPaneView] 播放换页动画。
+  final PivotController _viewController = PivotController();
 
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.initialPage ?? kSwipePageViewInitialPage;
+    _currentIndex = widget.initialPage ?? kPivotPaneViewInitialPage;
   }
 
   void _handleSwapEnded() {
@@ -265,14 +270,23 @@ mixin _SwipeSyncState<T extends SwipePagesBase> on State<T> {
 
   /// 构建标题指示器。
   Widget buildIndicator() {
-    return SwipePageIndicator(
+    return PivotHeader(
       titles: [for (final e in widget.items) e.title],
+      clipBehavior: Clip.none,
       currentIndex: _currentIndex,
       progress: _progress,
       swapTargetIndex: _swapTarget,
-      titleGap: widget.titleGap ?? kSwipePageIndicatorTitleGap,
-      align: widget.align ?? kSwipePageIndicatorAlign,
-      flyDuration: widget.flyDuration ?? kSwipePageViewMoveDuration,
+      titleGap:
+          widget.titleGap ??
+          ([
+                'zh',
+                'ja',
+                'ko',
+              ].contains(Localizations.localeOf(context).languageCode)
+              ? kPivotHeaderEATitleGap
+              : kPivotHeaderTitleGap),
+      align: widget.align ?? kPivotHeaderAlign,
+      flyDuration: widget.flyDuration ?? kPivotPaneViewMoveDuration,
       fadeDuration: widget.fadeDuration ?? Duration.zero,
       onSwapEnded: _handleSwapEnded,
       onTitleTap: _handleTitleTap,
@@ -282,16 +296,20 @@ mixin _SwipeSyncState<T extends SwipePagesBase> on State<T> {
   /// 构建滑动翻页组件（无限滚动：任意 index 循环映射到有限页面）。
   Widget buildView() {
     final n = widget.items.length;
-    return SwipePageView(
+    return PivotPaneView(
       controller: _viewController,
-      initialPage: widget.initialPage ?? kSwipePageViewInitialPage,
+      clipBehavior: Clip.none,
+      transition: widget.transition,
+      hideDuration: widget.hideDuration ?? kPivotPaneViewHideDuration,
+      showDuration: widget.showDuration ?? kPivotPaneViewShowDuration,
+      initialPage: widget.initialPage ?? kPivotPaneViewInitialPage,
       // null 表示沿用系统值：33% × 一页宽 / 一页宽。
       swipeThreshold: widget.swipeThreshold,
       maxDragDistance: widget.maxDragDistance,
       flyDistance: widget.flyDistance ?? 0,
-      flyDuration: widget.flyDuration ?? kSwipePageViewMoveDuration,
+      flyDuration: widget.flyDuration ?? kPivotPaneViewMoveDuration,
       fadeDuration: widget.fadeDuration ?? Duration.zero,
-      snapBackDuration: widget.snapBackDuration ?? kSwipePageViewMoveDuration,
+      snapBackDuration: widget.snapBackDuration ?? kPivotPaneViewMoveDuration,
       itemBuilder: (context, index) => widget.items[index % n].page,
       onPageChanged: (o, n) {
         setState(() {
@@ -318,47 +336,52 @@ mixin _SwipeSyncState<T extends SwipePagesBase> on State<T> {
   }
 }
 
-class _SwipePagesState extends State<SwipePages>
-    with _SwipeSyncState<SwipePages> {
+class _PivotState extends State<Pivot> with _PivotSyncState<Pivot> {
   @override
   Widget build(BuildContext context) {
     if (widget.items.isEmpty) return const SizedBox.shrink();
 
     // 整体内边距：标题与主体统一内缩
-    return Padding(
-      padding: widget.padding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          buildIndicator(),
-          Expanded(child: buildView()),
-        ],
+    return ClipRect(
+      child: Padding(
+        padding: widget.padding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            buildIndicator(),
+            const SizedBox(height: 28 * uixScale),
+            Expanded(child: buildView()),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _SwipeStackPagesState extends State<SwipeStackPages>
-    with _SwipeSyncState<SwipeStackPages> {
+class _PivotStackState extends State<PivotStack>
+    with _PivotSyncState<PivotStack> {
   @override
   Widget build(BuildContext context) {
     if (widget.items.isEmpty) return const SizedBox.shrink();
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // 底层：滑动翻页铺满整个区域
-        buildView(),
-        // 顶层：标题指示器悬浮在指定位置。标题区域响应点击（切换页面）；
-        // 其余空白区域不吸收触摸（Stack 仅命中子组件），可穿透到页面拖动。
-        Align(
-          alignment: widget.indicatorAlign,
-          child: Padding(
-            padding: widget.indicatorPadding,
-            child: buildIndicator(),
+    return ClipRect(
+      child: Stack(
+        clipBehavior: Clip.none,
+        fit: StackFit.expand,
+        children: [
+          // 底层：滑动翻页铺满整个区域
+          buildView(),
+          // 顶层：标题指示器悬浮在指定位置。标题区域响应点击（切换页面）；
+          // 其余空白区域不吸收触摸（Stack 仅命中子组件），可穿透到页面拖动。
+          Align(
+            alignment: widget.indicatorAlign,
+            child: Padding(
+              padding: widget.indicatorPadding,
+              child: buildIndicator(),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -366,9 +389,9 @@ class _SwipeStackPagesState extends State<SwipeStackPages>
 /// 标题指示器（可独立使用）。
 ///
 /// 通过 [align] 控制当前标题的对齐方式（默认左对齐）：
-/// - [SwipeTitleAlign.start]：当前标题左边缘对齐父容器左侧；
-/// - [SwipeTitleAlign.center]：当前标题水平居中；
-/// - [SwipeTitleAlign.end]：当前标题右边缘对齐父容器右侧。
+/// - [PivotHeaderAlignment.start]：当前标题左边缘对齐父容器左侧；
+/// - [PivotHeaderAlignment.center]：当前标题水平居中；
+/// - [PivotHeaderAlignment.end]：当前标题右边缘对齐父容器右侧。
 ///
 /// 上一页标题在当前标题一侧、下一页标题在另一侧（非当前标题带 50%
 /// 透明滤镜）。标题条整体随 [progress] 平移（移动距离 = 对应方向目标标题的
@@ -382,23 +405,25 @@ class _SwipeStackPagesState extends State<SwipeStackPages>
 /// 若只有一个页面，只显示当前标题。
 ///
 /// 若提供 [onTitleTap]，点击上一页/下一页标题可触发回调（通常用于切换页面）。
-class SwipePageIndicator extends StatefulWidget {
-  const SwipePageIndicator({
+class PivotHeader extends StatefulWidget {
+  const PivotHeader({
     super.key,
     required this.titles,
     required this.currentIndex,
     this.progress = 0,
+    this.clipBehavior = Clip.hardEdge,
     this.swapTargetIndex,
-    this.titleGap = kSwipePageIndicatorTitleGap,
-    this.align = kSwipePageIndicatorAlign,
-    this.flyDuration = kSwipePageIndicatorFlyDuration,
-    this.fadeDuration = kSwipePageIndicatorFadeDuration,
+    this.titleGap = kPivotHeaderTitleGap,
+    this.align = kPivotHeaderAlign,
+    this.flyDuration = kPivotHeaderFlyDuration,
+    this.fadeDuration = kPivotHeaderFadeDuration,
     this.onSwapEnded,
     this.onTitleTap,
   });
 
   /// 所有标题（顺序与页面一一对应，可循环）。
   final List<Widget> titles;
+  final Clip clipBehavior;
 
   /// 当前页面索引（可为负数，内部循环映射）。
   final int currentIndex;
@@ -412,8 +437,8 @@ class SwipePageIndicator extends StatefulWidget {
   /// 标题之间的间距。
   final double titleGap;
 
-  /// 标题对齐方式（左/中/右），默认 [SwipeTitleAlign.start]。
-  final SwipeTitleAlign align;
+  /// 标题对齐方式（左/中/右），默认 [PivotHeaderAlignment.start]。
+  final PivotHeaderAlignment align;
 
   /// 换页动画时长。
   final Duration flyDuration;
@@ -430,20 +455,20 @@ class SwipePageIndicator extends StatefulWidget {
   final ValueChanged<int>? onTitleTap;
 
   @override
-  State<SwipePageIndicator> createState() => _SwipePageIndicatorState();
+  State<PivotHeader> createState() => _PivotHeaderState();
 }
 
-class _SwipePageIndicatorState extends State<SwipePageIndicator>
+class _PivotHeaderState extends State<PivotHeader>
     with TickerProviderStateMixin {
   /// 已测量的标题宽度（key：标题在列表中的索引）。
   final Map<int, double> _widths = {};
 
   /// 已测量的标题高度；Stack 必须有确定高度，先用估计值占位。
-  double _titleHeight = kSwipePageIndicatorFontSize * 1.43;
+  double _titleHeight = kPivotHeaderFontSize * 1.43;
 
   late final AnimationController _controller;
 
-  /// `PivotMove`：500 ms、`Log(150)`（[kSwipePageViewMoveCurve]）。
+  /// `PivotMove`：500 ms、`Log(150)`（[kPivotPaneViewMoveCurve]）。
   late final Animation<double> _slide;
 
   bool _swapping = false;
@@ -462,12 +487,12 @@ class _SwipePageIndicatorState extends State<SwipePageIndicator>
       });
     _slide = CurvedAnimation(
       parent: _controller,
-      curve: kSwipePageViewMoveCurve,
+      curve: kPivotPaneViewMoveCurve,
     );
   }
 
   @override
-  void didUpdateWidget(SwipePageIndicator oldWidget) {
+  void didUpdateWidget(PivotHeader oldWidget) {
     super.didUpdateWidget(oldWidget);
     // 检测到新的换页目标 → 播放换页动画
     if (widget.swapTargetIndex != null &&
@@ -525,7 +550,7 @@ class _SwipePageIndicatorState extends State<SwipePageIndicator>
   }
 
   /// 计算「目标标题归位所需的总位移」：目标标题从静止布局位置，移动到
-  /// [SwipeTitleAlign] 锚点位置的距离（换页动画的推入距离即此值）。
+  /// [PivotHeaderAlignment] 锚点位置的距离（换页动画的推入距离即此值）。
   ///
   /// [current] 当前（旧）页索引，[target] 目标页索引，
   /// [sign] 滑动方向（+1 右滑去上一页，-1 左滑去下一页）。
@@ -533,13 +558,13 @@ class _SwipePageIndicatorState extends State<SwipePageIndicator>
     final wCur = _w(current);
     final wTarget = _w(target);
     switch (widget.align) {
-      case SwipeTitleAlign.start:
+      case PivotHeaderAlignment.start:
         // 锚点 = 父容器左侧：右滑归位 w(target)+gap，左滑归位 w(cur)+gap
         return sign > 0 ? wTarget + widget.titleGap : wCur + widget.titleGap;
-      case SwipeTitleAlign.center:
+      case PivotHeaderAlignment.center:
         // 锚点 = 父容器中心：左右对称，各归位 w/2 + w/2 + gap
         return wCur / 2 + wTarget / 2 + widget.titleGap;
-      case SwipeTitleAlign.end:
+      case PivotHeaderAlignment.end:
         // 锚点 = 父容器右侧：右滑归位 w(cur)+gap，左滑归位 w(target)+gap
         return sign > 0 ? wCur + widget.titleGap : wTarget + widget.titleGap;
     }
@@ -579,9 +604,9 @@ class _SwipePageIndicatorState extends State<SwipePageIndicator>
   /// 当前标题左边缘的锚点位置（相对父容器）。
   double _anchorX(double width) {
     return switch (widget.align) {
-      SwipeTitleAlign.start => 0.0,
-      SwipeTitleAlign.center => (width - _w(widget.currentIndex)) / 2,
-      SwipeTitleAlign.end => width - _w(widget.currentIndex),
+      PivotHeaderAlignment.start => 0.0,
+      PivotHeaderAlignment.center => (width - _w(widget.currentIndex)) / 2,
+      PivotHeaderAlignment.end => width - _w(widget.currentIndex),
     };
   }
 
@@ -596,6 +621,7 @@ class _SwipePageIndicatorState extends State<SwipePageIndicator>
     // 移入，没有任何淡入淡出。这里同样只渲染连续槽位，避免"三选一"布局
     // 在换页瞬间让最外侧标题从左跳到右。
     return ClipRect(
+      clipBehavior: widget.clipBehavior,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final anchor = _anchorX(constraints.maxWidth);
@@ -629,7 +655,12 @@ class _SwipePageIndicatorState extends State<SwipePageIndicator>
                       child: Align(
                         alignment: Alignment.centerLeft,
                         widthFactor: 1,
-                        child: _title(k, selected: k == cur),
+                        // Selection commits on release; layout retains the old anchor
+                        // until the title motion has finished.
+                        child: _title(
+                          k,
+                          selected: k == (widget.swapTargetIndex ?? cur),
+                        ),
                       ),
                     ),
                 ],
@@ -645,8 +676,8 @@ class _SwipePageIndicatorState extends State<SwipePageIndicator>
     final theme = Theme.of(context);
     final selectedColor = theme.textTheme.bodyLarge?.color ?? Colors.white;
     final idleColor = theme.brightness == Brightness.dark
-        ? kSwipePageIndicatorIdleColorDark
-        : kSwipePageIndicatorIdleColorLight;
+        ? kPivotHeaderIdleColorDark
+        : kPivotHeaderIdleColorLight;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: widget.onTitleTap == null ? null : () => widget.onTitleTap!(index),
@@ -663,7 +694,7 @@ class _SwipePageIndicatorState extends State<SwipePageIndicator>
         child: DefaultTextStyle.merge(
           style: TextStyle(
             // PivotStyle.HeaderFont：FontFaceSemiLight（项目注册为 w300）
-            fontSize: kSwipePageIndicatorFontSize,
+            fontSize: kPivotHeaderFontSize,
             fontWeight: FontWeight.w300,
             overflow: TextOverflow.visible,
             color: selected ? selectedColor : idleColor,

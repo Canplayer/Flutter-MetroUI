@@ -14,7 +14,7 @@ typedef OnTransitionEnd = void Function(int oldIndex, int newIndex);
 
 /// 滑动进度回调：返回 -1.0 ~ 1.0。
 ///
-/// - 拖动过程中：位移 / [SwipePageView.maxDragDistance]（默认一页宽）；
+/// - 拖动过程中：位移 / [PivotPaneView.maxDragDistance]（默认一页宽）；
 /// - 归位 / 换页动画过程中：从当前位置平滑到终点；
 /// - 动画结束后：回调 0.0。
 typedef OnSlideProgress = void Function(double progress);
@@ -22,34 +22,34 @@ typedef OnSlideProgress = void Function(double progress);
 /// 页面构建器。
 typedef PageItemBuilder = Widget Function(BuildContext context, int index);
 
-/// [SwipePageView] 的默认初始页码。
-const int kSwipePageViewInitialPage = 0;
+/// [PivotPaneView] 的默认初始页码。
+const int kPivotPaneViewInitialPage = 0;
 
 /// `Pivot.uix!StaticResources::PanPercentThreshold` = **0.33** [读出]。
 ///
 /// 松手判定不看绝对像素，而看「已划过一页的比例」是否超过 33%。
-const double kSwipePageViewPanPercentThreshold = 0.33;
+const double kPivotPaneViewPanPercentThreshold = 0.33;
 
 /// `Animations.uix!Pivot::PivotMove`：**500 ms**、`Log(150)` [读出]。
 ///
 /// 系统用一个 500 ms 的 `PivotMove` 把标题条从拖动位置送回目标位置；
 /// 页面与标题条同步，所以页面归位也用同样的时长与曲线。
-const Duration kSwipePageViewMoveDuration = Duration(milliseconds: 500);
+const Duration kPivotPaneViewMoveDuration = Duration(milliseconds: 500);
 
 /// `PivotMove` 的插值曲线 `Log(150)` [读出]。
-const Curve kSwipePageViewMoveCurve = MetroCurves.metroTranslateIn;
+const Curve kPivotPaneViewMoveCurve = MetroCurves.metroTranslateIn;
 
 /// `Animations.uix!SlideFull*FadeOut`：**300 ms**、`Log(150)` [读出]。
-const Duration kSwipePageViewHideDuration = Duration(milliseconds: 300);
+const Duration kPivotPaneViewHideDuration = Duration(milliseconds: 300);
 
 /// `Animations.uix!SlideFull*FadeIn`：**500 ms**、`Log(150)` [读出]。
-const Duration kSwipePageViewShowDuration = Duration(milliseconds: 500);
+const Duration kPivotPaneViewShowDuration = Duration(milliseconds: 500);
 
 /// `Animations.uix!FadeOut`：250 ms `Log(150)` 1→0 [读出]。
-const Duration kSwipePageViewFadeOutDuration = Duration(milliseconds: 250);
+const Duration kPivotPaneViewFadeOutDuration = Duration(milliseconds: 250);
 
 /// `Animations.uix!FadeIn`：350 ms `Log(150)` 0→1 [读出]。
-const Duration kSwipePageViewFadeInDuration = Duration(milliseconds: 350);
+const Duration kPivotPaneViewFadeInDuration = Duration(milliseconds: 350);
 
 /// 判定为「快滑（flick）」的速度阈值，单位 逻辑像素/秒。
 ///
@@ -60,30 +60,18 @@ const Duration kSwipePageViewFadeInDuration = Duration(milliseconds: 350);
 /// `SpGestureRecognizerGetFlickInfo` 只转发），本镜像没有读出具体数值。
 ///
 /// 0.5 px/ms（= 500 px/s）是 WP 触摸栈常用的快滑起点，属**近似值**，
-/// 可用 [SwipePageView.flickVelocity] 覆盖。
-const double kSwipePageViewFlickVelocity = 500.0;
+/// 可用 [PivotPaneView.flickVelocity] 覆盖。
+const double kPivotPaneViewFlickVelocity = 500.0;
 
-/// 旧默认值，保留以兼容既有调用；新代码请用系统值常量。
+/// 编程式控制 [PivotPaneView] 换页的控制器。
 ///
-/// 系统没有"固定像素阈值"和"固定最大拖动距离"：阈值是
-/// 33% × 一页宽（[kSwipePageViewPanPercentThreshold]），
-/// 拖动范围是一页宽，因此这些常量不再作为默认值使用。
-const double kSwipePageViewSwipeThreshold = 90.0 / 0.8;
-const double kSwipePageViewMaxDragDistance = 320.0 / 0.8;
-const double kSwipePageViewFlyDistance = 320.0;
-const Duration kSwipePageViewFlyDuration = kSwipePageViewMoveDuration;
-const Duration kSwipePageViewFadeDuration = Duration.zero;
-const Duration kSwipePageViewSnapBackDuration = kSwipePageViewMoveDuration;
-
-/// 编程式控制 [SwipePageView] 换页的控制器。
-///
-/// 创建后传入 [SwipePageView.controller] 即可使用。
-/// 触发时机与 [SwipePageView.onPageChanged] 一致：
+/// 创建后传入 [PivotPaneView.controller] 即可使用。
+/// 触发时机与 [PivotPaneView.onPageChanged] 一致：
 /// 调用 [switchTo] / [previous] / [next] 时立即回调。
-class SwipePageController {
-  _SwipePageViewState? _state;
+class PivotController {
+  _PivotPaneViewState? _state;
 
-  void _attach(_SwipePageViewState state) => _state = state;
+  void _attach(_PivotPaneViewState state) => _state = state;
   void _detach() => _state = null;
 
   /// 播放换页动画切换到 [index] 页（方向由相对位置自动决定；
@@ -99,19 +87,10 @@ class SwipePageController {
 
 /// Windows Phone 8 Pivot 的滑动翻页部分（`Pivot.uix`）。
 ///
-/// ## 内容只有一份，换页是"隐藏 → 换内容 → 显示" [读出]
-///
-/// `DefaultPivotPaneHost`（`PIVOT 0x11e8–0x125e`）换 pane 的顺序是：
-///
-/// ```
-/// PlayHideAnimation()                  // 0x1234  旧内容播隐藏动画
-/// PaneContents.RequestSource(null)     // 0x123b  清空内容
-/// UpdatePaneContents()                 // 0x1255
-/// LoadSelectedPane()                   // 0x125e  载入新 pane（播显示动画）
-/// ```
-///
-/// 加上 `PivotPaneHost` 只有 `CurrentPaneState` 一个状态、`LoadSelectedPane`
-/// 只载一个 pane，可以确定：**任何时刻只存在一份内容，不存在三页并排的滚动根**。
+/// `DefaultPivotPaneHost` attaches hide, calls ForceContentChange, then loads
+/// the replacement without awaiting the hide duration. Content-change tracks
+/// overlap. Flutter retains the outgoing subtree until its track finishes.
+/// This does not reproduce the native renderer's content snapshot mechanism.
 ///
 /// 换页用的两条动画在 `PivotAnimations`（`ANIMATIONS 0x2404–0x245e`）里按
 /// `PivotNavigationDirection` 二选一：
@@ -155,22 +134,27 @@ class SwipePageController {
 ///
 /// 未换页时 `ScrollModel.ScrollToPosition(0.5)` 回到中间，用 `PivotMove`
 /// ——**500 ms、Log(150)**（`ANIMATIONS 0x151–0x191`）。
-class SwipePageView extends StatefulWidget {
-  const SwipePageView({
+/// Content-change and sequential timing modes; native scheduling remains under investigation.
+enum PivotTransition { contentChange, sequential }
+
+class PivotPaneView extends StatefulWidget {
+  const PivotPaneView({
     super.key,
     required this.itemBuilder,
     this.onPageChanged,
     this.onTransitionEnd,
     this.onSlideProgress,
     this.controller,
-    this.initialPage = kSwipePageViewInitialPage,
+    this.clipBehavior = Clip.hardEdge,
+    this.transition = PivotTransition.contentChange,
+    this.initialPage = kPivotPaneViewInitialPage,
     this.swipeThreshold,
     this.maxDragDistance,
-    this.flickVelocity = kSwipePageViewFlickVelocity,
-    this.flyDuration = kSwipePageViewMoveDuration,
-    this.snapBackDuration = kSwipePageViewMoveDuration,
-    this.hideDuration = kSwipePageViewHideDuration,
-    this.showDuration = kSwipePageViewShowDuration,
+    this.flickVelocity = kPivotPaneViewFlickVelocity,
+    this.flyDuration = kPivotPaneViewMoveDuration,
+    this.snapBackDuration = kPivotPaneViewMoveDuration,
+    this.hideDuration = kPivotPaneViewHideDuration,
+    this.showDuration = kPivotPaneViewShowDuration,
     this.fadeDuration = Duration.zero,
     this.flyDistance = 0,
   });
@@ -178,6 +162,9 @@ class SwipePageView extends StatefulWidget {
   /// 页面构建器。index 可以是任意整数，超出当前页范围时同样会被调用，
   /// 由使用者决定如何呈现（实现无限滚动）。
   final PageItemBuilder itemBuilder;
+  final Clip clipBehavior;
+
+  final PivotTransition transition;
 
   /// 翻页回调：松手决定换页的瞬间回调 (旧页索引, 新页索引)，见 [OnPageChanged]。
   final OnPageChanged? onPageChanged;
@@ -188,8 +175,8 @@ class SwipePageView extends StatefulWidget {
   /// 滑动进度回调：-1.0 ~ 1.0，见 [OnSlideProgress]。
   final OnSlideProgress? onSlideProgress;
 
-  /// 编程式换页控制器（可选），见 [SwipePageController]。
-  final SwipePageController? controller;
+  /// 编程式换页控制器（可选），见 [PivotController]。
+  final PivotController? controller;
 
   /// 初始页码（可为负数）。
   final int initialPage;
@@ -197,7 +184,7 @@ class SwipePageView extends StatefulWidget {
   /// 松手换页的位移阈值，单位逻辑像素。
   ///
   /// 为 null（默认）时按系统的 `PanPercentThreshold` 计算：
-  /// **33% × 一页宽**（[kSwipePageViewPanPercentThreshold]）。
+  /// **33% × 一页宽**（[kPivotPaneViewPanPercentThreshold]）。
   final double? swipeThreshold;
 
   /// 归一化进度的分母，单位逻辑像素。
@@ -206,10 +193,10 @@ class SwipePageView extends StatefulWidget {
   /// 拖动范围也是 ±一页。
   final double? maxDragDistance;
 
-  /// 快滑判定速度阈值（逻辑像素/秒），见 [kSwipePageViewFlickVelocity]。
+  /// 快滑判定速度阈值（逻辑像素/秒），见 [kPivotPaneViewFlickVelocity]。
   final double flickVelocity;
 
-  /// 换页归位动画时长（默认 500 ms，见 [kSwipePageViewMoveDuration]）。
+  /// 换页归位动画时长（默认 500 ms，见 [kPivotPaneViewMoveDuration]）。
   final Duration flyDuration;
 
   /// 归位动画时长（默认 500 ms，未换页时的 `PivotMove`）。
@@ -222,22 +209,26 @@ class SwipePageView extends StatefulWidget {
   final Duration showDuration;
 
   /// 已不参与渲染。淡出淡入由 `SlideFull*Fade*` 自带的
-  /// `FadeOut`/`FadeIn`（250/350 ms）决定，见 [kSwipePageViewFadeOutDuration]。
+  /// `FadeOut`/`FadeIn`（250/350 ms）决定，见 [kPivotPaneViewFadeOutDuration]。
   final Duration fadeDuration;
 
   /// 已不参与渲染。系统的飞出距离固定为**一屏**（`Magnitude = 1.0`）。
   final double flyDistance;
 
   @override
-  State<SwipePageView> createState() => _SwipePageViewState();
+  State<PivotPaneView> createState() => _PivotPaneViewState();
 }
 
-class _SwipePageViewState extends State<SwipePageView>
+class _PivotPaneViewState extends State<PivotPaneView>
     with TickerProviderStateMixin {
   late int _currentIndex;
 
   /// 当前内容的横向位移，单位逻辑像素，范围 [-pane, +pane]。
   double _offset = 0.0;
+  Widget? _outgoing;
+  double _outgoingStart = 0;
+  int _direction = 1;
+  bool _concurrent = false;
 
   /// 最近一次布局得到的一屏宽（= 视口宽）。
   double _paneWidth = 0.0;
@@ -273,7 +264,7 @@ class _SwipePageViewState extends State<SwipePageView>
   }
 
   @override
-  void didUpdateWidget(SwipePageView oldWidget) {
+  void didUpdateWidget(PivotPaneView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller?._detach();
@@ -292,7 +283,7 @@ class _SwipePageViewState extends State<SwipePageView>
       widget.maxDragDistance ?? (_paneWidth > 0 ? _paneWidth : 1.0);
 
   double get _threshold =>
-      widget.swipeThreshold ?? kSwipePageViewPanPercentThreshold * _paneWidth;
+      widget.swipeThreshold ?? kPivotPaneViewPanPercentThreshold * _paneWidth;
 
   void _notifyProgress(double progress) {
     widget.onSlideProgress?.call(progress.clamp(-1.0, 1.0));
@@ -363,10 +354,31 @@ class _SwipePageViewState extends State<SwipePageView>
     _pendingIndex = target;
     _fromIndex = _currentIndex;
     widget.onPageChanged?.call(_currentIndex, target);
-    // SlideFull*FadeOut：旧内容继续沿滑动方向飞到屏幕外（一屏）。
-    _hiding = true;
-    _showing = false;
-    _beginMove(direction > 0 ? -_paneWidth : _paneWidth, widget.hideDuration);
+    _direction = direction;
+    _concurrent = widget.transition == PivotTransition.contentChange;
+    if (_concurrent) {
+      _outgoing = KeyedSubtree(
+        key: ValueKey(_currentIndex),
+        child: widget.itemBuilder(context, _currentIndex),
+      );
+      _outgoingStart = _offset;
+      setState(() {
+        _currentIndex = target;
+        _offset = direction > 0 ? _paneWidth : -_paneWidth;
+        _hiding = false;
+        _showing = true;
+      });
+      _beginMove(
+        0,
+        widget.showDuration > widget.hideDuration
+            ? widget.showDuration
+            : widget.hideDuration,
+      );
+    } else {
+      _hiding = true;
+      _showing = false;
+      _beginMove(direction > 0 ? -_paneWidth : _paneWidth, widget.hideDuration);
+    }
   }
 
   /// 编程式换页。系统 Pivot 只支持相邻翻页，跨页直接落位。
@@ -396,7 +408,15 @@ class _SwipePageViewState extends State<SwipePageView>
   }
 
   void _onMoveFrame() {
-    final t = kSwipePageViewMoveCurve.transform(_move.value);
+    final elapsed = _move.value * _move.duration!.inMicroseconds;
+    final progress = _concurrent && _showing
+        ? (elapsed /
+                  (widget.showDuration.inMicroseconds == 0
+                      ? 1
+                      : widget.showDuration.inMicroseconds))
+              .clamp(0.0, 1.0)
+        : _move.value;
+    final t = kPivotPaneViewMoveCurve.transform(progress);
     setState(() {
       _offset = _from + (_to - _from) * t;
     });
@@ -440,6 +460,8 @@ class _SwipePageViewState extends State<SwipePageView>
       _pendingIndex = null;
       _fromIndex = null;
       _showing = false;
+      _outgoing = null;
+      _concurrent = false;
     });
     _from = 0;
     _to = 0;
@@ -453,18 +475,18 @@ class _SwipePageViewState extends State<SwipePageView>
     if (_hiding) {
       final span = _move.duration!.inMicroseconds == 0
           ? 1.0
-          : kSwipePageViewFadeOutDuration.inMicroseconds /
+          : kPivotPaneViewFadeOutDuration.inMicroseconds /
                 _move.duration!.inMicroseconds;
       final t = (span <= 0 ? 1.0 : (_move.value / span)).clamp(0.0, 1.0);
-      return 1.0 - kSwipePageViewMoveCurve.transform(t).clamp(0.0, 1.0);
+      return 1.0 - kPivotPaneViewMoveCurve.transform(t).clamp(0.0, 1.0);
     }
     if (_showing) {
       final span = _move.duration!.inMicroseconds == 0
           ? 1.0
-          : kSwipePageViewFadeInDuration.inMicroseconds /
+          : kPivotPaneViewFadeInDuration.inMicroseconds /
                 _move.duration!.inMicroseconds;
       final t = (span <= 0 ? 1.0 : (_move.value / span)).clamp(0.0, 1.0);
-      return kSwipePageViewMoveCurve.transform(t).clamp(0.0, 1.0);
+      return kPivotPaneViewMoveCurve.transform(t).clamp(0.0, 1.0);
     }
     return 1.0;
   }
@@ -483,13 +505,47 @@ class _SwipePageViewState extends State<SwipePageView>
           final pane = constraints.maxWidth;
           if (pane != _paneWidth) _paneWidth = pane;
           // 系统任一时刻只有一份内容；飞出屏幕的部分要被裁掉。
+          final elapsed = _move.value * (_move.duration?.inMicroseconds ?? 0);
+          final hideT =
+              (elapsed /
+                      (widget.hideDuration.inMicroseconds == 0
+                          ? 1
+                          : widget.hideDuration.inMicroseconds))
+                  .clamp(0.0, 1.0);
+          final fadeT = (elapsed / kPivotPaneViewFadeOutDuration.inMicroseconds)
+              .clamp(0.0, 1.0);
           return ClipRect(
-            child: Transform.translate(
-              offset: Offset(_offset, 0),
-              child: Opacity(
-                opacity: _opacity,
-                child: widget.itemBuilder(context, _currentIndex),
-              ),
+            clipBehavior: widget.clipBehavior,
+            child: Stack(
+              clipBehavior: Clip.none,
+              fit: StackFit.expand,
+              children: [
+                if (_outgoing != null && hideT < 1)
+                  IgnorePointer(
+                    child: Transform.translate(
+                      offset: Offset(
+                        _outgoingStart +
+                            (-_direction * pane - _outgoingStart) *
+                                kPivotPaneViewMoveCurve.transform(hideT),
+                        0,
+                      ),
+                      child: Opacity(
+                        opacity: 1 - kPivotPaneViewMoveCurve.transform(fadeT),
+                        child: _outgoing,
+                      ),
+                    ),
+                  ),
+                Transform.translate(
+                  offset: Offset(_offset, 0),
+                  child: Opacity(
+                    opacity: _opacity,
+                    child: KeyedSubtree(
+                      key: ValueKey(_currentIndex),
+                      child: widget.itemBuilder(context, _currentIndex),
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         },

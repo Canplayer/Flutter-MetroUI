@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:metro_ui/widgets/swipe_page_view.dart';
+import 'package:metro_ui/widgets/pivot_pane_view.dart';
 
 void main() {
   Widget buildHost({
@@ -10,7 +10,7 @@ void main() {
   }) {
     return MaterialApp(
       home: Scaffold(
-        body: SwipePageView(
+        body: PivotPaneView(
           // 显式指定参数，与默认值解耦，保证测试稳定
           swipeThreshold: 50,
           maxDragDistance: 150,
