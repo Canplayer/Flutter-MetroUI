@@ -19,7 +19,9 @@ class MetroTitleTextTheme extends ThemeExtension<MetroTitleTextTheme> {
 
   @override
   ThemeExtension<MetroTitleTextTheme> lerp(
-      covariant ThemeExtension<MetroTitleTextTheme>? other, double t) {
+    covariant ThemeExtension<MetroTitleTextTheme>? other,
+    double t,
+  ) {
     if (other is! MetroTitleTextTheme) return this;
     return MetroTitleTextTheme(
       titleTextStyle: TextStyle.lerp(titleTextStyle, other.titleTextStyle, t),
@@ -117,21 +119,35 @@ class MetroAppBarTheme extends ThemeExtension<MetroAppBarTheme> {
 
   @override
   ThemeExtension<MetroAppBarTheme> lerp(
-      covariant ThemeExtension<MetroAppBarTheme>? other, double t) {
+    covariant ThemeExtension<MetroAppBarTheme>? other,
+    double t,
+  ) {
     if (other is! MetroAppBarTheme) return this;
     return MetroAppBarTheme(
       backgroundColor: Color.lerp(backgroundColor, other.backgroundColor, t),
-      expandedBackgroundColor:
-          Color.lerp(expandedBackgroundColor, other.expandedBackgroundColor, t),
+      expandedBackgroundColor: Color.lerp(
+        expandedBackgroundColor,
+        other.expandedBackgroundColor,
+        t,
+      ),
       buttonColor: Color.lerp(buttonColor, other.buttonColor, t),
       buttonIconColor: Color.lerp(buttonIconColor, other.buttonIconColor, t),
-      disabledButtonIconColor:
-          Color.lerp(disabledButtonIconColor, other.disabledButtonIconColor, t),
-      pressedButtonIconColor:
-          Color.lerp(pressedButtonIconColor, other.pressedButtonIconColor, t),
+      disabledButtonIconColor: Color.lerp(
+        disabledButtonIconColor,
+        other.disabledButtonIconColor,
+        t,
+      ),
+      pressedButtonIconColor: Color.lerp(
+        pressedButtonIconColor,
+        other.pressedButtonIconColor,
+        t,
+      ),
       menuItemColor: Color.lerp(menuItemColor, other.menuItemColor, t),
-      disabledMenuItemColor:
-          Color.lerp(disabledMenuItemColor, other.disabledMenuItemColor, t),
+      disabledMenuItemColor: Color.lerp(
+        disabledMenuItemColor,
+        other.disabledMenuItemColor,
+        t,
+      ),
       expandCurve: t < 0.5 ? expandCurve : other.expandCurve,
       collapseCurve: t < 0.5 ? collapseCurve : other.collapseCurve,
       expandDuration: t < 0.5 ? expandDuration : other.expandDuration,
@@ -166,7 +182,8 @@ class MetroButtonThemeData extends ThemeExtension<MetroButtonThemeData> {
   }) {
     return MetroButtonThemeData(
       normalBorderColor: normalBorderColor ?? this.normalBorderColor,
-      pressedBackgroundColor: pressedBackgroundColor ?? this.pressedBackgroundColor,
+      pressedBackgroundColor:
+          pressedBackgroundColor ?? this.pressedBackgroundColor,
       pressedTextColor: pressedTextColor ?? this.pressedTextColor,
       disabledBorderColor: disabledBorderColor ?? this.disabledBorderColor,
       disabledTextColor: disabledTextColor ?? this.disabledTextColor,
@@ -175,14 +192,32 @@ class MetroButtonThemeData extends ThemeExtension<MetroButtonThemeData> {
 
   @override
   ThemeExtension<MetroButtonThemeData> lerp(
-      covariant ThemeExtension<MetroButtonThemeData>? other, double t) {
+    covariant ThemeExtension<MetroButtonThemeData>? other,
+    double t,
+  ) {
     if (other is! MetroButtonThemeData) return this;
     return MetroButtonThemeData(
-      normalBorderColor: Color.lerp(normalBorderColor, other.normalBorderColor, t),
-      pressedBackgroundColor: Color.lerp(pressedBackgroundColor, other.pressedBackgroundColor, t),
+      normalBorderColor: Color.lerp(
+        normalBorderColor,
+        other.normalBorderColor,
+        t,
+      ),
+      pressedBackgroundColor: Color.lerp(
+        pressedBackgroundColor,
+        other.pressedBackgroundColor,
+        t,
+      ),
       pressedTextColor: Color.lerp(pressedTextColor, other.pressedTextColor, t),
-      disabledBorderColor: Color.lerp(disabledBorderColor, other.disabledBorderColor, t),
-      disabledTextColor: Color.lerp(disabledTextColor, other.disabledTextColor, t),
+      disabledBorderColor: Color.lerp(
+        disabledBorderColor,
+        other.disabledBorderColor,
+        t,
+      ),
+      disabledTextColor: Color.lerp(
+        disabledTextColor,
+        other.disabledTextColor,
+        t,
+      ),
     );
   }
 }
@@ -191,48 +226,94 @@ class MetroButtonThemeData extends ThemeExtension<MetroButtonThemeData> {
 class MetroPanoramaThemeData extends ThemeExtension<MetroPanoramaThemeData> {
   final PanoramaConfig config;
 
-  const MetroPanoramaThemeData({
-    this.config = const PanoramaConfig(),
-  });
+  const MetroPanoramaThemeData({this.config = const PanoramaConfig()});
 
   @override
-  ThemeExtension<MetroPanoramaThemeData> copyWith({
-    PanoramaConfig? config,
-  }) {
-    return MetroPanoramaThemeData(
-      config: config ?? this.config,
-    );
+  ThemeExtension<MetroPanoramaThemeData> copyWith({PanoramaConfig? config}) {
+    return MetroPanoramaThemeData(config: config ?? this.config);
   }
 
   @override
   ThemeExtension<MetroPanoramaThemeData> lerp(
-      covariant ThemeExtension<MetroPanoramaThemeData>? other, double t) {
+    covariant ThemeExtension<MetroPanoramaThemeData>? other,
+    double t,
+  ) {
     if (other is! MetroPanoramaThemeData) return this;
-    return MetroPanoramaThemeData(
-      config: t < 0.5 ? config : other.config,
-    );
+    return MetroPanoramaThemeData(config: t < 0.5 ? config : other.config);
   }
 }
 
-/// Page 专用主题扩展
+/// Version behavior is discrete; colors remain in ThemeData/colorScheme.
+/// Widgets can read this extension without introducing their own version flags.
+class MetroSystemThemeData extends ThemeExtension<MetroSystemThemeData> {
+  const MetroSystemThemeData({
+    this.version = MetroDesignVersion.wp8,
+    this.highContrast = false,
+  });
+  static MetroSystemThemeData of(BuildContext context) =>
+      Theme.of(context).extension<MetroSystemThemeData>() ??
+      const MetroSystemThemeData();
+
+  final MetroDesignVersion version;
+  final bool highContrast;
+  bool get continuousApplicationBar => version == MetroDesignVersion.wp7;
+  @override
+  MetroSystemThemeData copyWith({
+    MetroDesignVersion? version,
+    bool? highContrast,
+  }) => MetroSystemThemeData(
+    version: version ?? this.version,
+    highContrast: highContrast ?? this.highContrast,
+  );
+  @override
+  MetroSystemThemeData lerp(covariant MetroSystemThemeData? other, double t) =>
+      other ?? this; // Never interpolate operating-system behavior.
+}
+
+/// UIX Turnstile defaults. WP8.1 depth follows the explicit 100 dp × .8 assumption.
 class MetroPageThemeData extends ThemeExtension<MetroPageThemeData> {
-  const MetroPageThemeData();
-
+  const MetroPageThemeData({
+    this.inDuration = const Duration(milliseconds: 350),
+    this.outDuration = const Duration(milliseconds: 167),
+    this.pivotDepth = 0,
+    this.alternatePivot = false,
+    this.outAlphaHold = const Duration(milliseconds: 166),
+  });
+  factory MetroPageThemeData.forVersion(MetroDesignVersion version) =>
+      version == MetroDesignVersion.wp81
+      ? const MetroPageThemeData(
+          inDuration: Duration(milliseconds: 300),
+          outDuration: Duration(milliseconds: 128),
+          pivotDepth: 80,
+          alternatePivot: true,
+          outAlphaHold: Duration(milliseconds: 126),
+        )
+      : const MetroPageThemeData();
+  final Duration inDuration, outDuration, outAlphaHold;
+  final double pivotDepth;
+  final bool alternatePivot;
   @override
-  ThemeExtension<MetroPageThemeData> copyWith() {
-    return const MetroPageThemeData();
-  }
-
+  MetroPageThemeData copyWith({
+    Duration? inDuration,
+    Duration? outDuration,
+    Duration? outAlphaHold,
+    double? pivotDepth,
+    bool? alternatePivot,
+  }) => MetroPageThemeData(
+    inDuration: inDuration ?? this.inDuration,
+    outDuration: outDuration ?? this.outDuration,
+    outAlphaHold: outAlphaHold ?? this.outAlphaHold,
+    pivotDepth: pivotDepth ?? this.pivotDepth,
+    alternatePivot: alternatePivot ?? this.alternatePivot,
+  );
   @override
-  ThemeExtension<MetroPageThemeData> lerp(
-      covariant ThemeExtension<MetroPageThemeData>? other, double t) {
-    if (other is! MetroPageThemeData) return this;
-    return const MetroPageThemeData();
-  }
+  MetroPageThemeData lerp(covariant MetroPageThemeData? other, double t) =>
+      other ?? this;
 }
 
 /// ContextMenu 专用主题扩展
-class MetroContextMenuThemeData extends ThemeExtension<MetroContextMenuThemeData> {
+class MetroContextMenuThemeData
+    extends ThemeExtension<MetroContextMenuThemeData> {
   final Color? backgroundColor;
   final Color? lineColor;
   final Duration? pushBackDuration;
@@ -269,8 +350,10 @@ class MetroContextMenuThemeData extends ThemeExtension<MetroContextMenuThemeData
       lineColor: lineColor ?? this.lineColor,
       pushBackDuration: pushBackDuration ?? this.pushBackDuration,
       restoreDuration: restoreDuration ?? this.restoreDuration,
-      lineAnimationDuration: lineAnimationDuration ?? this.lineAnimationDuration,
-      menuAnimationDuration: menuAnimationDuration ?? this.menuAnimationDuration,
+      lineAnimationDuration:
+          lineAnimationDuration ?? this.lineAnimationDuration,
+      menuAnimationDuration:
+          menuAnimationDuration ?? this.menuAnimationDuration,
       itemTextStyle: itemTextStyle ?? this.itemTextStyle,
       itemHeight: itemHeight ?? this.itemHeight,
     );
@@ -278,15 +361,21 @@ class MetroContextMenuThemeData extends ThemeExtension<MetroContextMenuThemeData
 
   @override
   ThemeExtension<MetroContextMenuThemeData> lerp(
-      covariant ThemeExtension<MetroContextMenuThemeData>? other, double t) {
+    covariant ThemeExtension<MetroContextMenuThemeData>? other,
+    double t,
+  ) {
     if (other is! MetroContextMenuThemeData) return this;
     return MetroContextMenuThemeData(
       backgroundColor: Color.lerp(backgroundColor, other.backgroundColor, t),
       lineColor: Color.lerp(lineColor, other.lineColor, t),
       pushBackDuration: t < 0.5 ? pushBackDuration : other.pushBackDuration,
       restoreDuration: t < 0.5 ? restoreDuration : other.restoreDuration,
-      lineAnimationDuration: t < 0.5 ? lineAnimationDuration : other.lineAnimationDuration,
-      menuAnimationDuration: t < 0.5 ? menuAnimationDuration : other.menuAnimationDuration,
+      lineAnimationDuration: t < 0.5
+          ? lineAnimationDuration
+          : other.lineAnimationDuration,
+      menuAnimationDuration: t < 0.5
+          ? menuAnimationDuration
+          : other.menuAnimationDuration,
       itemTextStyle: TextStyle.lerp(itemTextStyle, other.itemTextStyle, t),
       itemHeight: t < 0.5 ? itemHeight : other.itemHeight,
     );

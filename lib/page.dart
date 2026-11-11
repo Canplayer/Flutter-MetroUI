@@ -98,12 +98,18 @@ mixin MetroRouteTransitionMixin<T> on PageRoute<T> {
   }
 
   @override
-  Widget buildTransitions(BuildContext context, Animation<double> animation,
-      Animation<double> secondaryAnimation, Widget child) {
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
     // 这里的动画行为还是直接切吧，如果尝试使用任何的动画行为，可能第一帧会删一下我也不知道什么原因反正这样写硬切才是我发现的最佳方案。
     final pageTheme = Theme.of(context).extension<MetroPageThemeData>();
     // we can use pageTheme for transitions in the future
-    if (pageTheme != null) { /* no-op */ }
+    if (pageTheme != null) {
+      /* no-op */
+    }
     return child;
   }
 }
@@ -148,7 +154,9 @@ class MetroPage<T> extends Page<T> {
   @override
   Route<T> createRoute(BuildContext context) {
     return _PageBasedMetroPageRoute<T>(
-        page: this, allowSnapshotting: allowSnapshotting);
+      page: this,
+      allowSnapshotting: allowSnapshotting,
+    );
   }
 }
 

@@ -361,6 +361,15 @@ class MetroAppBarController extends ChangeNotifier {
 
   void closeMenu() => _close?.call();
 
+  /// Hide during the outgoing page animation; the next page registers its bar.
+  void beginNavigation({required bool continuous}) {
+    if (continuous || _currentBar == null) return;
+    _close?.call();
+    _expanded = false;
+    _currentBar = null;
+    notifyListeners();
+  }
+
   /// 打开当前栏的菜单，供自定义内容调用。
   void openMenu() => _open?.call();
 
@@ -427,24 +436,38 @@ class MetroApplicationBarOverlay extends StatelessWidget {
         return IgnorePointer(
           ignoring: bar == null,
           child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
+            duration: Duration(
+              milliseconds:
+                  MetroSystemThemeData.of(context).continuousApplicationBar
+                  ? 100
+                  : 200,
+            ),
             reverseDuration: const Duration(milliseconds: 100),
-            switchInCurve: const UixLog(150),
-            switchOutCurve: Curves.easeIn,
+            switchInCurve:
+                MetroSystemThemeData.of(context).continuousApplicationBar
+                ? const UixEaseIn(10, .5)
+                : const UixLog(150),
+            switchOutCurve: const UixEaseIn(10, .5),
             transitionBuilder: (child, animation) {
-              return SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 1),
-                  end: Offset.zero,
-                ).animate(animation),
+              return AnimatedBuilder(
+                animation: animation,
                 child: child,
+                builder: (context, child) => Transform.translate(
+                  offset: Offset(0, 72 * .8 * (1 - animation.value)),
+                  child: child,
+                ),
               );
             },
             child: bar != null
                 ? MetroApplicationBarView(
                     // 仅 buttons 变化时不触发整条 Application Bar 的切换淡入淡出。
                     key: ValueKey<Object>(
-                      controller._owner ?? _barStructureKey(bar),
+                      (Theme.of(context)
+                                  .extension<MetroSystemThemeData>()
+                                  ?.continuousApplicationBar ??
+                              false)
+                          ? '__wp7_continuous_bar__'
+                          : controller._owner ?? _barStructureKey(bar),
                     ),
                     bar: bar,
                     controller: controller,
@@ -852,13 +875,13 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
 
         final Color collapsedBg =
             widget.bar.backgroundColor ??
-            Theme.of(context).extension<MetroAppBarTheme>()!.backgroundColor ??
+            Theme.of(context).extension<MetroAppBarTheme>()?.backgroundColor ??
             Theme.of(context).colorScheme.surfaceContainer;
         final Color expandedBg =
             widget.bar.expandedBackgroundColor ??
             Theme.of(context)
-                .extension<MetroAppBarTheme>()!
-                .expandedBackgroundColor ??
+                .extension<MetroAppBarTheme>()
+                ?.expandedBackgroundColor ??
             Theme.of(context).colorScheme.surfaceContainer;
 
         final Color bgColor = useExpandedChrome ? expandedBg : collapsedBg;
@@ -957,8 +980,8 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                                         color:
                                             widget.bar.buttonIconColor ??
                                             Theme.of(context)
-                                                .extension<MetroAppBarTheme>()!
-                                                .buttonIconColor ??
+                                                .extension<MetroAppBarTheme>()
+                                                ?.buttonIconColor ??
                                             Colors.white,
                                       ),
                                     ),

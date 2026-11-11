@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:metro_ui/uix_metrics.dart';
 import 'package:metro_ui/widgets/swipe_page_view.dart';
 
 /// 标题指示器的对齐方式。
@@ -25,8 +26,28 @@ class SwipePageItem {
   final Widget page;
 }
 
-/// [SwipePageIndicator] 的默认标题间距。
-const double kSwipePageIndicatorTitleGap = 24.0;
+/// `Constants.PivotHeaderSpacing` = 24（480 设计单位）× 0.8 [读出]。
+///
+/// `PIVOT 0x45–0x66`：标题条的 `FlowLayout.Spacing` 与 `RepeatGap` 都取这个值。
+/// 东亚语言版本改用 `PivotEAHeaderSpacing` = 40（× 0.8 = 32）。
+const double kSwipePageIndicatorTitleGap = 24 * uixScale;
+
+/// `Constants.PivotEAHeaderSpacing` = 40 × 0.8 [读出]。
+const double kSwipePageIndicatorEATitleGap = 40 * uixScale;
+
+/// `Constants.PivotHeaderFontSize` = 54（点）× 4/3 × 0.8 [读出]。
+///
+/// `PivotStyle.HeaderFont` = `FontFaceSemiLight` @ 该字号；项目字体把
+/// SemiLight 注册在 `w300`。
+const double kSwipePageIndicatorFontSize = 54 * (4 / 3) * uixScale;
+
+/// `ThemeResources.PivotColorDark` = `0x67FFFFFF`（白 40%）[读出]。
+///
+/// 未选中标题的颜色；选中项用 `SystemColors.TextHighColor`。
+const Color kSwipePageIndicatorIdleColorDark = Color(0x67FFFFFF);
+
+/// `ThemeResources.PivotColorLight` = `0x33000000`（黑 20%）[读出]。
+const Color kSwipePageIndicatorIdleColorLight = Color(0x33000000);
 
 /// [SwipePageIndicator] 的默认标题对齐方式。
 const SwipeTitleAlign kSwipePageIndicatorAlign = SwipeTitleAlign.start;
@@ -39,8 +60,12 @@ const Duration kSwipePageIndicatorFlyDuration = Duration(milliseconds: 2000);
 /// [SwipePageIndicator] 独立使用时的默认渐隐/渐显动画时长。
 const Duration kSwipePageIndicatorFadeDuration = Duration(milliseconds: 200);
 
-/// [SwipePages] 整体（标题 + 主体）的默认内边距：水平 18。
-const EdgeInsetsGeometry kSwipePagesPadding = EdgeInsets.symmetric(horizontal: 18);
+/// `Constants.HorizontalPagePadding` = 24 × 0.8 = 19.2 [读出]。
+///
+/// `Styles.PageMargins` 的左右内缩都取自它。
+const EdgeInsetsGeometry kSwipePagesPadding = EdgeInsets.symmetric(
+  horizontal: 24 * uixScale,
+);
 
 /// 组合组件（标题指示器 + 滑动翻页）的公共基类。
 ///
@@ -62,6 +87,8 @@ abstract class SwipePagesBase extends StatefulWidget {
     this.flyDuration,
     this.fadeDuration,
     this.snapBackDuration,
+    this.hideDuration,
+    this.showDuration,
     this.titleGap,
     this.align,
     this.onPageChanged,
@@ -92,6 +119,12 @@ abstract class SwipePagesBase extends StatefulWidget {
 
   /// 归位动画时长，透传给 [SwipePageView]。
   final Duration? snapBackDuration;
+
+  /// 旧内容飞出时长，透传给 [SwipePageView]（`SlideFull*FadeOut`，300 ms）。
+  final Duration? hideDuration;
+
+  /// 新内容飞入时长，透传给 [SwipePageView]（`SlideFull*FadeIn`，500 ms）。
+  final Duration? showDuration;
 
   /// 标题之间的间距，透传给标题指示器。
   final double? titleGap;
@@ -135,6 +168,8 @@ class SwipePages extends SwipePagesBase {
     super.flyDuration,
     super.fadeDuration,
     super.snapBackDuration,
+    super.hideDuration,
+    super.showDuration,
     super.titleGap,
     super.align,
     super.onPageChanged,
@@ -169,6 +204,8 @@ class SwipeStackPages extends SwipePagesBase {
     super.flyDuration,
     super.fadeDuration,
     super.snapBackDuration,
+    super.hideDuration,
+    super.showDuration,
     super.titleGap,
     super.align,
     super.onPageChanged,
@@ -235,8 +272,8 @@ mixin _SwipeSyncState<T extends SwipePagesBase> on State<T> {
       swapTargetIndex: _swapTarget,
       titleGap: widget.titleGap ?? kSwipePageIndicatorTitleGap,
       align: widget.align ?? kSwipePageIndicatorAlign,
-      flyDuration: widget.flyDuration ?? kSwipePageViewFlyDuration,
-      fadeDuration: widget.fadeDuration ?? kSwipePageViewFadeDuration,
+      flyDuration: widget.flyDuration ?? kSwipePageViewMoveDuration,
+      fadeDuration: widget.fadeDuration ?? Duration.zero,
       onSwapEnded: _handleSwapEnded,
       onTitleTap: _handleTitleTap,
     );
@@ -248,13 +285,13 @@ mixin _SwipeSyncState<T extends SwipePagesBase> on State<T> {
     return SwipePageView(
       controller: _viewController,
       initialPage: widget.initialPage ?? kSwipePageViewInitialPage,
-      swipeThreshold: widget.swipeThreshold ?? kSwipePageViewSwipeThreshold,
-      maxDragDistance: widget.maxDragDistance ?? kSwipePageViewMaxDragDistance,
-      flyDistance: widget.flyDistance ?? kSwipePageViewFlyDistance,
-      flyDuration: widget.flyDuration ?? kSwipePageViewFlyDuration,
-      fadeDuration: widget.fadeDuration ?? kSwipePageViewFadeDuration,
-      snapBackDuration:
-          widget.snapBackDuration ?? kSwipePageViewSnapBackDuration,
+      // null 表示沿用系统值：33% × 一页宽 / 一页宽。
+      swipeThreshold: widget.swipeThreshold,
+      maxDragDistance: widget.maxDragDistance,
+      flyDistance: widget.flyDistance ?? 0,
+      flyDuration: widget.flyDuration ?? kSwipePageViewMoveDuration,
+      fadeDuration: widget.fadeDuration ?? Duration.zero,
+      snapBackDuration: widget.snapBackDuration ?? kSwipePageViewMoveDuration,
       itemBuilder: (context, index) => widget.items[index % n].page,
       onPageChanged: (o, n) {
         setState(() {
@@ -401,9 +438,13 @@ class _SwipePageIndicatorState extends State<SwipePageIndicator>
   /// 已测量的标题宽度（key：标题在列表中的索引）。
   final Map<int, double> _widths = {};
 
+  /// 已测量的标题高度；Stack 必须有确定高度，先用估计值占位。
+  double _titleHeight = kSwipePageIndicatorFontSize * 1.43;
+
   late final AnimationController _controller;
-  late final Animation<double> _slide; // easeOutCubic 从快到慢
-  late final Animation<double> _fade; // 渐显/渐隐（线性）
+
+  /// `PivotMove`：500 ms、`Log(150)`（[kSwipePageViewMoveCurve]）。
+  late final Animation<double> _slide;
 
   bool _swapping = false;
   int _oldCurrent = 0;
@@ -419,13 +460,9 @@ class _SwipePageIndicatorState extends State<SwipePageIndicator>
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed) _onSwapCompleted();
       });
-    final fadeFraction =
-        (widget.fadeDuration.inMilliseconds / widget.flyDuration.inMilliseconds)
-            .clamp(0.0, 1.0);
-    _slide = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
-    _fade = CurvedAnimation(
+    _slide = CurvedAnimation(
       parent: _controller,
-      curve: Interval(0.0, fadeFraction, curve: Curves.linear),
+      curve: kSwipePageViewMoveCurve,
     );
   }
 
@@ -508,131 +545,132 @@ class _SwipePageIndicatorState extends State<SwipePageIndicator>
     }
   }
 
-  /// 换页动画中旧标题条的位移：从拖动结束位置继续沿滑动方向推入，
-  /// 直到目标标题左边缘对齐父容器左侧（位移终点 = sign × gapWidth）。
-  double _oldOffset() {
+  /// 换页动画中标题条的位移：从拖动结束位置继续沿滑动方向移动，
+  /// 直到目标标题归位到锚点（位移终点 = sign × gapWidth）。
+  double _swapOffset() {
     return _startX + (_sign * _gapWidth - _startX) * _slide.value;
   }
 
-  /// 换页动画中新标题条的位移：与旧条同步移动，但整体偏置一个推入距离
-  /// （从滑动方向的反方向推入，目标标题直接对齐父容器左侧）。
-  double _newOffset() {
-    return _oldOffset() - _sign * _gapWidth;
+  /// 标题按周期重复：一个周期 = n 个标题 + n 个间距。
+  double get _periodWidth {
+    var sum = 0.0;
+    for (var i = 0; i < _n; i++) {
+      sum += _w(i) + widget.titleGap;
+    }
+    return sum;
+  }
+
+  /// 第 [k] 个槽位（可为任意整数）相对第 0 个槽位左边的累计宽度。
+  ///
+  /// 标题以 [periodWidth] 为周期重复，所以槽位坐标可以直接按周期换算，
+  /// 连续平移到任何位置都不会有"某个标题瞬移"的接缝。
+  double _slotX(int k) {
+    final n = _n;
+    final period = _periodWidth;
+    final cycle = (k / n).floor();
+    final rest = k - cycle * n;
+    var x = cycle * period;
+    for (var i = 0; i < rest; i++) {
+      x += _w(i) + widget.titleGap;
+    }
+    return x;
+  }
+
+  /// 当前标题左边缘的锚点位置（相对父容器）。
+  double _anchorX(double width) {
+    return switch (widget.align) {
+      SwipeTitleAlign.start => 0.0,
+      SwipeTitleAlign.center => (width - _w(widget.currentIndex)) / 2,
+      SwipeTitleAlign.end => width - _w(widget.currentIndex),
+    };
   }
 
   @override
   Widget build(BuildContext context) {
     if (_n == 0) return const SizedBox.shrink();
+    final cur = widget.currentIndex;
+    final offset = _swapping ? _swapOffset() : _dragOffset();
 
-    // 注意：不使用 ClipRect 裁剪。超出容器范围的标题（上一页/下一页、
-    // 拖动或换页时移出容器的标题）会照常绘制在容器之外。
-    return Stack(
-      // 标题条整体按对齐方式定位：当前标题对齐父容器左/中/右
-      alignment: _barAlignment(),
-      children: [
-        if (!_swapping)
-          _buildBar(widget.currentIndex, _dragOffset(), 1.0)
-        else ...[
-          _buildBar(_oldCurrent, _oldOffset(), 1 - _fade.value, tag: '-old'),
-          _buildBar(
-            widget.swapTargetIndex!,
-            _newOffset(),
-            _fade.value,
-            tag: '-new',
-          ),
-        ],
-      ],
-    );
-  }
-
-  /// 对齐方式对应的 Stack alignment。
-  Alignment _barAlignment() {
-    switch (widget.align) {
-      case SwipeTitleAlign.start:
-        return Alignment.centerLeft;
-      case SwipeTitleAlign.center:
-        return Alignment.center;
-      case SwipeTitleAlign.end:
-        return Alignment.centerRight;
-    }
-  }
-
-  /// 构建一个标题条：当前标题按 [widget.align] 对齐（100% 不透明），
-  /// 上一页标题在当前标题一侧、下一页标题在另一侧（均 50% 不透明，
-  /// 中间隔 titleGap）。
-  Widget _buildBar(int curIndex, double offset, double opacity,
-      {String tag = ''}) {
-    final n = _n;
-    final cur = curIndex % n;
-    // 原始索引（可为负/越界），渲染与点击时内部取模映射到有限标题
-    final prev = curIndex - 1;
-    final next = curIndex + 1;
-
-    final wCur = _w(cur);
-    final wPrev = _w(prev);
-    final wNext = _w(next);
-
-    // prev/next 相对"当前标题锚点"的偏移（与对齐方式相关）
-    late final double prevDx;
-    late final double nextDx;
-    switch (widget.align) {
-      case SwipeTitleAlign.start:
-        prevDx = -(wPrev + widget.titleGap); // prev 在当前左侧
-        nextDx = wCur + widget.titleGap; // next 在当前右侧
-      case SwipeTitleAlign.center:
-        prevDx = -(wPrev / 2 + wCur / 2 + widget.titleGap);
-        nextDx = wCur / 2 + wNext / 2 + widget.titleGap;
-      case SwipeTitleAlign.end:
-        prevDx = -(wCur + widget.titleGap); // prev 在当前左侧
-        nextDx = wNext + widget.titleGap; // next 在当前右侧（屏幕外）
-    }
-
-    return Transform(
-      key: ValueKey('bar-$cur$tag'),
-      transform: Matrix4.translationValues(offset, 0, 0),
-      child: SizedBox(
-        width: double.infinity, // 标题条撑满父容器，对齐才准确
-        child: Stack(
-          alignment: _barAlignment(),
-          children: [
-            if (n > 1) ...[
-              _positioned(prev, prevDx, opacity * 0.5), // 非当前：50% 透明
-              _positioned(next, nextDx, opacity * 0.5), // 非当前：50% 透明
-            ],
-            _positioned(cur, 0, opacity), // 当前标题：对齐锚点
-          ],
-        ),
+    // 系统里标题条是一个横向 ScrollViewer 里的 Repeater（连续条），
+    // 超出视口的部分被裁掉；拖动/换页时旧标题从边缘移出、新标题从另一侧
+    // 移入，没有任何淡入淡出。这里同样只渲染连续槽位，避免"三选一"布局
+    // 在换页瞬间让最外侧标题从左跳到右。
+    return ClipRect(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final anchor = _anchorX(constraints.maxWidth);
+          final base = _slotX(cur);
+          // 槽位坐标用的是全局累计宽度，换页那一刻不会出现标题瞬移；
+          // 换页期间再多画「前进方向」上的一个槽位，否则它在提交的瞬间
+          // 会从无到有地冒到屏幕边缘（就是观众看到的"标题跳一下"）。
+          var lo = _n > 1 ? cur - 1 : cur;
+          var hi = _n > 1 ? cur + 1 : cur;
+          if (_swapping && _n > 2) {
+            if (_sign < 0) {
+              hi = cur + 2;
+            } else {
+              lo = cur - 2;
+            }
+          }
+          return SizedBox(
+            height: _titleHeight,
+            child: Transform.translate(
+              // 用取模后的标题索引做 key（负页码也能得到 0..n-1）。
+              key: ValueKey('bar-${cur % _n}'),
+              offset: Offset(offset, 0),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  for (var k = lo; k <= hi; k++)
+                    Positioned(
+                      left: anchor + _slotX(k) - base,
+                      top: 0,
+                      bottom: 0,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: 1,
+                        child: _title(k, selected: k == cur),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _positioned(int index, double dx, double opacity) {
-    return Transform.translate(
-      offset: Offset(dx, 0),
-      child: Opacity(
-        opacity: opacity,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onTitleTap == null
-              ? null
-              : () => widget.onTitleTap!(index),
-          child: _MeasureSize(
-            onSize: (size) {
-              if (size.width != (_widths[index % _n] ?? -1)) {
-                setState(() => _widths[index % _n] = size.width);
-              }
-            },
-            child: DefaultTextStyle.merge(
-              style: TextStyle(
-                fontSize: 57,
-                fontWeight: FontWeight.w300,
-                overflow: TextOverflow.visible,
-                color: Theme.of(context).textTheme.bodyLarge?.color,
-                letterSpacing: 0.3,
-              ),
-              child: widget.titles[index % _n],
-            ),
+  Widget _title(int index, {required bool selected}) {
+    final theme = Theme.of(context);
+    final selectedColor = theme.textTheme.bodyLarge?.color ?? Colors.white;
+    final idleColor = theme.brightness == Brightness.dark
+        ? kSwipePageIndicatorIdleColorDark
+        : kSwipePageIndicatorIdleColorLight;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onTitleTap == null ? null : () => widget.onTitleTap!(index),
+      child: _MeasureSize(
+        onSize: (size) {
+          final changedWidth = size.width != (_widths[index % _n] ?? -1);
+          final changedHeight = size.height != _titleHeight;
+          if (!changedWidth && !changedHeight) return;
+          setState(() {
+            if (changedWidth) _widths[index % _n] = size.width;
+            if (changedHeight) _titleHeight = size.height;
+          });
+        },
+        child: DefaultTextStyle.merge(
+          style: TextStyle(
+            // PivotStyle.HeaderFont：FontFaceSemiLight（项目注册为 w300）
+            fontSize: kSwipePageIndicatorFontSize,
+            fontWeight: FontWeight.w300,
+            overflow: TextOverflow.visible,
+            color: selected ? selectedColor : idleColor,
+            // Constants.PivotHeaderCharacterSpacing = 0.0（非东亚语言）
+            letterSpacing: 0,
           ),
+          child: widget.titles[index % _n],
         ),
       ),
     );
@@ -652,7 +690,9 @@ class _MeasureSize extends SingleChildRenderObjectWidget {
 
   @override
   void updateRenderObject(
-      BuildContext context, _MeasureSizeRenderObject renderObject) {
+    BuildContext context,
+    _MeasureSizeRenderObject renderObject,
+  ) {
     renderObject.onSize = onSize;
   }
 }

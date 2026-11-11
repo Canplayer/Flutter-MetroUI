@@ -23,6 +23,7 @@ Future<void> _runPrePushAnimation(
 
   // 如果当前页面有 MetroPageScaffold
   if (currentScaffoldState != null) {
+    currentScaffoldState.prepareNavigation();
     // 决定是否播放默认 pushNext（跳转到下一页）动画
     final bool playDefault =
         !currentScaffoldState.widget.disableDefaultPushNextAnimation;
@@ -37,7 +38,8 @@ Future<void> _runPrePushAnimation(
   } else {
     // 可选：日志或降级策略
     debugPrint(
-        'MetroPageScaffold state not found; performing navigation without page animation.');
+      'MetroPageScaffold state not found; performing navigation without page animation.',
+    );
   }
 
   // 在执行实际页面跳转之前，可以添加一个额外的固定延迟

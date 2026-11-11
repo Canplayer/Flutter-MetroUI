@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:metro_ui/metro_theme_extensions.dart';
 
 /// Metro风格页面动画状态枚举
 enum MetroAnimationType {
@@ -13,243 +15,110 @@ enum MetroAnimationType {
 class MetroAnimatedPage extends StatefulWidget {
   final Widget child;
 
-  const MetroAnimatedPage({
-    required this.child,
-    super.key,
-  });
+  const MetroAnimatedPage({required this.child, super.key});
 
   @override
   MetroAnimatedPageState createState() => MetroAnimatedPageState();
 }
 
 class MetroAnimatedPageState extends State<MetroAnimatedPage>
-    with TickerProviderStateMixin {
-  // 翻转动画原点距离
-  double _pivot = 0;
-  static const double _pivotMax = 320; // magic number常量化
-
-  // 角度转弧度的常量
-  static const double _degreesToRadians = 3.1415926535897932 / 180.0;
-
-  // 将角度转换为弧度
-  static double _toRadians(double degrees) => degrees * _degreesToRadians;
-
-  late final AnimationController _rotationController;
-  late final AnimationController _translationController;
-  late Animation<double> _rotationAnimation;
-  late Animation<double> _translationAnimation;
-  final MetroAnimationType _currentAnimationType = MetroAnimationType.didPush;
-
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  MetroAnimationType? _type;
+  MetroPageThemeData _config = const MetroPageThemeData();
+  double _begin = 0, _end = 0;
+  Curve _curve = MetroCurves.forwardIn;
+  bool _incoming = true;
+  bool _ready = false;
   @override
   void initState() {
     super.initState();
-    _rotationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 0),
-    );
-    _translationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 0),
-    );
-    // 初始化为静止状态，防止LateInitializationError
-    _rotationAnimation =
-        Tween<double>(begin: _toRadians(-180), end: _toRadians(-180))
-            .animate(_rotationController);
-    _translationAnimation =
-        Tween<double>(begin: -100, end: -100).animate(_translationController);
-    //新页面会调用这个方法，也就是说如果传入的widget默认行为将会直接播放push动画
-    // didPush();
+    _controller = AnimationController(vsync: this, value: 1);
   }
 
-  /// 设置旋转动画的角度范围
-  // void _setupRotationAnimation(double begin, double end) {
-  //   _rotationAnimation = Tween<double>(
-  //     begin: begin,
-  //     end: end,
-  //   ).animate(CurvedAnimation(
-  //     parent: _rotationController,
-  //     curve: Curves.easeOut,
-  //   ));
-  // }
-
-  /// didPush动画：从-90度旋转到0度（页面进入）
-  Future<void> didPush() async {
-    _setupAnimation(
-      rotationBegin: _toRadians(-80),
-      rotationEnd: _toRadians(0),
-      translationBegin: 0,
-      translationEnd: 0,
-      rotationDuration: const Duration(milliseconds: 350),
-      translationDuration: const Duration(milliseconds: 350),
-      rotationCurve: MetroCurves.forwardIn,
-      translationCurve: MetroCurves.forwardIn,
-    );
-    _rotationController.reset();
-    _translationController.reset();
-    _rotationController.forward();
-    await _translationController.forward();
-  }
-
-  /// didPushNext动画：从0度旋转到90度（下一页进入）
-  Future<void> didPushNext() async {
-    _setupAnimation(
-      rotationBegin: _toRadians(0),
-      rotationEnd: _toRadians(50),
-      translationBegin: 0,
-      translationEnd: 0,
-      rotationDuration: const Duration(milliseconds: 167),
-      translationDuration: const Duration(milliseconds: 167),
-      rotationCurve: MetroCurves.forwardOut,
-      translationCurve: MetroCurves.forwardOut,
-    );
-    _rotationController.reset();
-    _translationController.reset();
-    _rotationController.forward();
-    await _translationController.forward();
-  }
-
-  /// didPopNext动画：从90度旋转到0度（下一页退出）
-  Future<void> didPopNext() async {
-    _setupAnimation(
-        rotationBegin: _toRadians(50),
-        rotationEnd: _toRadians(0),
-        translationBegin: 0,
-        translationEnd: 0,
-        rotationDuration: const Duration(milliseconds: 350),
-        translationDuration: const Duration(milliseconds: 350),
-        rotationCurve: MetroCurves.backwardIn,
-        translationCurve: MetroCurves.backwardIn);
-    _rotationController.reset();
-    _translationController.reset();
-    _rotationController.forward();
-    await _translationController.forward();
-  }
-
-  /// didPop动画：从0度旋转到-90度（页面退出）
-  Future<void> didPop() async {
-    _setupAnimation(
-      rotationBegin: _toRadians(0),
-      rotationEnd: _toRadians(-80),
-      translationBegin: 0,
-      translationEnd: 0,
-      rotationDuration: const Duration(milliseconds: 167),
-      translationDuration: const Duration(milliseconds: 167),
-      rotationCurve: MetroCurves.backwardOut,
-      translationCurve: MetroCurves.backwardOut,
-    );
-    _rotationController.reset();
-    _translationController.reset();
-    _rotationController.forward();
-    await _translationController.forward();
-  }
-
-  /// 动画参数统一设置
-  void _setupAnimation({
-    required double rotationBegin,
-    required double rotationEnd,
-    required double translationBegin,
-    required double translationEnd,
-    required Duration rotationDuration,
-    required Duration translationDuration,
-    required Curve rotationCurve,
-    required Curve translationCurve,
-  }) {
-    _rotationController.duration = rotationDuration;
-    _translationController.duration = translationDuration;
-    _rotationAnimation = Tween<double>(
-      begin: rotationBegin,
-      end: rotationEnd,
-    ).animate(CurvedAnimation(
-      parent: _rotationController,
-      curve: rotationCurve,
-    ));
-    _translationAnimation = Tween<double>(
-      begin: translationBegin,
-      end: translationEnd,
-    ).animate(CurvedAnimation(
-      parent: _translationController,
-      curve: translationCurve,
-    ))
-      ..addListener(() {
-        setState(() {
-          _pivot = _translationAnimation.value * _pivotMax;
-        });
-      });
-  }
-
-  /// 播放当前动画类型的动画
-  Future<void> play() async {
-    switch (_currentAnimationType) {
-      case MetroAnimationType.didPush:
-        await didPush();
-        break;
-      case MetroAnimationType.didPop:
-        await didPop();
-        break;
-      case MetroAnimationType.didPushNext:
-        await didPushNext();
-        break;
-      case MetroAnimationType.didPopNext:
-        await didPopNext();
-        break;
+  Future<void> _play(MetroAnimationType type) async {
+    _config =
+        Theme.of(context).extension<MetroPageThemeData>() ??
+        const MetroPageThemeData();
+    _type = type;
+    _ready = true;
+    _incoming =
+        type == MetroAnimationType.didPush ||
+        type == MetroAnimationType.didPopNext;
+    _begin = type == MetroAnimationType.didPush
+        ? -80
+        : type == MetroAnimationType.didPopNext
+        ? 50
+        : 0;
+    _end = type == MetroAnimationType.didPop
+        ? -80
+        : type == MetroAnimationType.didPushNext
+        ? 50
+        : 0;
+    _curve = _incoming ? MetroCurves.forwardIn : MetroCurves.forwardOut;
+    _controller.duration = _incoming ? _config.inDuration : _config.outDuration;
+    try {
+      await _controller.forward(from: 0).orCancel;
+    } on TickerCanceled {
+      /* disposed or replaced */
     }
   }
 
-  /// 重置动画
+  Future<void> didPush() => _play(MetroAnimationType.didPush);
+  Future<void> didPushNext() => _play(MetroAnimationType.didPushNext);
+  Future<void> didPopNext() => _play(MetroAnimationType.didPopNext);
+  Future<void> didPop() => _play(MetroAnimationType.didPop);
+  Future<void> play() => _play(_type ?? MetroAnimationType.didPush);
   void reset() {
-    _rotationController.reset();
-    _translationController.reset();
+    _controller.stop();
+    setState(() {
+      _type = null;
+      _ready = true;
+    });
   }
 
-  Future<void> didFinish() async {
-    _setupAnimation(
-      rotationBegin: _toRadians(0),
-      rotationEnd: _toRadians(0),
-      translationBegin: 0,
-      translationEnd: 0,
-      rotationDuration: const Duration(milliseconds: 1),
-      translationDuration: const Duration(milliseconds: 1),
-      rotationCurve: Curves.easeOut,
-      translationCurve: Curves.easeOutCirc,
-    );
-    _rotationController.reset();
-    _translationController.reset();
-  }
-
+  Future<void> didFinish() async => reset();
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: Listenable.merge([_rotationAnimation, _translationAnimation]),
-      builder: (context, child) {
-        double pivotX = _getPivotX();
-        return Transform(
-          transform: Matrix4.rotationY(_rotationAnimation.value),
-          origin: Offset(pivotX, 0),
-          child: widget.child,
-        );
-      },
-    );
-  }
-
-  /// 根据动画类型获取pivot点的X坐标
-  double _getPivotX() {
-    return -50 * 0.8;
-    // switch (_currentAnimationType) {
-    //   case MetroAnimationType.didPush:
-    //   case MetroAnimationType.didPop:
-    //     // 左侧进入/退出，pivot点在左侧
-    //     return -_pivot;
-    //   case MetroAnimationType.didPushNext:
-    //   case MetroAnimationType.didPopNext:
-    //     // 右侧进入/退出，pivot点在右侧
-    //     return _pivot;
-    // }
-  }
-
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _controller,
+    child: widget.child,
+    builder: (context, child) {
+      if (!_ready) return Opacity(opacity: 0, child: child);
+      if (_type == null) return child!;
+      final angle =
+          (_begin + (_end - _begin) * _curve.transform(_controller.value)) *
+          math.pi /
+          180;
+      final elapsed = _controller.value * _controller.duration!.inMicroseconds;
+      final duration = _controller.duration!.inMicroseconds;
+      final alpha = _incoming
+          ? (elapsed / 10000).clamp(0.0, 1.0)
+          : ((duration - elapsed) /
+                    (duration - _config.outAlphaHold.inMicroseconds))
+                .clamp(0.0, 1.0);
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final positive =
+              _config.alternatePivot &&
+              (_type == MetroAnimationType.didPushNext ||
+                  _type == MetroAnimationType.didPopNext);
+          final x = constraints.maxWidth * (positive ? .1 : -.1);
+          final z = _config.pivotDepth;
+          final matrix = Matrix4.identity()
+            ..translateByDouble(x, 0, z, 1)
+            ..rotateY(angle)
+            ..translateByDouble(-x, 0, -z, 1);
+          return Transform(
+            transform: matrix,
+            child: Opacity(opacity: alpha, child: child),
+          );
+        },
+      );
+    },
+  );
   @override
   void dispose() {
-    _rotationController.dispose();
-    _translationController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 }
@@ -257,8 +126,6 @@ class MetroAnimatedPageState extends State<MetroAnimatedPage>
 abstract final class MetroCurves {
   /// 一个用于panorama页面进入时候的旋转的动画曲线
   static const UixLog panoramaForwardIn = UixLog(10);
-
-  
 
   /// 一个用于panorama页面进入时候的内容物平移的动画曲线
   //static const Cubic panoramaTranslateIn = Cubic(0.197, 0.893, 0.41, 0.99);
@@ -314,8 +181,7 @@ abstract final class MetroCurves {
   ///     { x: 21, y: -1 },
   ///     { x: 23, y: 0 }
   static const KeyframeInterpolatedCurve appBarButtonTranslateIn =
-      KeyframeInterpolatedCurve(
-    [
+      KeyframeInterpolatedCurve([
         Offset(0.000000, 0.000000),
         Offset(0.043478, 0.340000),
         Offset(0.086957, 0.620000),
@@ -330,8 +196,7 @@ abstract final class MetroCurves {
         Offset(0.782609, 1.060000),
         Offset(0.913043, 1.020000),
         Offset(1.000000, 1.000000),
-    ],
-  );
+      ]);
 }
 
 class KeyframeInterpolatedCurve extends Curve {
@@ -375,8 +240,7 @@ class UixLog extends Curve {
 
   @override
   double transformInternal(double t) {
-    return (1.0 - math.pow(base, -t).toDouble()) /
-        (1.0 - 1.0 / base);
+    return (1.0 - math.pow(base, -t).toDouble()) / (1.0 - 1.0 / base);
   }
 }
 
@@ -388,8 +252,7 @@ class UixExp extends Curve {
 
   @override
   double transformInternal(double t) {
-    return (math.pow(base, t).toDouble() - 1.0) /
-    (base - 1.0);
+    return (math.pow(base, t).toDouble() - 1.0) / (base - 1.0);
   }
 }
 
@@ -469,5 +332,42 @@ class KeyframeBuilder {
           : values[index] / actualMaxValue;
       return Offset(normalizedX, normalizedY);
     });
+  }
+}
+
+// UIXRender 0x100265e2 rounds the join position to float32 before use.
+double _uixJoin(double weight, double point) {
+  final q = (math.pow(weight, .99) - 1) / (weight - 1);
+  final k = (1 - q) * point / (.01 * (1 - point) + (1 - q) * point);
+  return (Float32List(1)..[0] = k)[0];
+}
+
+/// UIX kind 7: linear section followed by logarithmic interpolation.
+/// uixn packet 0x0a -> UIXRender 0x1002309e -> 0x1002648b.
+class UixEaseIn extends Curve {
+  const UixEaseIn(this.weight, this.point)
+    : assert(weight > 1),
+      assert(point > 0 && point < 1);
+  final double weight, point;
+  @override
+  double transformInternal(double t) {
+    final k = _uixJoin(weight, point);
+    if (t <= point) return k * t / point;
+    return k + (1 - k) * UixLog(weight).transform((t - point) / (1 - point));
+  }
+}
+
+/// UIX kind 8: exponential section followed by a linear section.
+/// uixn packet 0x09 -> UIXRender 0x10023020 -> 0x1002669c.
+class UixEaseOut extends Curve {
+  const UixEaseOut(this.weight, this.point)
+    : assert(weight > 1),
+      assert(point > 0 && point < 1);
+  final double weight, point;
+  @override
+  double transformInternal(double t) {
+    final k = _uixJoin(weight, 1 - point);
+    if (t <= point) return k * UixExp(weight).transform(t / point);
+    return k + (1 - k) * (t - point) / (1 - point);
   }
 }

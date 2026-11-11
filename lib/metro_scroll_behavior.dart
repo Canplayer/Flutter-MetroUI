@@ -65,7 +65,9 @@ class MetroScrollBehavior extends ScrollBehavior {
     // 从 details.clipBehavior 获取滚动组件设置的裁切行为
     return MetroOverscrollIndicator(
       axisDirection: details.direction,
-      clipBehavior: details.decorationClipBehavior ?? Clip.hardEdge, // 使用滚动组件的 clipBehavior
+      clipBehavior:
+          details.decorationClipBehavior ??
+          Clip.hardEdge, // 使用滚动组件的 clipBehavior
       child: child,
     );
   }
@@ -93,9 +95,15 @@ class MetroBouncingScrollPhysics extends BouncingScrollPhysics {
     }
 
     final double overscrollPastStart =
-        (position.minScrollExtent - position.pixels).clamp(0.0, double.infinity);
+        (position.minScrollExtent - position.pixels).clamp(
+          0.0,
+          double.infinity,
+        );
     final double overscrollPastEnd =
-        (position.pixels - position.maxScrollExtent).clamp(0.0, double.infinity);
+        (position.pixels - position.maxScrollExtent).clamp(
+          0.0,
+          double.infinity,
+        );
     const double maxOverscroll = 100.0;
 
     // 检查是否超出顶部边界（向下拉，超出顶部）
@@ -107,7 +115,8 @@ class MetroBouncingScrollPhysics extends BouncingScrollPhysics {
           return 0;
         }
         // 限制下一次滑动的距离，防止超出最大值
-        final double allowedOffset = (maxOverscroll - overscrollPastStart).clamp(0, double.infinity);
+        final double allowedOffset = (maxOverscroll - overscrollPastStart)
+            .clamp(0, double.infinity);
         if (offset > allowedOffset) {
           return allowedOffset;
         }
@@ -124,7 +133,10 @@ class MetroBouncingScrollPhysics extends BouncingScrollPhysics {
           return 0;
         }
         // 限制下一次滑动的距离，防止超出最大值
-        final double allowedOffset = (maxOverscroll - overscrollPastEnd).clamp(0, double.infinity);
+        final double allowedOffset = (maxOverscroll - overscrollPastEnd).clamp(
+          0,
+          double.infinity,
+        );
         if (offset.abs() > allowedOffset) {
           return -allowedOffset;
         }
@@ -178,7 +190,9 @@ class _MetroOverscrollIndicatorState extends State<MetroOverscrollIndicator>
         _overscrollAmount *= (1.0 - _controller.value);
         // 同步到状态管理器
         OverscrollStateManager.setOverscrollAmount(
-            _scrollViewId, _overscrollAmount);
+          _scrollViewId,
+          _overscrollAmount,
+        );
       });
     });
   }
@@ -201,10 +215,10 @@ class _MetroOverscrollIndicatorState extends State<MetroOverscrollIndicator>
     // 滚动更新 - 从 ScrollMetrics 获取超滚动信息
     if (notification is ScrollUpdateNotification) {
       final metrics = notification.metrics;
-      
+
       // 计算当前的超滚动量
       double currentOverscroll = 0.0;
-      
+
       if (metrics.pixels < metrics.minScrollExtent) {
         // 超出顶部边界
         currentOverscroll = metrics.pixels - metrics.minScrollExtent;
@@ -212,14 +226,17 @@ class _MetroOverscrollIndicatorState extends State<MetroOverscrollIndicator>
         // 超出底部边界
         currentOverscroll = metrics.pixels - metrics.maxScrollExtent;
       }
-      
+
       // 更新超滚动状态
       if (currentOverscroll != _overscrollAmount) {
         setState(() {
           _overscrollAmount = currentOverscroll;
-          OverscrollStateManager.setOverscrollAmount(_scrollViewId, _overscrollAmount);
+          OverscrollStateManager.setOverscrollAmount(
+            _scrollViewId,
+            _overscrollAmount,
+          );
         });
-        
+
         // 如果正在超滚动，停止回弹动画
         if (currentOverscroll != 0.0 && _controller.isAnimating) {
           _controller.stop();
@@ -236,7 +253,7 @@ class _MetroOverscrollIndicatorState extends State<MetroOverscrollIndicator>
         _controller.forward(from: 0.0);
       }
     }
-    
+
     return false;
   }
 

@@ -219,10 +219,6 @@ class _MetroCircleButtonState extends State<MetroCircleButton> {
 
     final String? label = widget.semanticLabel;
     if (label == null) return result;
-    return Semantics(
-      label: label,
-      button: true,
-      child: result,
-    );
+    return Semantics(label: label, button: true, child: result);
   }
 }

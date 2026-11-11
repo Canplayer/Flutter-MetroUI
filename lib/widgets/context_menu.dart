@@ -1,11 +1,12 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:metro_ui/metro_theme_extensions.dart';
 import 'package:metro_ui/page_scaffold.dart';
 import 'package:metro_ui/widgets/tile.dart';
 
 /// 一种长按调出的 Metro 风格上下文菜单。
-/// 
+///
 /// 长按时，包裹的 [child] 保持原位，背景（通常是 [MetroPageScaffold]）拉远缩小。
 /// 然后在 [child] 周围形成一条展开水平线，最后展开 [menu] 菜单，体验非常丝滑且有空间感。
 class MetroContextMenu extends StatefulWidget {
@@ -44,8 +45,9 @@ class MetroContextMenu extends StatefulWidget {
 class MetroContextMenuState extends State<MetroContextMenu> {
   // 使用 GlobalKey，让 child 可以在当前 Widget 树和 Overlay 树之间完美转移而不丢失 State
   final GlobalKey _contentKey = GlobalKey();
-  final GlobalKey<_ContextMenuOverlayState> _overlayKey = GlobalKey<_ContextMenuOverlayState>();
-  
+  final GlobalKey<_ContextMenuOverlayState> _overlayKey =
+      GlobalKey<_ContextMenuOverlayState>();
+
   bool _isOpen = false;
   bool _isDismissing = false;
   Size? _savedSize;
@@ -66,7 +68,10 @@ class MetroContextMenuState extends State<MetroContextMenu> {
     final scaffoldState = MetroPageScaffold.maybeOf(context);
     if (scaffoldState != null) {
       scaffoldState.pushBackBackground(
-        duration: widget.pushBackDuration ?? themeData?.pushBackDuration ?? const Duration(milliseconds: 500),
+        duration:
+            widget.pushBackDuration ??
+            themeData?.pushBackDuration ??
+            const Duration(milliseconds: 500),
         curve: widget.pushBackCurve,
       );
     }
@@ -76,13 +81,19 @@ class MetroContextMenuState extends State<MetroContextMenu> {
     _savedSize = renderBox.size;
 
     final OverlayState overlayState = Overlay.of(context);
-    final RenderBox overlayRenderBox = overlayState.context.findRenderObject() as RenderBox;
+    final RenderBox overlayRenderBox =
+        overlayState.context.findRenderObject() as RenderBox;
 
-    final Offset localOffset = renderBox.localToGlobal(Offset.zero, ancestor: overlayRenderBox);
+    final Offset localOffset = renderBox.localToGlobal(
+      Offset.zero,
+      ancestor: overlayRenderBox,
+    );
     final Rect targetRect = localOffset & _savedSize!;
 
     // 同样转化触摸点，保障点位对应 Overlay
-    final Offset localTouchOffset = overlayRenderBox.globalToLocal(details.globalPosition);
+    final Offset localTouchOffset = overlayRenderBox.globalToLocal(
+      details.globalPosition,
+    );
 
     // 3. 捕获当前的上下文继承环境，防止转移到 Overlay 后丢失样式出现黄线
     final ThemeData theme = Theme.of(context);
@@ -106,7 +117,11 @@ class MetroContextMenuState extends State<MetroContextMenu> {
                   touchOffset: localTouchOffset,
                   overlaySize: overlayRenderBox.size,
                   menu: Container(
-                    color: Theme.of(context).extension<MetroContextMenuThemeData>()?.backgroundColor ?? Theme.of(context).colorScheme.surface,
+                    color:
+                        Theme.of(context)
+                            .extension<MetroContextMenuThemeData>()
+                            ?.backgroundColor ??
+                        Theme.of(context).colorScheme.surface,
                     child: widget.menu,
                   ),
                   themeData: themeData,
@@ -114,10 +129,7 @@ class MetroContextMenuState extends State<MetroContextMenu> {
                     width: _savedSize!.width,
                     height: _savedSize!.height,
                     // 原封不动地挂载原组件！
-                    child: KeyedSubtree(
-                      key: _contentKey,
-                      child: widget.child,
-                    ),
+                    child: KeyedSubtree(key: _contentKey, child: widget.child),
                   ),
                   onDismiss: dismissMenu,
                 ),
@@ -130,7 +142,7 @@ class MetroContextMenuState extends State<MetroContextMenu> {
 
     // 原位替换成空白占位，使得原组件从屏幕“消失”（因为它去 Overlay 里了）
     setState(() {
-      _isOpen = true; 
+      _isOpen = true;
     });
 
     overlayState.insert(_overlayEntry!);
@@ -138,7 +150,7 @@ class MetroContextMenuState extends State<MetroContextMenu> {
 
   void dismissMenu() async {
     if (_isDismissing) return;
-    
+
     // 进入隐藏菜单动画并等待背景回归
     setState(() {
       _isDismissing = true;
@@ -149,21 +161,28 @@ class MetroContextMenuState extends State<MetroContextMenu> {
     final themeData = Theme.of(context).extension<MetroContextMenuThemeData>();
     final scaffoldState = MetroPageScaffold.maybeOf(context);
     scaffoldState?.restoreBackground(
-      duration: widget.restoreDuration ?? themeData?.restoreDuration ?? const Duration(milliseconds: 350),
+      duration:
+          widget.restoreDuration ??
+          themeData?.restoreDuration ??
+          const Duration(milliseconds: 350),
       curve: widget.restoreCurve,
     );
 
     // 等待背景动画执行完毕后再销毁 Overlay 并放回原 Widget
-    await Future.delayed(widget.restoreDuration ?? themeData?.restoreDuration ?? const Duration(milliseconds: 350));
-    
+    await Future.delayed(
+      widget.restoreDuration ??
+          themeData?.restoreDuration ??
+          const Duration(milliseconds: 350),
+    );
+
     if (!mounted) return;
 
     _overlayEntry?.remove();
     _overlayEntry = null;
 
     setState(() {
-      _isOpen = false; 
-      _isDismissing = false; 
+      _isOpen = false;
+      _isDismissing = false;
     });
   }
 
@@ -171,19 +190,13 @@ class MetroContextMenuState extends State<MetroContextMenu> {
   Widget build(BuildContext context) {
     // 菜单打开时由于元件被送走了，用原来相同大小的位置撑场面，避免排版塌陷失效
     if (_isOpen && _savedSize != null) {
-      return SizedBox(
-        width: _savedSize!.width,
-        height: _savedSize!.height,
-      );
+      return SizedBox(width: _savedSize!.width, height: _savedSize!.height);
     }
 
     return GestureDetector(
       onLongPressStart: _handleLongPressStart,
       behavior: HitTestBehavior.opaque,
-      child: KeyedSubtree(
-        key: _contentKey,
-        child: widget.child, 
-      ),
+      child: KeyedSubtree(key: _contentKey, child: widget.child),
     );
   }
 }
@@ -217,7 +230,7 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
   late AnimationController _controller;
   late Animation<double> _lineAnimation;
   late Animation<double> _menuAnimation;
-  
+
   bool _isHidden = false;
 
   /// 实测的菜单真实高度（首帧布局完成后通过不可见的测量副本获取）
@@ -236,12 +249,16 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
   @override
   void initState() {
     super.initState();
-    final int lineMs = widget.themeData?.lineAnimationDuration?.inMilliseconds ?? 500;
-    final int menuMs = widget.themeData?.menuAnimationDuration?.inMilliseconds ?? 400;
+    final int lineMs =
+        widget.themeData?.lineAnimationDuration?.inMilliseconds ?? 500;
+    final int menuMs =
+        widget.themeData?.menuAnimationDuration?.inMilliseconds ?? 400;
     final int totalMs = lineMs + menuMs;
 
     _controller = AnimationController(
-        vsync: this, duration: Duration(milliseconds: totalMs));
+      vsync: this,
+      duration: Duration(milliseconds: totalMs),
+    );
 
     _lineAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
@@ -290,8 +307,9 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
         widget.targetRect.bottom + menuHeight > widget.overlaySize.height;
 
     // 线条高度位置
-    final double lineTop =
-        isUpward ? widget.targetRect.top - 1.0 : widget.targetRect.bottom;
+    final double lineTop = isUpward
+        ? widget.targetRect.top - 1.0
+        : widget.targetRect.bottom;
 
     return Stack(
       children: [
@@ -308,9 +326,7 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
         Positioned(
           left: widget.targetRect.left,
           top: widget.targetRect.top,
-          child: IgnorePointer(
-            child: widget.childClone,
-          ),
+          child: IgnorePointer(child: widget.childClone),
         ),
 
         // 不可见的菜单测量副本：与可见菜单相同的宽度约束、不限制高度，
@@ -321,10 +337,7 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
           top: 0,
           child: Offstage(
             offstage: true,
-            child: KeyedSubtree(
-              key: _menuMeasureKey,
-              child: widget.menu,
-            ),
+            child: KeyedSubtree(key: _menuMeasureKey, child: widget.menu),
           ),
         ),
 
@@ -335,12 +348,16 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
             animation: _lineAnimation,
             builder: (context, child) {
               // 利用 lerpDouble，左右两端会同时向两边延伸到底
-              final double left =
-                  lerpDouble(widget.touchOffset.dx, 0.0, _lineAnimation.value)!;
+              final double left = lerpDouble(
+                widget.touchOffset.dx,
+                0.0,
+                _lineAnimation.value,
+              )!;
               final double right = lerpDouble(
-                  widget.overlaySize.width - widget.touchOffset.dx,
-                  0.0,
-                  _lineAnimation.value)!;
+                widget.overlaySize.width - widget.touchOffset.dx,
+                0.0,
+                _lineAnimation.value,
+              )!;
 
               if (_lineAnimation.value == 0) return const SizedBox.shrink();
 
@@ -350,7 +367,9 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
                 top: lineTop,
                 height: 1.0,
                 child: Container(
-                  color: widget.themeData?.lineColor ?? Theme.of(context).colorScheme.primary,
+                  color:
+                      widget.themeData?.lineColor ??
+                      Theme.of(context).colorScheme.primary,
                 ),
               );
             },
@@ -367,15 +386,21 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
               builder: (context, child) {
                 if (_menuAnimation.value == 0) return const SizedBox.shrink();
                 return Transform(
-                  alignment: isUpward ? Alignment.bottomCenter : Alignment.topCenter,
-                  transform: Matrix4.diagonal3Values(1.0, _menuAnimation.value, 1.0),
+                  alignment: isUpward
+                      ? Alignment.bottomCenter
+                      : Alignment.topCenter,
+                  transform: Matrix4.diagonal3Values(
+                    1.0,
+                    _menuAnimation.value,
+                    1.0,
+                  ),
                   child: child,
                 );
               },
               child: widget.menu,
             ),
           ),
-        ]
+        ],
       ],
     );
   }
@@ -414,12 +439,14 @@ class MetroContextMenuItem extends StatefulWidget {
 }
 
 class _MetroContextMenuItemState extends State<MetroContextMenuItem> {
-
   @override
   Widget build(BuildContext context) {
     final themeData = Theme.of(context).extension<MetroContextMenuThemeData>();
     final defaultItemHeight = widget.height ?? themeData?.itemHeight ?? 56.0;
-    final defaultTextStyle = widget.textStyle ?? themeData?.itemTextStyle ?? const TextStyle(fontSize: 24, fontWeight: FontWeight.w400);
+    final defaultTextStyle =
+        widget.textStyle ??
+        themeData?.itemTextStyle ??
+        const TextStyle(fontSize: 24, fontWeight: FontWeight.w400);
 
     return Tile(
       onTap: widget.onTap,
@@ -428,13 +455,12 @@ class _MetroContextMenuItemState extends State<MetroContextMenuItem> {
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
         alignment: Alignment.centerLeft,
         child: DefaultTextStyle(
-          style: (Theme.of(context).textTheme.bodyMedium ?? const TextStyle()).merge(defaultTextStyle).copyWith(
-            color: defaultTextStyle.color,
-          ),
+          style: (Theme.of(context).textTheme.bodyMedium ?? const TextStyle())
+              .merge(defaultTextStyle)
+              .copyWith(color: defaultTextStyle.color),
           child: widget.child,
         ),
       ),
     );
   }
 }
-

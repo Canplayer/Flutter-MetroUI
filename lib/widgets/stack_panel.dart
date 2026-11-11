@@ -10,11 +10,7 @@ class StackPanel extends StatelessWidget {
   /// 创建一个 StackPanel
   ///
   /// [top] 和 [bottom] 参数通常传入 Text 小部件。
-  const StackPanel({
-    super.key,
-    this.top,
-    this.bottom,
-  });
+  const StackPanel({super.key, this.top, this.bottom});
 
   /// 上方的小部件
   final Widget? top;
@@ -63,9 +59,7 @@ class StackPanel extends StatelessWidget {
               child: bottom ?? const SizedBox.shrink(),
             ),
           ),
-          SizedBox(
-            height: 44 * 0.8,
-          ),
+          SizedBox(height: 44 * 0.8),
         ],
       ],
     );

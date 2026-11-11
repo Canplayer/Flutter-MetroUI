@@ -8,6 +8,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:metro_ui/animations.dart';
+import 'package:metro_ui/metro_theme_extensions.dart';
 import 'package:metro_ui/application_bar.dart';
 import 'package:metro_ui/widgets/tile.dart';
 
@@ -108,13 +109,11 @@ class _BodyBuilderState extends State<_BodyBuilder> {
 
     return MediaQuery(
       data: metrics.copyWith(
-        padding: metrics.padding.copyWith(
-          top: top,
-          bottom: bottom,
-        ),
+        padding: metrics.padding.copyWith(top: top, bottom: bottom),
       ),
       child: PopScope(
-        canPop: widget.onWillPop != null &&
+        canPop:
+            widget.onWillPop != null &&
             !(MetroAppBarScope.maybeOf(context)?.isExpanded ?? false),
         onPopInvokedWithResult: (didPop, result) async {
           if (didPop) {
@@ -126,9 +125,14 @@ class _BodyBuilderState extends State<_BodyBuilder> {
             return;
           }
           // 拦截返回事件
-          final bool shouldPop =
-              widget.onWillPop != null ? await widget.onWillPop!() : true;
+          final bool shouldPop = widget.onWillPop != null
+              ? await widget.onWillPop!()
+              : true;
           if (shouldPop) {
+            MetroAppBarScope.controllerOf(context)?.beginNavigation(
+              continuous: MetroSystemThemeData.of(context)
+                  .continuousApplicationBar,
+            );
             // 决定是否播放默认退出（didPop）动画
             final bool playDefault = !widget.disableDefaultPopAnimation;
             if (playDefault) {
@@ -147,10 +151,7 @@ class _BodyBuilderState extends State<_BodyBuilder> {
             }
           }
         },
-        child: MetroAnimatedPage(
-          key: widget.animatedPageKey,
-          child: content,
-        ),
+        child: MetroAnimatedPage(key: widget.animatedPageKey, child: content),
       ),
     );
   }
@@ -318,8 +319,8 @@ class MetroPageScaffold extends StatefulWidget {
   ///
   /// 如果范围内没有 [MetroPageScaffold]，则会抛出异常。要在没有 [MetroPageScaffold] 时返回 null，请使用 [maybeOf]。
   static MetroPageScaffoldState of(BuildContext context) {
-    final MetroPageScaffoldState? result =
-        context.findAncestorStateOfType<MetroPageScaffoldState>();
+    final MetroPageScaffoldState? result = context
+        .findAncestorStateOfType<MetroPageScaffoldState>();
     if (result != null) {
       return result;
     }
@@ -393,6 +394,12 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
   }
 
   /// 播放 MetroAnimatedPage 的默认退出动画。
+  void prepareNavigation() {
+    MetroAppBarScope.controllerOf(context)?.beginNavigation(
+      continuous: MetroSystemThemeData.of(context).continuousApplicationBar,
+    );
+  }
+
   Future<void> playDefaultPushNextAnimation() async {
     await _metroAnimatedPageKey.currentState?.didPushNext();
   }
@@ -447,9 +454,13 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
 
     // 初始化 Z 轴动画控制器（后推变暗动画）
     _zAxisController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500));
-    _zAxisAnimation =
-        CurvedAnimation(parent: _zAxisController, curve: Curves.easeOutCubic);
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _zAxisAnimation = CurvedAnimation(
+      parent: _zAxisController,
+      curve: Curves.easeOutCubic,
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // 登记当前页面的 Application Bar
@@ -537,7 +548,8 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
   /// 将当前页面的 Application Bar 注册到全局控制器。
   void _updateApplicationBar() {
     if (!mounted) return;
-    MetroAppBarScope.controllerOf(context)?.setAppBar(widget.applicationBar, owner: this);
+    MetroAppBarScope.controllerOf(context)
+        ?.setAppBar(widget.applicationBar, owner: this);
   }
 
   /// 当前页面 Application Bar 折叠状态下占据的屏幕高度（含底部安全区）。
@@ -545,8 +557,8 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
   /// 只有当 [MetroAppBarScope] 存在且当前存在 Application Bar 时才返回实际高度，
   /// 否则返回 0。手动拖拽展开的高度不参与计算。
   double _applicationBarHeight(BuildContext context) {
-    final MetroApplicationBar? bar =
-        MetroAppBarScope.maybeOf(context)?.currentBar;
+    final MetroApplicationBar? bar = MetroAppBarScope.maybeOf(context)
+        ?.currentBar;
     if (bar == null) return 0.0;
     return metroAppBarCollapsedHeight(bar) +
         MediaQuery.paddingOf(context).bottom;

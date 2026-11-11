@@ -87,10 +87,7 @@ class _LeftEdgeRotateAnimationState extends State<LeftEdgeRotateAnimation> {
       child: Transform(
         origin: Offset(-_edgeOffset + _getPivotX(), 0),
         transform: Matrix4.identity()..rotateY(widget.rotation),
-        child: Container(
-          key: _childKey,
-          child: widget.child,
-        ),
+        child: Container(key: _childKey, child: widget.child),
       ),
     );
   }

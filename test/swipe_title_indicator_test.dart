@@ -43,6 +43,10 @@ void main() {
           flyDuration: const Duration(milliseconds: 100),
           fadeDuration: const Duration(milliseconds: 50),
           snapBackDuration: const Duration(milliseconds: 120),
+          // 换页是「隐藏 → 换内容 → 显示」两段，缩短以便单次 pump 覆盖；
+          // 源码值在 swipe_page_pivot_test.dart 里校验。
+          hideDuration: const Duration(milliseconds: 100),
+          showDuration: const Duration(milliseconds: 100),
           align: align,
           titleGap: titleGap,
           padding: padding,
@@ -141,18 +145,20 @@ void main() {
     expect(tester.getTopLeft(find.text('B')).dx, closeTo(aRight + 24, 1));
   });
 
-  testWidgets('SwipePages 默认整体内边距：水平 18', (tester) async {
-    // 不指定 padding → 使用默认 EdgeInsets.symmetric(horizontal: 18)
+  testWidgets('SwipePages 默认整体内边距：水平 19.2（HorizontalPagePadding）', (
+    tester,
+  ) async {
+    // 不指定 padding → 使用默认 EdgeInsets.symmetric(horizontal: 24*0.8)
     await tester.pumpWidget(
-      MaterialApp(
+      const MaterialApp(
         home: Scaffold(
           body: SwipePages(
             items: [
-              const SwipePageItem(
+              SwipePageItem(
                 title: Text('A'),
                 page: ColoredBox(color: Colors.red, child: SizedBox.expand()),
               ),
-              const SwipePageItem(
+              SwipePageItem(
                 title: Text('B'),
                 page: ColoredBox(color: Colors.green, child: SizedBox.expand()),
               ),
@@ -165,8 +171,11 @@ void main() {
     );
     await tester.pump(); // 等待宽度测量
 
-    // 整体内缩 18：当前标题 A 左边缘 = 18（而非 0）
-    expect(tester.getTopLeft(find.text('A')).dx, closeTo(18, 1));
+    // 整体内缩 19.2：当前标题 A 左边缘 = 19.2（而非 0）
+    expect(
+      tester.getTopLeft(find.text('A')).dx,
+      closeTo(kSwipePagesPadding.resolve(TextDirection.ltr).left, 0.6),
+    );
   });
 
   testWidgets('center 模式：当前标题水平居中于父容器', (tester) async {
@@ -278,27 +287,36 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('非当前页标题带 50% 透明滤镜', (tester) async {
+  testWidgets('非当前标题用 PivotColor，当前标题用 TextHighColor', (tester) async {
+    // PivotStyle：选中 SelectedPivotColor = TextHighColor（白），
+    // 未选中 PivotColor = ThemeResources.PivotColorDark(0x67FFFFFF)/Light。
+    // 两者字号相同，只有颜色不同；系统不用透明度滤镜。
     await tester.pumpWidget(buildHost());
     await tester.pump(); // 等待宽度测量
 
-    // 三页：bar-0 为中心（A），左右为 B、C
-    // 遍历所有 Opacity 找到对应标题：中心 100%，左右 50%
-    double opacityOf(String text) {
-      // 找到包含该文本的标题，再找其最近的 Opacity 祖先
+    Color colorOf(String text) {
       final textFinder = find.descendant(
         of: find.byKey(const ValueKey('bar-0')),
         matching: find.text(text),
       );
-      final opacity = tester.widget<Opacity>(
-        find.ancestor(of: textFinder, matching: find.byType(Opacity)).first,
-      );
-      return opacity.opacity;
+      final widget = tester.widget<Text>(textFinder);
+      final inherited = DefaultTextStyle.of(tester.element(textFinder)).style;
+      return widget.style?.color ?? inherited.color!;
     }
 
-    expect(opacityOf('A'), 1.0); // 当前标题 100%
-    expect(opacityOf('B'), 0.5); // 非当前 50%
-    expect(opacityOf('C'), 0.5); // 非当前 50%
+    final idle =
+        ThemeData.estimateBrightnessForColor(
+              Scaffold.of(tester.element(find.text('A')))
+                      .widget
+                      .backgroundColor ??
+                  Colors.white,
+            ) ==
+            Brightness.dark
+        ? kSwipePageIndicatorIdleColorDark
+        : kSwipePageIndicatorIdleColorLight;
+    expect(colorOf('B'), idle);
+    expect(colorOf('C'), idle);
+    expect(colorOf('A'), isNot(idle));
   });
 
   testWidgets('松手换页后标题组更新，新标题条停在中心', (tester) async {
@@ -424,7 +442,8 @@ void main() {
     // 当前 A，点击下一页标题 B → 切到第 1 页
     await tester.tap(find.text('B'));
     await tester.pump(); // 触发换页
-    await tester.pump(const Duration(milliseconds: 300)); // 动画结束
+    // 换页是「隐藏 → 换内容 → 显示」两段，等到全部结束
+    await tester.pumpAndSettle();
 
     expect(changed, ['0->1']);
     expect(find.text('B'), findsOneWidget);
@@ -433,7 +452,7 @@ void main() {
     // → 切到第 2 页
     await tester.tap(find.text('C'));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
 
     expect(changed, ['0->1', '1->2']);
   });
@@ -480,7 +499,8 @@ void main() {
     expect(find.text('B'), findsOneWidget);
   });
 
-  testWidgets('换页动画期间：整体向右推入，新条从左侧滑入，旧条渐隐新条渐显', (tester) async {
+  testWidgets('换页动画期间：单条标题整体向右推入，到达后换成新条', (tester) async {
+    // 系统是一个横向 ScrollViewer：标题条整体平移，没有任何淡入淡出。
     await tester.pumpWidget(buildHost());
     await tester.pump();
 
@@ -489,55 +509,78 @@ void main() {
     await tester.pump();
     await g.up();
 
-    // 换页动画刚开始：新旧两条同时存在
+    // 换页动画刚开始：仍只有一条标题条，且键仍是旧页码
     await tester.pump();
-    expect(find.byKey(const ValueKey('bar-0-old')), findsOneWidget);
-    expect(find.byKey(const ValueKey('bar-2-new')), findsOneWidget);
-
-    // 推进 20ms，动画进行中
-    await tester.pump(const Duration(milliseconds: 20));
-
-    // 右滑 → 上一页：整体向右推入（旧条继续右移，offset > 0）
-    final oldOffset = barOffset(tester, 'bar-0-old');
-    final newOffset = barOffset(tester, 'bar-2-new');
-    expect(oldOffset, greaterThan(0)); // 向右推入
-    expect(newOffset, lessThan(oldOffset)); // 新条位于旧条左侧（从左侧推入）
-
-    // 旧条渐隐（opacity < 1）、新条渐显（opacity > 0 且 < 1）
-    final oldOpacity = tester
-        .widget<Opacity>(
-          find
-              .ancestor(
-                of: find.descendant(
-                  of: find.byKey(const ValueKey('bar-0-old')),
-                  matching: find.text('A'),
-                ),
-                matching: find.byType(Opacity),
-              )
-              .first,
-        )
-        .opacity;
-    final newOpacity = tester
-        .widget<Opacity>(
-          find
-              .ancestor(
-                of: find.descendant(
-                  of: find.byKey(const ValueKey('bar-2-new')),
-                  matching: find.text('C'),
-                ),
-                matching: find.byType(Opacity),
-              )
-              .first,
-        )
-        .opacity;
-    expect(oldOpacity, lessThan(1.0)); // 旧条渐隐（C 渐变消失）
-    expect(newOpacity, greaterThan(0.0)); // 新条渐显（D 渐变显示）
-    expect(newOpacity, lessThan(1.0));
-
-    // 动画结束后只剩新条
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(find.byKey(const ValueKey('bar-2')), findsOneWidget);
+    expect(find.byKey(const ValueKey('bar-0')), findsOneWidget);
     expect(find.byKey(const ValueKey('bar-0-old')), findsNothing);
-    expect(find.byKey(const ValueKey('bar-2-new')), findsNothing);
+
+    // 推进 20ms：右滑 → 上一页，整体继续向右推入（offset 增大）
+    await tester.pump(const Duration(milliseconds: 20));
+    expect(barOffset(tester, 'bar-0'), greaterThan(0));
+
+    // 动画结束后换成新页码的标题条，位移归零
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.byKey(const ValueKey('bar-2')), findsOneWidget);
+    expect(find.byKey(const ValueKey('bar-0')), findsNothing);
+    expect(barOffset(tester, 'bar-2'), closeTo(0, 0.01));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('换页过程中标题条连续：没有任何标题在提交瞬间瞬移', (tester) async {
+    // 回归：旧实现只画 [prev, cur, next]，提交换页时"再下一个"标题会从
+    // 屏幕左侧凭空跳到右侧，肉眼看到标题跳一下。现在槽位坐标用全局累计
+    // 宽度，换页期间还多画一个前进方向的槽位，因此每个标题的 x 必须连续。
+    await tester.pumpWidget(buildHost());
+    await tester.pump(); // 等待宽度测量
+
+    /// 取 [text] 所有实例的左边（可能有重复的同名标题，排序后逐个比较）。
+    List<double> lefts(String text) {
+      final xs =
+          find
+              .text(text)
+              .evaluate()
+              .map(
+                (e) => (e.renderObject! as RenderBox)
+                    .localToGlobal(Offset.zero)
+                    .dx,
+              )
+              .toList()
+            ..sort();
+      return xs;
+    }
+
+    final g = await tester.startGesture(const Offset(400, 300));
+    await g.moveBy(const Offset(-40, 0));
+    await tester.pump();
+    await g.up();
+    await tester.pump();
+
+    // 采样换页全过程：相邻两帧之间，同名标题的每一个可见实例都不应跳变。
+    final before = {
+      for (final t in ['A', 'B', 'C']) t: lefts(t),
+    };
+    var prev = before;
+    for (var i = 0; i < 12; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+      final now = {
+        for (final t in ['A', 'B', 'C']) t: lefts(t),
+      };
+      for (final t in ['A', 'B', 'C']) {
+        final a = prev[t]!;
+        final b = now[t]!;
+        // 同名实例数量变化说明有实例凭空出现/消失（只允许出现在屏幕外）。
+        if (a.length == b.length && a.isNotEmpty) {
+          for (var k = 0; k < a.length; k++) {
+            expect(
+              (b[k] - a[k]).abs(),
+              lessThan(120),
+              reason: '$t 第 $k 个实例在 50ms 内跳变 ${(b[k] - a[k])}',
+            );
+          }
+        }
+      }
+      prev = now;
+    }
+    await tester.pumpAndSettle();
   });
 }

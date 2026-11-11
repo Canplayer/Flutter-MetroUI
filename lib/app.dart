@@ -10,8 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:metro_ui/widgets/panorama.dart';
 import 'package:metro_ui/metro_scroll_behavior.dart';
 import 'package:metro_ui/page_scaffold.dart';
+
 import './application_bar.dart';
-import './animations.dart' show UixLog;
+import './animations.dart' show UixLog, UixEaseIn;
 import './route_aware_provider.dart';
 import './metro_theme_extensions.dart';
 import './uix_typography.dart';
@@ -197,16 +198,20 @@ class MetroApp extends StatefulWidget {
     this.metroColor,
     this.metroHighContrastTheme,
     @Deprecated(
-        '如果使用默认theme行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroColor+themeMode，这样做更接近与还原Windows Phone原版体验')
+      '如果使用默认theme行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroColor+themeMode，这样做更接近与还原Windows Phone原版体验',
+    )
     this.theme,
     @Deprecated(
-        '如果使用默认theme行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroColor+themeMode，这样做更接近与还原Windows Phone原版体验')
+      '如果使用默认theme行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroColor+themeMode，这样做更接近与还原Windows Phone原版体验',
+    )
     this.darkTheme,
     @Deprecated(
-        '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验')
+      '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验',
+    )
     this.highContrastTheme,
     @Deprecated(
-        '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验')
+      '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验',
+    )
     this.highContrastDarkTheme,
     this.themeMode = MetroThemeMode.dark,
     this.fontFamily,
@@ -229,11 +234,11 @@ class MetroApp extends StatefulWidget {
     this.scrollBehavior = const MetroScrollBehavior(),
     this.themeAnimationStyle,
     this.useWVGAMode = false,
-  })  : routeInformationProvider = null,
-        routeInformationParser = null,
-        routerDelegate = null,
-        backButtonDispatcher = null,
-        routerConfig = null;
+  }) : routeInformationProvider = null,
+       routeInformationParser = null,
+       routerDelegate = null,
+       backButtonDispatcher = null,
+       routerConfig = null;
 
   ///创建一个使用 [Router] 而不是 [Navigator] 的 [MetroApp]。
   ///
@@ -254,16 +259,20 @@ class MetroApp extends StatefulWidget {
     this.metroColor,
     this.metroHighContrastTheme,
     @Deprecated(
-        '如果使用默认theme行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroColor+themeMode，这样做更接近与还原Windows Phone原版体验')
+      '如果使用默认theme行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroColor+themeMode，这样做更接近与还原Windows Phone原版体验',
+    )
     this.theme,
     @Deprecated(
-        '如果使用默认theme行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroColor+themeMode，这样做更接近与还原Windows Phone原版体验')
+      '如果使用默认theme行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroColor+themeMode，这样做更接近与还原Windows Phone原版体验',
+    )
     this.darkTheme,
     @Deprecated(
-        '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验')
+      '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验',
+    )
     this.highContrastTheme,
     @Deprecated(
-        '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验')
+      '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验',
+    )
     this.highContrastDarkTheme,
     this.themeMode = MetroThemeMode.dark,
     this.fontFamily,
@@ -286,15 +295,15 @@ class MetroApp extends StatefulWidget {
     this.scrollBehavior,
     this.themeAnimationStyle,
     this.useWVGAMode = false,
-  })  : assert(routerDelegate != null || routerConfig != null),
-        navigatorObservers = null,
-        navigatorKey = null,
-        onGenerateRoute = null,
-        home = null,
-        onGenerateInitialRoutes = null,
-        onUnknownRoute = null,
-        routes = null,
-        initialRoute = null;
+  }) : assert(routerDelegate != null || routerConfig != null),
+       navigatorObservers = null,
+       navigatorKey = null,
+       onGenerateRoute = null,
+       home = null,
+       onGenerateInitialRoutes = null,
+       onUnknownRoute = null,
+       routes = null,
+       initialRoute = null;
 
   /// {@macro flutter.widgets.widgetsApp.navigatorKey}
   final GlobalKey<NavigatorState>? navigatorKey;
@@ -325,7 +334,7 @@ class MetroApp extends StatefulWidget {
 
   /// {@macro flutter.widgets.widgetsApp.onNavigationNotification}
   final NotificationListenerCallback<NavigationNotification>?
-      onNavigationNotification;
+  onNavigationNotification;
 
   /// {@macro flutter.widgets.widgetsApp.navigatorObservers}
   final List<NavigatorObserver>? navigatorObservers;
@@ -671,9 +680,11 @@ class _MetroAppState extends State<MetroApp> {
     ThemeData? theme;
 
     final MetroThemeMode mode = widget.themeMode ?? MetroThemeMode.system;
-    final Brightness platformBrightness =
-        MediaQuery.platformBrightnessOf(context);
-    final bool useDarkTheme = mode == MetroThemeMode.dark ||
+    final Brightness platformBrightness = MediaQuery.platformBrightnessOf(
+      context,
+    );
+    final bool useDarkTheme =
+        mode == MetroThemeMode.dark ||
         (mode == MetroThemeMode.system &&
             platformBrightness == ui.Brightness.dark);
     final bool useWhiteTheme = !useDarkTheme;
@@ -690,7 +701,9 @@ class _MetroAppState extends State<MetroApp> {
 
     // Metro Extensions Builder
     List<ThemeExtension<dynamic>> buildMetroExtensions(
-        Color textColor, Color onSurface) {
+      Color textColor,
+      Color onSurface,
+    ) {
       Curve appBarExpandCurve = const UixLog(150);
       Curve appBarCollapseCurve = const UixLog(150);
       Duration appBarExpandDuration = const Duration(milliseconds: 400);
@@ -708,12 +721,12 @@ class _MetroAppState extends State<MetroApp> {
       Color contextMenuLine = useWhiteTheme ? blackColor : whiteColor;
 
       if (widget.version == MetroDesignVersion.wp7) {
-        appBarExpandCurve = Curves.bounceOut;
-        appBarCollapseCurve = Curves.easeIn;
-        appBarExpandDuration = const Duration(milliseconds: 300);
-        appBarExpandDuration =
-            const Duration(milliseconds: 400); // Exaggerated bounce
-        appBarCollapseDuration = const Duration(milliseconds: 250);
+        appBarExpandCurve = const UixEaseIn(10, .5);
+        appBarCollapseCurve = const UixEaseIn(10, .5);
+        appBarExpandDuration = const Duration(
+          milliseconds: 400,
+        ); // ShellFrame Assets MenuMoveShowLength
+        appBarCollapseDuration = const Duration(milliseconds: 200);
 
         panoramaTitleEntryTranslate = 2600.0;
         panoramaBgEntryTranslate = 1400.0;
@@ -721,9 +734,6 @@ class _MetroAppState extends State<MetroApp> {
 
         buttonPressedBg = onSurface;
         buttonPressedText = useWhiteTheme ? whiteColor : blackColor;
-      } else if (widget.version == MetroDesignVersion.wp81) {
-        // wp81 tweaks...
-        appBarExpandCurve = Curves.easeOut;
       }
 
       return <ThemeExtension<dynamic>>[
@@ -785,7 +795,11 @@ class _MetroAppState extends State<MetroApp> {
           ),
           itemHeight: 70.0,
         ),
-        const MetroPageThemeData(),
+        MetroSystemThemeData(
+          version: widget.version,
+          highContrast: MediaQuery.highContrastOf(context),
+        ),
+        MetroPageThemeData.forVersion(widget.version),
       ];
     }
 
@@ -829,8 +843,10 @@ class _MetroAppState extends State<MetroApp> {
         );
       } else {
         theme = theme.copyWith(
-          textTheme: theme.textTheme
-              .apply(fontFamily: 'Segoe WP', package: 'metro_ui'),
+          textTheme: theme.textTheme.apply(
+            fontFamily: 'Segoe WP',
+            package: 'metro_ui',
+          ),
         );
       }
 
@@ -839,8 +855,8 @@ class _MetroAppState extends State<MetroApp> {
       final Color onSurface = theme.colorScheme.onSurface;
       theme = theme.copyWith(
         extensions: [
-          ...theme.extensions.values,
           ...buildMetroExtensions(textColor, onSurface),
+          ...theme.extensions.values,
         ],
       );
 
@@ -862,7 +878,7 @@ class _MetroAppState extends State<MetroApp> {
       colorScheme: metroTheme.colorScheme.copyWith(
         primary: primaryColor,
         onSurface: onSurface,
-        surfaceContainer: surfaceColor
+        surfaceContainer: surfaceColor,
       ),
       textTheme: metroTheme.textTheme.apply(
         fontFamily: widget.fontFamily ?? 'Segoe WP',
@@ -881,7 +897,7 @@ class _MetroAppState extends State<MetroApp> {
     final ThemeData theme = _themeBuilder(context);
     final Color effectiveSelectionColor =
         theme.textSelectionTheme.selectionColor ??
-            theme.colorScheme.primary.withValues(alpha: 0.40);
+        theme.colorScheme.primary.withValues(alpha: 0.40);
     final Color effectiveCursorColor =
         theme.textSelectionTheme.cursorColor ?? theme.colorScheme.primary;
 
@@ -902,7 +918,7 @@ class _MetroAppState extends State<MetroApp> {
       child: childWidget,
     );
 
-    if (widget.themeAnimationStyle != AnimationStyle.noAnimation) {
+    {
       if (widget.builder != null) {
         childWidget = Builder(
           builder: (BuildContext context) {
@@ -915,14 +931,22 @@ class _MetroAppState extends State<MetroApp> {
             // widget.builder() 将无法找到主题。因此，我们用另一个 builder
             // 包裹 widget.builder，以便它们之间有一个 context 分隔，
             // 并且 Theme.of() 能正确解析为我们传递给 AnimatedTheme 的主题。
-            return widget.builder!(context, child);
+            return widget.builder!(
+              context,
+              ColoredBox(
+                color: theme.scaffoldBackgroundColor,
+                child: child ?? const SizedBox.shrink(),
+              ),
+            );
           },
         );
       }
       childWidget = AnimatedTheme(
         data: theme,
-        duration: widget.themeAnimationStyle?.duration ??
-            widget.themeAnimationDuration,
+        duration: widget.themeAnimationStyle == AnimationStyle.noAnimation
+            ? Duration.zero
+            : widget.themeAnimationStyle?.duration ??
+                  widget.themeAnimationDuration,
         curve: widget.themeAnimationStyle?.curve ?? widget.themeAnimationCurve,
         child: Stack(
           children: [
@@ -947,19 +971,16 @@ class _MetroAppState extends State<MetroApp> {
               // （红字 + 黄双下划线）。这里提供中性底座，
               // 让 AppBar 内的文字（内置按钮/菜单项/自定义内容）正常渲染。
               child: DefaultTextStyle(
-                style: theme.textTheme.bodyMedium ??
+                style:
+                    theme.textTheme.bodyMedium ??
                     const TextStyle(color: Colors.white),
-                child:
-                    MetroApplicationBarOverlay(controller: _appBarController),
+                child: MetroApplicationBarOverlay(
+                  controller: _appBarController,
+                ),
               ),
             ),
           ],
         ),
-      );
-    } else {
-      childWidget = Theme(
-        data: theme,
-        child: childWidget,
       );
     }
 
@@ -1088,10 +1109,14 @@ class _MetroAppState extends State<MetroApp> {
       pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) {
         return PageRouteBuilder<T>(
           settings: settings,
-          pageBuilder: (BuildContext context, Animation<double> animation,
-              Animation<double> secondaryAnimation) {
-            return builder(context);
-          },
+          pageBuilder:
+              (
+                BuildContext context,
+                Animation<double> animation,
+                Animation<double> secondaryAnimation,
+              ) {
+                return builder(context);
+              },
         );
       },
       home: widget.home,

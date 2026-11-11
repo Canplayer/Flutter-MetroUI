@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:metro_ui/animations.dart';
 
 /// 页面切换回调：返回 (旧页面索引, 新页面索引)。
 ///
-/// 在**松手触发换页的那一刻**立即回调（此时换页动画刚开始播放），
+/// 在**松手决定换页的那一刻**立即回调（此时归位动画刚开始播放），
 /// 用于通知外部"发生了换页"。
 typedef OnPageChanged = void Function(int oldIndex, int newIndex);
 
 /// 换页动画结束回调：返回 (旧页面索引, 新页面索引)。
 ///
-/// 在换页动画播放完毕后回调，用于通知外部"换页动画已结束"。
+/// 在页面归位到新位置后回调。
 typedef OnTransitionEnd = void Function(int oldIndex, int newIndex);
 
 /// 滑动进度回调：返回 -1.0 ~ 1.0。
 ///
-/// - 拖动过程中：位移 / maxDragDistance（位移被钳制在 ±maxDragDistance）；
-/// - 换页 / 归位动画过程中：从当前值平滑归零；
+/// - 拖动过程中：位移 / [SwipePageView.maxDragDistance]（默认一页宽）；
+/// - 归位 / 换页动画过程中：从当前位置平滑到终点；
 /// - 动画结束后：回调 0.0。
 typedef OnSlideProgress = void Function(double progress);
 
@@ -24,23 +25,55 @@ typedef PageItemBuilder = Widget Function(BuildContext context, int index);
 /// [SwipePageView] 的默认初始页码。
 const int kSwipePageViewInitialPage = 0;
 
-/// [SwipePageView] 的默认松手换页阈值（像素）。
+/// `Pivot.uix!StaticResources::PanPercentThreshold` = **0.33** [读出]。
+///
+/// 松手判定不看绝对像素，而看「已划过一页的比例」是否超过 33%。
+const double kSwipePageViewPanPercentThreshold = 0.33;
+
+/// `Animations.uix!Pivot::PivotMove`：**500 ms**、`Log(150)` [读出]。
+///
+/// 系统用一个 500 ms 的 `PivotMove` 把标题条从拖动位置送回目标位置；
+/// 页面与标题条同步，所以页面归位也用同样的时长与曲线。
+const Duration kSwipePageViewMoveDuration = Duration(milliseconds: 500);
+
+/// `PivotMove` 的插值曲线 `Log(150)` [读出]。
+const Curve kSwipePageViewMoveCurve = MetroCurves.metroTranslateIn;
+
+/// `Animations.uix!SlideFull*FadeOut`：**300 ms**、`Log(150)` [读出]。
+const Duration kSwipePageViewHideDuration = Duration(milliseconds: 300);
+
+/// `Animations.uix!SlideFull*FadeIn`：**500 ms**、`Log(150)` [读出]。
+const Duration kSwipePageViewShowDuration = Duration(milliseconds: 500);
+
+/// `Animations.uix!FadeOut`：250 ms `Log(150)` 1→0 [读出]。
+const Duration kSwipePageViewFadeOutDuration = Duration(milliseconds: 250);
+
+/// `Animations.uix!FadeIn`：350 ms `Log(150)` 0→1 [读出]。
+const Duration kSwipePageViewFadeInDuration = Duration(milliseconds: 350);
+
+/// 判定为「快滑（flick）」的速度阈值，单位 逻辑像素/秒。
+///
+/// 系统 `Pivot` 用的是 `Flicker` 手势：`Flicker.Invoked` 一触发就
+/// **不看位移**，直接按 `Velocity.X` 的符号决定方向
+/// （`PIVOT 0x2f9–0x327`：`Velocity.X > 0` → 上一页，否则下一页）。
+/// 但 `Flicker` 内部的速度阈值在原生手势识别器里（`uixrender` 的
+/// `SpGestureRecognizerGetFlickInfo` 只转发），本镜像没有读出具体数值。
+///
+/// 0.5 px/ms（= 500 px/s）是 WP 触摸栈常用的快滑起点，属**近似值**，
+/// 可用 [SwipePageView.flickVelocity] 覆盖。
+const double kSwipePageViewFlickVelocity = 500.0;
+
+/// 旧默认值，保留以兼容既有调用；新代码请用系统值常量。
+///
+/// 系统没有"固定像素阈值"和"固定最大拖动距离"：阈值是
+/// 33% × 一页宽（[kSwipePageViewPanPercentThreshold]），
+/// 拖动范围是一页宽，因此这些常量不再作为默认值使用。
 const double kSwipePageViewSwipeThreshold = 90.0 / 0.8;
-
-/// [SwipePageView] 的默认最大拖动位移（像素）。
 const double kSwipePageViewMaxDragDistance = 320.0 / 0.8;
-
-/// [SwipePageView] 的默认飞出/飞入位移（像素）。
 const double kSwipePageViewFlyDistance = 320.0;
-
-/// [SwipePageView] 的默认飞出/飞入动画时长。
-const Duration kSwipePageViewFlyDuration = Duration(milliseconds: 300);
-
-/// [SwipePageView] 的默认渐隐/渐显动画时长。
-const Duration kSwipePageViewFadeDuration = Duration(milliseconds: 100);
-
-/// [SwipePageView] 的默认归位动画时长。
-const Duration kSwipePageViewSnapBackDuration = Duration(milliseconds: 200);
+const Duration kSwipePageViewFlyDuration = kSwipePageViewMoveDuration;
+const Duration kSwipePageViewFadeDuration = Duration.zero;
+const Duration kSwipePageViewSnapBackDuration = kSwipePageViewMoveDuration;
 
 /// 编程式控制 [SwipePageView] 换页的控制器。
 ///
@@ -64,34 +97,64 @@ class SwipePageController {
   void next() => _state?._switchTo(_state!._currentIndex + 1);
 }
 
-/// 简化版左右滑动翻页组件（不依赖标准 PageView，无惯性设计）。
+/// Windows Phone 8 Pivot 的滑动翻页部分（`Pivot.uix`）。
 ///
-/// ## 交互规则
-/// - 屏幕上始终只显示当前页 A，手指拖动时 A 跟随手指水平移动；
-/// - 拖动位移被限制在 `[-maxDragDistance, maxDragDistance]` 内（默认 320px），
-///   超过该数值后页面不再移动（多手指接力、迟迟不松手也不会触发换页）；
-/// - 多手指由 GestureDetector 的拖拽识别器原生接力处理：只要还有手指按住
-///   屏幕，拖动就持续进行、不会触发换页；全部手指松开后才判定：
-///   - 位移绝对值 < [swipeThreshold]（默认 50px）：归位回原位；
-///   - 位移绝对值 >= [swipeThreshold]：播放换页动画。
+/// ## 内容只有一份，换页是"隐藏 → 换内容 → 显示" [读出]
 ///
-/// ## 换页动画（播放速度与手指滑动速度无关）
-/// 单个 [AnimationController] 驱动四个 [Interval] 子动画，A、B 两页同步运动：
-/// 1. 页面 A 沿滑动方向飞出 [flyDistance]（默认 320px），时长 [flyDuration]，
-///    使用从快到慢的 [Curves.easeOutCubic] 曲线（起始速度有限、尾部减速
-///    肉眼可见；不要用 [Curves.decelerate]，其起始速度无穷大，动画会在
-///    前几毫秒内瞬间完成，看起来像"瞬移"），同时叠加 [fadeDuration]
-///    的渐隐动画（[Curves.easeInCubic] 先慢后快，保证 A 飞出过程清晰可见）；
-/// 2. 页面 B 与 A **同时**从滑动方向的反方向 [flyDistance] 处滑入
-///    （曲线与时长同 A），并同时叠加 [fadeDuration] 的渐显动画。
-///    渐显与滑入必须同时启动：若先渐显、后滑入，B 会静止停在屏幕边缘
-///    渐显，产生"先闪一下再飞入"的割裂感。
+/// `DefaultPivotPaneHost`（`PIVOT 0x11e8–0x125e`）换 pane 的顺序是：
 ///
-/// ## 其他特性
-/// - 支持无限滚动：[itemBuilder] 的 index 可以是任意整数；
-/// - 通过 [onPageChanged] 在松手触发换页时监听翻页（动画刚开始即回调）；
-///   通过 [onTransitionEnd] 监听换页动画播放完毕；
-///   通过 [onSlideProgress] 监听滑动距离。
+/// ```
+/// PlayHideAnimation()                  // 0x1234  旧内容播隐藏动画
+/// PaneContents.RequestSource(null)     // 0x123b  清空内容
+/// UpdatePaneContents()                 // 0x1255
+/// LoadSelectedPane()                   // 0x125e  载入新 pane（播显示动画）
+/// ```
+///
+/// 加上 `PivotPaneHost` 只有 `CurrentPaneState` 一个状态、`LoadSelectedPane`
+/// 只载一个 pane，可以确定：**任何时刻只存在一份内容，不存在三页并排的滚动根**。
+///
+/// 换页用的两条动画在 `PivotAnimations`（`ANIMATIONS 0x2404–0x245e`）里按
+/// `PivotNavigationDirection` 二选一：
+///
+/// | | 方向 | 动画 | X 位移 | 时长 | 曲线 |
+/// |---|---|---|---|---|---|
+/// | 隐藏 | — | `SlideFullLeftFadeOut` | 0 → −1 屏 | **300 ms** | Log(150) |
+/// | 隐藏 | — | `SlideFullRightFadeOut` | 0 → +1 屏 | **300 ms** | Log(150) |
+/// | 显示 | — | `SlideFullLeftFadeIn` | +1 屏 → 0 | **500 ms** | Log(150) |
+/// | 显示 | — | `SlideFullRightFadeIn` | −1 屏 → 0 | **500 ms** | Log(150) |
+///
+/// 各自还叠了一条透明度动画：`FadeOut` = 250 ms `Log(150)` 1→0，
+/// `FadeIn` = 350 ms `Log(150)` 0→1。
+///
+/// ## 拖动：内容跟随手指 1:1 [读出]
+///
+/// `PIVOT 0x424–0x498` 在 `PivotData.Dragging` 变化时给 `PivotPane` 播放
+/// `PaneAnimation`，其 `TimeSource = ScrollRootRelativeTo`（由滚动偏移驱动），
+/// 关键帧 X：滚动 0 → `+PaneWidth`，滚动 `2*PaneWidth` → `−PaneWidth`。
+/// 拖动一屏正好位移一屏，**线性**跟随手指。
+///
+/// 滚动根 `MinimumSize = (PaneWidth * 3, 1)`（`PIVOT 0x35f–0x377`）只提供
+/// 拖动量程：可拖动范围是 ±一屏。
+///
+/// ## 松手判定 [读出] `PIVOT 0x2f9–0x423`
+///
+/// 两套判定互斥，**先快滑、后位移**：
+///
+/// 1. `Flicker.Invoked`（快滑）→ 不看位移，
+///    `Velocity.X > 0` 去上一页，否则去下一页；
+/// 2. 否则（`!Flicked`）用滚动位置算归一化中心
+///    `delta = (ViewNear + ViewFar) / 2 - 0.5`，
+///    阈值 `threshold = PanPercentThreshold / 3`，
+///    `delta > threshold` → 上一页，`delta < -threshold` → 下一页，
+///    其余归位。
+///
+/// 除以 3 是把「三屏宽量程」的归一化坐标折回「一屏」，
+/// 等价于 **划过一屏的 33%** 就换页。
+///
+/// ## 回弹
+///
+/// 未换页时 `ScrollModel.ScrollToPosition(0.5)` 回到中间，用 `PivotMove`
+/// ——**500 ms、Log(150)**（`ANIMATIONS 0x151–0x191`）。
 class SwipePageView extends StatefulWidget {
   const SwipePageView({
     super.key,
@@ -101,24 +164,25 @@ class SwipePageView extends StatefulWidget {
     this.onSlideProgress,
     this.controller,
     this.initialPage = kSwipePageViewInitialPage,
-    this.swipeThreshold = kSwipePageViewSwipeThreshold,
-    this.maxDragDistance = kSwipePageViewMaxDragDistance,
-    this.flyDistance = kSwipePageViewFlyDistance,
-    this.flyDuration = kSwipePageViewFlyDuration,
-    this.fadeDuration = kSwipePageViewFadeDuration,
-    this.snapBackDuration = kSwipePageViewSnapBackDuration,
+    this.swipeThreshold,
+    this.maxDragDistance,
+    this.flickVelocity = kSwipePageViewFlickVelocity,
+    this.flyDuration = kSwipePageViewMoveDuration,
+    this.snapBackDuration = kSwipePageViewMoveDuration,
+    this.hideDuration = kSwipePageViewHideDuration,
+    this.showDuration = kSwipePageViewShowDuration,
+    this.fadeDuration = Duration.zero,
+    this.flyDistance = 0,
   });
 
   /// 页面构建器。index 可以是任意整数，超出当前页范围时同样会被调用，
   /// 由使用者决定如何呈现（实现无限滚动）。
   final PageItemBuilder itemBuilder;
 
-  /// 翻页回调：松手触发换页的瞬间回调 (旧页索引, 新页索引)，
-  /// 见 [OnPageChanged]。
+  /// 翻页回调：松手决定换页的瞬间回调 (旧页索引, 新页索引)，见 [OnPageChanged]。
   final OnPageChanged? onPageChanged;
 
-  /// 换页动画结束回调：动画播放完毕后回调 (旧页索引, 新页索引)，
-  /// 见 [OnTransitionEnd]。
+  /// 换页动画结束回调，见 [OnTransitionEnd]。
   final OnTransitionEnd? onTransitionEnd;
 
   /// 滑动进度回调：-1.0 ~ 1.0，见 [OnSlideProgress]。
@@ -130,24 +194,39 @@ class SwipePageView extends StatefulWidget {
   /// 初始页码（可为负数）。
   final int initialPage;
 
-  /// 松手触发换页的最小位移（像素），见构造参数默认值。
-  final double swipeThreshold;
+  /// 松手换页的位移阈值，单位逻辑像素。
+  ///
+  /// 为 null（默认）时按系统的 `PanPercentThreshold` 计算：
+  /// **33% × 一页宽**（[kSwipePageViewPanPercentThreshold]）。
+  final double? swipeThreshold;
 
-  /// 拖动过程中页面允许的最大位移（像素）；
-  /// 归一化进度 = 位移 / maxDragDistance。
-  final double maxDragDistance;
+  /// 归一化进度的分母，单位逻辑像素。
+  ///
+  /// 为 null（默认）时等于一页宽——系统的滚动坐标本来就以页为单位，
+  /// 拖动范围也是 ±一页。
+  final double? maxDragDistance;
 
-  /// 换页时页面飞出/飞入的位移（像素）。
-  final double flyDistance;
+  /// 快滑判定速度阈值（逻辑像素/秒），见 [kSwipePageViewFlickVelocity]。
+  final double flickVelocity;
 
-  /// 飞出/飞入动画时长。
+  /// 换页归位动画时长（默认 500 ms，见 [kSwipePageViewMoveDuration]）。
   final Duration flyDuration;
 
-  /// 渐隐/渐显动画时长。
+  /// 归位动画时长（默认 500 ms，未换页时的 `PivotMove`）。
+  final Duration snapBackDuration;
+
+  /// 旧内容飞出时长（默认 300 ms，`SlideFull*FadeOut`）。
+  final Duration hideDuration;
+
+  /// 新内容飞入时长（默认 500 ms，`SlideFull*FadeIn`）。
+  final Duration showDuration;
+
+  /// 已不参与渲染。淡出淡入由 `SlideFull*Fade*` 自带的
+  /// `FadeOut`/`FadeIn`（250/350 ms）决定，见 [kSwipePageViewFadeOutDuration]。
   final Duration fadeDuration;
 
-  /// 归位动画时长。
-  final Duration snapBackDuration;
+  /// 已不参与渲染。系统的飞出距离固定为**一屏**（`Magnitude = 1.0`）。
+  final double flyDistance;
 
   @override
   State<SwipePageView> createState() => _SwipePageViewState();
@@ -156,87 +235,40 @@ class SwipePageView extends StatefulWidget {
 class _SwipePageViewState extends State<SwipePageView>
     with TickerProviderStateMixin {
   late int _currentIndex;
-  double _dragOffset = 0.0; // 当前拖拽偏移量，限制在 ±maxDragDistance
 
-  // 状态标识
-  bool _isTransitioning = false; // 换页动画播放中
-  bool _isSnappingBack = false; // 归位动画播放中
+  /// 当前内容的横向位移，单位逻辑像素，范围 [-pane, +pane]。
+  double _offset = 0.0;
 
-  // 动画控制器
-  late AnimationController _transitionController;
-  late AnimationController _snapController;
+  /// 最近一次布局得到的一屏宽（= 视口宽）。
+  double _paneWidth = 0.0;
 
-  // 换页动画（单控制器 + Interval 分段）
-  late Animation<double> _pageASlide; // A 飞出：0~flyDuration easeOutCubic
-  late Animation<double> _pageAFade; // A 渐隐：0~fadeDuration easeInCubic
-  late Animation<double> _pageBFade; // B 渐显：0~fadeDuration linear
-  late Animation<double> _pageBSlide; // B 滑入：0~flyDuration easeOutCubic
+  late final AnimationController _move = AnimationController(
+    vsync: this,
+    duration: widget.snapBackDuration,
+  );
 
-  // 换页动画的临时状态
-  int _targetIndex = 0;
-  double _startDragOffset = 0.0;
-  int _slideDirection = 0; // 1: 向右滑(上一页), -1: 向左滑(下一页)
+  double _from = 0;
+  double _to = 0;
+
+  bool _hiding = false;
+  bool _showing = false;
+
+  /// 正在换到的页码；null 表示只是回弹。
+  int? _pendingIndex;
+
+  /// 换页起始页码（内容换掉后 `_currentIndex` 已是新页，回调仍要报旧页）。
+  int? _fromIndex;
+
+  bool get _moving => _move.isAnimating;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialPage;
     widget.controller?._attach(this);
-
-    // ── 换页过渡动画控制器（总时长 = flyDuration） ──────────────────────────
-    _transitionController = AnimationController(
-      vsync: this,
-      duration: widget.flyDuration,
-    );
-
-    // 渐显/渐隐时长占动画总时长的比例（默认 50/100 = 0.5）
-    final fadeFraction =
-        (widget.fadeDuration.inMilliseconds / widget.flyDuration.inMilliseconds)
-            .clamp(0.0, 1.0);
-
-    // A 沿滑动方向飞出：从快到慢（easeOutCubic 起始速度有限，减速肉眼可见）
-    _pageASlide = CurvedAnimation(
-      parent: _transitionController,
-      curve: const Interval(0.0, 1.0, curve: Curves.easeOutCubic),
-    );
-    // A 渐隐：easeInCubic 先慢后快 → A 飞出过程清晰可见
-    _pageAFade = CurvedAnimation(
-      parent: _transitionController,
-      curve: Interval(0.0, fadeFraction, curve: Curves.easeInCubic),
-    );
-    // B 渐显：与滑入同时进行，避免"先静止在屏幕边缘闪现、再飞入"
-    _pageBFade = CurvedAnimation(
-      parent: _transitionController,
-      curve: Interval(0.0, fadeFraction, curve: Curves.linear),
-    );
-    // B 从反方向滑入：从快到慢，曲线与 A 相同
-    _pageBSlide = CurvedAnimation(
-      parent: _transitionController,
-      curve: const Interval(0.0, 1.0, curve: Curves.easeOutCubic),
-    );
-
-    _transitionController.addListener(_onTransitionFrame);
-    _transitionController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _onTransitionCompleted();
-      }
-    });
-
-    // ── 归位动画控制器 ──────────────────────────────────────────────────────
-    _snapController = AnimationController(
-      vsync: this,
-      duration: widget.snapBackDuration,
-    );
-
-    _snapController.addListener(_onSnapFrame);
-    _snapController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        setState(() {
-          _isSnappingBack = false;
-          _dragOffset = 0.0;
-        });
-        _notifyProgress(0.0);
-      }
+    _move.addListener(_onMoveFrame);
+    _move.addStatusListener((status) {
+      if (status == AnimationStatus.completed) _onMoveCompleted();
     });
   }
 
@@ -252,126 +284,192 @@ class _SwipePageViewState extends State<SwipePageView>
   @override
   void dispose() {
     widget.controller?._detach();
-    _transitionController.dispose();
-    _snapController.dispose();
+    _move.dispose();
     super.dispose();
   }
 
-  /// 通知外部滑动进度 (-1.0 ~ 1.0)。
+  double get _progressDenominator =>
+      widget.maxDragDistance ?? (_paneWidth > 0 ? _paneWidth : 1.0);
+
+  double get _threshold =>
+      widget.swipeThreshold ?? kSwipePageViewPanPercentThreshold * _paneWidth;
+
   void _notifyProgress(double progress) {
     widget.onSlideProgress?.call(progress.clamp(-1.0, 1.0));
   }
 
-  // ── 手势处理 ──────────────────────────────────────────────────────────────
+  // ── 手势 ────────────────────────────────────────────────────────────────
 
   void _handleDragUpdate(DragUpdateDetails details) {
-    if (_isTransitioning) return; // 换页动画期间忽略手势
+    // 隐藏/显示阶段不接受新手势。
+    if (_moving && _pendingIndex != null) return;
 
-    if (_isSnappingBack) {
-      // 归位中再次拖动：从当前位置继续
-      _snapController.stop();
-      _isSnappingBack = false;
+    if (_moving) {
+      _move.stop();
+      _pendingIndex = null;
     }
 
+    final pane = _paneWidth;
     setState(() {
-      _dragOffset = (_dragOffset + (details.primaryDelta ?? 0))
-          .clamp(-widget.maxDragDistance, widget.maxDragDistance)
-          .toDouble();
+      _offset = (_offset + (details.primaryDelta ?? 0)).clamp(-pane, pane);
     });
-    _notifyProgress(_dragOffset / widget.maxDragDistance);
+    _notifyProgress(_offset / _progressDenominator);
   }
 
   void _handleDragEnd(DragEndDetails details) {
-    if (_isTransitioning) return;
+    if (_moving && _pendingIndex != null) return;
 
-    if (_dragOffset.abs() < widget.swipeThreshold) {
-      _startSnapBack(); // < 50px：归位回原位
-    } else {
-      _startPageTransition(); // >= 50px：触发换页
+    final pane = _paneWidth;
+    if (pane <= 0) return;
+
+    final velocity = details.primaryVelocity ?? 0;
+
+    // 1) 快滑：只看方向，不看位移（PIVOT 0x2f9–0x327）。
+    if (velocity.abs() >= widget.flickVelocity) {
+      _startNavigation(velocity > 0 ? -1 : 1);
+      return;
     }
+
+    // 2) 位移阈值：划过一屏的 33%（PIVOT 0x3aa–0x413）。
+    if (_offset.abs() >= _threshold) {
+      _startNavigation(_offset > 0 ? -1 : 1);
+      return;
+    }
+
+    _startSnapBack();
   }
 
   void _handleDragCancel() {
-    if (_isTransitioning) return;
-    _startSnapBack(); // 手势被系统取消时直接归位
+    if (_moving && _pendingIndex != null) return;
+    _startSnapBack();
   }
 
-  // ── 归位 ──────────────────────────────────────────────────────────────────
+  // ── 回弹 / 换页 ─────────────────────────────────────────────────────────
 
   void _startSnapBack() {
-    _isSnappingBack = true;
-    _startDragOffset = _dragOffset;
-    _snapController.forward(from: 0.0);
+    if (_offset == 0) {
+      _notifyProgress(0);
+      return;
+    }
+    _pendingIndex = null;
+    _hiding = false;
+    _showing = false;
+    _beginMove(0.0, widget.snapBackDuration);
   }
 
-  void _onSnapFrame() {
-    final t = Curves.easeOut.transform(_snapController.value);
-    setState(() {
-      _dragOffset = _startDragOffset * (1.0 - t);
-    });
-    _notifyProgress(_dragOffset / widget.maxDragDistance);
+  /// [direction]：+1 去下一页（内容左移），-1 去上一页（内容右移）。
+  void _startNavigation(int direction) {
+    final target = _currentIndex + direction;
+    _pendingIndex = target;
+    _fromIndex = _currentIndex;
+    widget.onPageChanged?.call(_currentIndex, target);
+    // SlideFull*FadeOut：旧内容继续沿滑动方向飞到屏幕外（一屏）。
+    _hiding = true;
+    _showing = false;
+    _beginMove(direction > 0 ? -_paneWidth : _paneWidth, widget.hideDuration);
   }
 
-  // ── 换页 ──────────────────────────────────────────────────────────────────
-
-  /// 编程式换页：播放切换到 [target] 页的动画（无拖拽起始偏移，
-  /// 由 [SwipePageController] 触发）。
+  /// 编程式换页。系统 Pivot 只支持相邻翻页，跨页直接落位。
   void _switchTo(int target) {
-    if (_isTransitioning) return; // 换页动画播放中忽略
-    if (target == _currentIndex) return; // 目标即当前页，无操作
-
-    _isTransitioning = true;
-    _startDragOffset = 0;
-    // 目标为上一页（target < current）→ 向右飞出；下一页 → 向左
-    _slideDirection = target < _currentIndex ? 1 : -1;
-    _targetIndex = target;
-
-    // 触发换页 → 立即回调（动画刚开始播放）
-    widget.onPageChanged?.call(_currentIndex, _targetIndex);
-
-    _transitionController.forward(from: 0.0);
+    if (_moving) return;
+    if (target == _currentIndex) return;
+    final direction = target < _currentIndex ? -1 : 1;
+    if (target != _currentIndex + direction) {
+      final oldIndex = _currentIndex;
+      setState(() {
+        _currentIndex = target;
+        _offset = 0;
+      });
+      widget.onPageChanged?.call(oldIndex, target);
+      widget.onTransitionEnd?.call(oldIndex, target);
+      return;
+    }
+    _startNavigation(direction);
   }
 
-  void _startPageTransition() {
-    _isTransitioning = true;
-    _startDragOffset = _dragOffset;
-
-    // 向右滑 (_dragOffset > 0)：目标页是上一页；向左滑：下一页
-    _slideDirection = _dragOffset > 0 ? 1 : -1;
-    _targetIndex = _slideDirection > 0 ? _currentIndex - 1 : _currentIndex + 1;
-
-    // 松手触发换页 → 立即回调（动画刚开始播放）
-    widget.onPageChanged?.call(_currentIndex, _targetIndex);
-
-    _transitionController.forward(from: 0.0);
+  void _beginMove(double to, Duration duration) {
+    _move.stop();
+    _move.duration = duration;
+    _from = _offset;
+    _to = to;
+    _move.forward(from: 0);
   }
 
-  void _onTransitionFrame() {
-    // 进度从当前拖拽值平滑归零
-    _notifyProgress(
-      _startDragOffset * (1.0 - _transitionController.value) /
-          widget.maxDragDistance,
-    );
-    setState(() {});
-  }
-
-  void _onTransitionCompleted() {
-    final oldIndex = _currentIndex;
-    final newIndex = _targetIndex;
-
+  void _onMoveFrame() {
+    final t = kSwipePageViewMoveCurve.transform(_move.value);
     setState(() {
-      _currentIndex = newIndex;
-      _isTransitioning = false;
-      _dragOffset = 0.0;
+      _offset = _from + (_to - _from) * t;
     });
-
-    _transitionController.reset();
-    _notifyProgress(0.0);
-    // 换页动画播放完毕 → 回调结束事件
-    widget.onTransitionEnd?.call(oldIndex, newIndex);
+    _notifyProgress(_offset / _progressDenominator);
   }
 
-  // ── 渲染 ──────────────────────────────────────────────────────────────────
+  void _onMoveCompleted() {
+    final target = _pendingIndex;
+    if (target == null) {
+      // 回弹：终点就是 0。
+      setState(() {
+        _offset = 0;
+        _hiding = false;
+        _showing = false;
+      });
+      _notifyProgress(0);
+      return;
+    }
+
+    if (_hiding) {
+      // 隐藏播完 → 换内容 → 播显示（DefaultPivotPaneHost 的顺序）。
+      final pane = _paneWidth;
+      final direction = target > _currentIndex ? 1 : -1;
+      setState(() {
+        _currentIndex = target;
+        // 新内容从反方向一屏处出发。
+        _offset = direction > 0 ? pane : -pane;
+        _hiding = false;
+        _showing = true;
+      });
+      _from = _offset;
+      _to = 0;
+      _move.duration = widget.showDuration;
+      _move.forward(from: 0);
+      return;
+    }
+
+    final oldIndex = _fromIndex ?? _currentIndex;
+    setState(() {
+      _offset = 0;
+      _pendingIndex = null;
+      _fromIndex = null;
+      _showing = false;
+    });
+    _from = 0;
+    _to = 0;
+    _move.reset();
+    _notifyProgress(0);
+    widget.onTransitionEnd?.call(oldIndex, target);
+  }
+
+  /// 当前帧的透明度，来源 `SlideFull*Fade*` 叠加的 `FadeOut` / `FadeIn`。
+  double get _opacity {
+    if (_hiding) {
+      final span = _move.duration!.inMicroseconds == 0
+          ? 1.0
+          : kSwipePageViewFadeOutDuration.inMicroseconds /
+                _move.duration!.inMicroseconds;
+      final t = (span <= 0 ? 1.0 : (_move.value / span)).clamp(0.0, 1.0);
+      return 1.0 - kSwipePageViewMoveCurve.transform(t).clamp(0.0, 1.0);
+    }
+    if (_showing) {
+      final span = _move.duration!.inMicroseconds == 0
+          ? 1.0
+          : kSwipePageViewFadeInDuration.inMicroseconds /
+                _move.duration!.inMicroseconds;
+      final t = (span <= 0 ? 1.0 : (_move.value / span)).clamp(0.0, 1.0);
+      return kSwipePageViewMoveCurve.transform(t).clamp(0.0, 1.0);
+    }
+    return 1.0;
+  }
+
+  // ── 渲染 ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -380,51 +478,22 @@ class _SwipePageViewState extends State<SwipePageView>
       onHorizontalDragEnd: _handleDragEnd,
       onHorizontalDragCancel: _handleDragCancel,
       behavior: HitTestBehavior.opaque,
-      child: Stack(
-        fit: StackFit.expand,
-        // 不裁切：页面滑出容器边缘时完整渲染，不会被切断
-        clipBehavior: Clip.none,
-        children: [
-          if (!_isTransitioning) ...[
-            // 静止 / 拖动 / 归位：只渲染当前页 A
-            _buildPage(_currentIndex, _dragOffset, 1.0),
-          ] else ...[
-            // 换页动画：B 在底层，A 在上层飞出
-            _buildPageB(),
-            _buildPageA(),
-          ],
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final pane = constraints.maxWidth;
+          if (pane != _paneWidth) _paneWidth = pane;
+          // 系统任一时刻只有一份内容；飞出屏幕的部分要被裁掉。
+          return ClipRect(
+            child: Transform.translate(
+              offset: Offset(_offset, 0),
+              child: Opacity(
+                opacity: _opacity,
+                child: widget.itemBuilder(context, _currentIndex),
+              ),
+            ),
+          );
+        },
       ),
     );
-  }
-
-  Widget _buildPage(int index, double offset, double opacity) {
-    return Opacity(
-      opacity: opacity,
-      child: Transform.translate(
-        offset: Offset(offset, 0),
-        child: widget.itemBuilder(context, index),
-      ),
-    );
-  }
-
-  /// 构建飞出的页面 A。
-  Widget _buildPageA() {
-    // 向滑动方向飞出 flyDistance，easeOutCubic 从快到慢
-    final offsetX = _startDragOffset +
-        _slideDirection * widget.flyDistance * _pageASlide.value;
-    // 50ms 渐隐，easeInCubic 先慢后快
-    final opacity = (1.0 - _pageAFade.value).clamp(0.0, 1.0);
-    return _buildPage(_currentIndex, offsetX, opacity);
-  }
-
-  /// 构建飞入的页面 B。
-  Widget _buildPageB() {
-    // 从滑动方向的反方向 flyDistance 处滑向屏幕中心
-    final offsetX =
-        -_slideDirection * widget.flyDistance * (1.0 - _pageBSlide.value);
-    // 50ms 渐显，与滑入同时进行
-    final opacity = _pageBFade.value.clamp(0.0, 1.0);
-    return _buildPage(_targetIndex, offsetX, opacity);
   }
 }

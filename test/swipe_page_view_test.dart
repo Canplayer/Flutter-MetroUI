@@ -17,6 +17,10 @@ void main() {
           flyDuration: const Duration(milliseconds: 100),
           fadeDuration: const Duration(milliseconds: 50),
           snapBackDuration: const Duration(milliseconds: 120),
+          // 换页是「隐藏 300ms → 换内容 → 显示 500ms」两段，
+          // 这里缩短以便单次 pump 覆盖，源码值在 pivot 测试里校验。
+          hideDuration: const Duration(milliseconds: 100),
+          showDuration: const Duration(milliseconds: 100),
           onPageChanged: onPageChanged,
           onTransitionEnd: onTransitionEnd,
           onSlideProgress: onSlideProgress,
@@ -85,8 +89,9 @@ void main() {
     expect(transitionEnded, isEmpty); // 动画尚未结束
     expect(find.text('page 0'), findsOneWidget); // A 仍在飞出中
 
-    // 等待换页动画结束（100ms）
-    await tester.pump(const Duration(milliseconds: 300));
+    // 换页是两段：隐藏 100ms → 换内容 → 显示 100ms
+    await tester.pump(const Duration(milliseconds: 120)); // 隐藏结束
+    await tester.pump(const Duration(milliseconds: 120)); // 显示结束
 
     expect(find.text('page -1'), findsOneWidget);
     expect(find.text('page 0'), findsNothing);
@@ -151,8 +156,9 @@ void main() {
     await tester.pump();
     expect(changed, ['0->-1']); // 换页事件：全部松手即触发
 
-    // 等待动画结束
-    await tester.pump(const Duration(milliseconds: 300));
+    // 等待两段动画结束
+    await tester.pump(const Duration(milliseconds: 120));
+    await tester.pump(const Duration(milliseconds: 120));
     expect(find.text('page -1'), findsOneWidget);
     expect(transitionEnded, ['0->-1']);
   });
@@ -171,7 +177,8 @@ void main() {
     await tester.pump();
     expect(changed, ['0->1']); // 松手即触发
 
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 120));
+    await tester.pump(const Duration(milliseconds: 120));
 
     expect(find.text('page 1'), findsOneWidget);
     expect(find.text('page 0'), findsNothing);
