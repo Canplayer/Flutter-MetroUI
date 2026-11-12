@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:metro_ui/widgets/tile.dart';
 import 'package:metro_ui/widgets/button.dart';
 import 'package:metro_ui/widgets/metro_circle_button.dart';
-import 'package:metro_ui/widgets/switcher.dart';
+import 'package:metro_ui/widgets/toggle_switch.dart';
 
 Matrix4 _tileMatrix(WidgetTester tester) => tester
     .widget<Transform>(
@@ -64,11 +64,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Center(
-          child: CustomSwitch(value: false, onChanged: (v) => value = v),
+          child: ToggleSwitchBase(value: false, onChanged: (v) => value = v),
         ),
       ),
     );
-    await tester.tap(find.byType(CustomSwitch));
+    await tester.tap(find.byType(ToggleSwitchBase));
     await tester.pump();
     expect(value, isTrue);
   });
@@ -76,18 +76,18 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      const MaterialApp(home: Center(child: CustomSwitch(value: false))),
+      const MaterialApp(home: Center(child: ToggleSwitchBase(value: false))),
     );
     final opacity = tester.widget<Opacity>(
       find
           .descendant(
-            of: find.byType(CustomSwitch),
+            of: find.byType(ToggleSwitchBase),
             matching: find.byType(Opacity),
           )
           .first,
     );
     expect(opacity.opacity, 0.4);
-    await tester.tap(find.byType(CustomSwitch));
+    await tester.tap(find.byType(ToggleSwitchBase));
     await tester.pump();
     expect(tester.takeException(), isNull);
   });

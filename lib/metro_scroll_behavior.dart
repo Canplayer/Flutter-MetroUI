@@ -1,327 +1,371 @@
-import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 
-/// 超滚动状态管理器
-///
-/// 使用静态 ValueNotifier 在不同组件间共享超滚动状态
-class OverscrollStateManager {
-  // 使用 Map 存储多个滚动视图的状态，key 为唯一标识
-  static final Map<int, ValueNotifier<double>> _notifiers = {};
+import 'src/scrolling/uix_scroll_simulation.dart';
+import 'uix_metrics.dart';
 
-  /// 获取或创建指定 ID 的状态通知器
-  static ValueNotifier<double> getNotifier(int id) {
-    return _notifiers.putIfAbsent(id, () => ValueNotifier<double>(0.0));
-  }
-
-  /// 移除指定 ID 的状态通知器
-  static void removeNotifier(int id) {
-    _notifiers[id]?.dispose();
-    _notifiers.remove(id);
-  }
-
-  /// 获取当前超滚动量
-  static double getOverscrollAmount(int id) {
-    return _notifiers[id]?.value ?? 0.0;
-  }
-
-  /// 设置超滚动量
-  static void setOverscrollAmount(int id, double amount) {
-    getNotifier(id).value = amount;
-  }
-}
-
-/// 自定义滚动行为
-///
-/// 功能：
-/// 1. 自定义滚动条样式：2单位宽，距离边缘1单位
-/// 2. 超距离滑动时的缩放效果
+/// WP scroll chrome and the recovered WP8 default Accordion motion model.
 class MetroScrollBehavior extends ScrollBehavior {
   const MetroScrollBehavior();
-
   @override
   Widget buildScrollbar(
     BuildContext context,
     Widget child,
     ScrollableDetails details,
-  ) {
-    return RawScrollbar(
-      controller: details.controller,
-      thumbColor: Colors.grey.withAlpha(150), // 半透明灰色滚动条
-      thickness: 2.0,
-      radius: const Radius.circular(0), // 矩形滚动条
-      padding: const EdgeInsets.all(1.0), // 距离边缘1单位
-      child: child,
-    );
-  }
-
+  ) => RawScrollbar(
+    controller: details.controller,
+    thumbColor: Colors.grey.withAlpha(150),
+    thickness: 2,
+    radius: Radius.zero,
+    padding: const EdgeInsets.all(1),
+    child: child,
+  );
   @override
   Widget buildOverscrollIndicator(
     BuildContext context,
     Widget child,
     ScrollableDetails details,
-  ) {
-    // 使用自定义的超距离滑动指示器
-    // 从 details.clipBehavior 获取滚动组件设置的裁切行为
-    return MetroOverscrollIndicator(
-      axisDirection: details.direction,
-      clipBehavior:
-          details.decorationClipBehavior ??
-          Clip.hardEdge, // 使用滚动组件的 clipBehavior
-      child: child,
-    );
-  }
-
+  ) => _AccordionIndicator(
+    axisDirection: details.direction,
+    clipBehavior: details.decorationClipBehavior ?? Clip.hardEdge,
+    child: child,
+  );
   @override
-  ScrollPhysics getScrollPhysics(BuildContext context) {
-    // 使用自定义的滚动物理效果，使用默认 ID 0
-    return const MetroBouncingScrollPhysics(scrollViewId: 0);
-  }
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const MetroScrollPhysics();
 }
 
-/// 自定义滚动物理效果
-///
-/// 当页面overScroll时，反向拉动不允许继续滚动
-class MetroBouncingScrollPhysics extends BouncingScrollPhysics {
-  const MetroBouncingScrollPhysics({super.parent, this.scrollViewId = 0});
+// Weak position keys avoid shared numeric IDs and cross-list disposal.
+final _positions = Expando<_AccordionState>('WP Accordion per ScrollPosition');
+_AccordionState _stateFor(Object position) =>
+    _positions[position] ??= _AccordionState();
 
-  final int scrollViewId;
-
+/// Clamps viewport pixels while retaining raw drag distance for Accordion.
+/// Pair with [MetroScrollBehavior] to paint the recovered deformation.
+class MetroScrollPhysics extends ClampingScrollPhysics {
+  const MetroScrollPhysics({super.parent});
+  @override
+  MetroScrollPhysics applyTo(ScrollPhysics? ancestor) =>
+      MetroScrollPhysics(parent: buildParent(ancestor));
+  @override
+  bool shouldAcceptUserOffset(ScrollMetrics position) => allowUserScrolling;
+  @override
+  double get maxFlingVelocity => UixScrollSimulation.maximumSpeed * uixScale;
   @override
   double applyPhysicsToUserOffset(ScrollMetrics position, double offset) {
-    // 如果在滚动范围内，使用父类的默认行为
-    if (!position.outOfRange) {
-      return super.applyPhysicsToUserOffset(position, offset);
+    final state = _stateFor(position);
+    state.dragging = true;
+    state.generation++;
+    offset *= state.inputScale;
+    if (state.overscroll == 0) return offset;
+    final next = state.overscroll - offset;
+    if (next == 0 || next.sign == state.overscroll.sign) {
+      state.setOverscroll(next);
+      return 0;
     }
+    // Reversing must consume all raw excess before scrolling into the list.
+    state.setOverscroll(0);
+    return -next;
+  }
 
-    final double overscrollPastStart =
-        (position.minScrollExtent - position.pixels).clamp(
-          0.0,
-          double.infinity,
-        );
-    final double overscrollPastEnd =
-        (position.pixels - position.maxScrollExtent).clamp(
-          0.0,
-          double.infinity,
-        );
-    const double maxOverscroll = 100.0;
-
-    // 检查是否超出顶部边界（向下拉，超出顶部）
-    if (overscrollPastStart > 0) {
-      // offset > 0 表示继续向下拉（远离边界），需要限制
-      if (offset > 0) {
-        // 如果已经超出最大值，阻止继续向外拉
-        if (overscrollPastStart >= maxOverscroll) {
-          return 0;
-        }
-        // 限制下一次滑动的距离，防止超出最大值
-        final double allowedOffset = (maxOverscroll - overscrollPastStart)
-            .clamp(0, double.infinity);
-        if (offset > allowedOffset) {
-          return allowedOffset;
-        }
-      }
-      // offset < 0 表示向上拉（回到边界内），允许无阻力滑动
-      return offset;
+  @override
+  double applyBoundaryConditions(ScrollMetrics position, double value) {
+    final excess = super.applyBoundaryConditions(position, value);
+    final state = _stateFor(position);
+    if (state.dragging && excess != 0) {
+      state.setOverscroll(state.overscroll + excess, boundary: value - excess);
     }
-    // 检查是否超出底部边界（向上拉，超出底部）
-    else if (overscrollPastEnd > 0) {
-      // offset < 0 表示继续向上拉（远离边界），需要限制
-      if (offset < 0) {
-        // 如果已经超出最大值，阻止继续向外拉
-        if (overscrollPastEnd >= maxOverscroll) {
-          return 0;
-        }
-        // 限制下一次滑动的距离，防止超出最大值
-        final double allowedOffset = (maxOverscroll - overscrollPastEnd).clamp(
-          0,
-          double.infinity,
-        );
-        if (offset.abs() > allowedOffset) {
-          return -allowedOffset;
-        }
-      }
-      // offset > 0 表示向下拉（回到边界内），允许无阻力滑动
-      return offset;
-    }
+    return excess;
+  }
 
-    // 如果超出滚动范围但未达到100像素，直接返回用户的偏移量，不施加任何摩擦力
-    return offset;
+  @override
+  Simulation? createBallisticSimulation(
+    ScrollMetrics position,
+    double velocity,
+  ) {
+    final state = _stateFor(position);
+    if (state.overscroll != 0 && state.boundary != position.pixels) {
+      state.reset();
+    }
+    if (state.dragging) velocity *= state.inputScale;
+    state.dragging = false;
+    state.inputScale = 1;
+    final generation = ++state.generation;
+    if (state.overscroll == 0 &&
+        !position.outOfRange &&
+        velocity.abs() < UixScrollSimulation.parkingSpeed * uixScale) {
+      return null;
+    }
+    return _ViewportSimulation(
+      UixScrollSimulation(
+        position: position.pixels + state.overscroll,
+        velocity: velocity,
+        minScrollExtent: position.minScrollExtent,
+        maxScrollExtent: position.maxScrollExtent,
+      ),
+      position.minScrollExtent,
+      position.maxScrollExtent,
+      (amount, boundary) {
+        if (generation == state.generation) {
+          state.setOverscroll(amount, boundary: boundary);
+        }
+      },
+    );
   }
 }
 
-/// 自定义超距离滑动指示器
-///
-/// 当滑动超过内容边界时，以容器顶部向上320单位为原点进行纵向缩放
-class MetroOverscrollIndicator extends StatefulWidget {
-  const MetroOverscrollIndicator({
-    super.key,
-    required this.child,
-    required this.axisDirection,
-    this.clipBehavior = Clip.none, // 默认不裁切
-  });
-
-  final Widget child;
-  final AxisDirection axisDirection;
-  final Clip clipBehavior; // 裁切行为
+// Flutter's ballistic activity is the sole clock, including boundary recovery.
+// Clamped pixels avoid translating/culling the viewport before deformation.
+class _ViewportSimulation extends Simulation {
+  _ViewportSimulation(this.motion, this.min, this.max, this.onOverscroll);
+  final UixScrollSimulation motion;
+  final double min, max;
+  final void Function(double amount, double boundary) onOverscroll;
+  @override
+  double x(double time) {
+    final raw = motion.x(time), pixels = raw.clamp(min, max);
+    onOverscroll(raw - pixels, pixels);
+    return pixels;
+  }
 
   @override
-  State<MetroOverscrollIndicator> createState() =>
-      _MetroOverscrollIndicatorState();
+  double dx(double time) => motion.dx(time);
+  @override
+  bool isDone(double time) => motion.isDone(time);
 }
 
-class _MetroOverscrollIndicatorState extends State<MetroOverscrollIndicator>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  double _overscrollAmount = 0.0;
-  final int _scrollViewId = 0; // 滚动视图 ID，用于状态管理
-  Timer? _debugTimer;
+class _AccordionState extends ChangeNotifier {
+  double overscroll = 0, inputScale = 1;
+  double? boundary;
+  bool dragging = false;
+  int generation = 0;
+  double get scale =>
+      1 -
+      math.min(overscroll.abs() / uixScale, UixScrollSimulation.compressLimit) /
+          UixScrollSimulation.compressOffset;
+  void setOverscroll(double amount, {double? boundary}) {
+    this.boundary = amount == 0 ? null : boundary ?? this.boundary;
+    if (amount == overscroll) return;
+    overscroll = amount;
+    notifyListeners();
+  }
 
+  void reset() {
+    generation++;
+    dragging = false;
+    inputScale = 1;
+    setOverscroll(0);
+  }
+}
+
+class _AccordionIndicator extends StatefulWidget {
+  const _AccordionIndicator({
+    required this.child,
+    required this.axisDirection,
+    required this.clipBehavior,
+  });
+  final Widget child;
+  final AxisDirection axisDirection;
+  final Clip clipBehavior;
   @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _controller.addListener(() {
-      // 动画过程中，更新 overscroll 值
+  State<_AccordionIndicator> createState() => _AccordionIndicatorState();
+}
+
+class _AccordionIndicatorState extends State<_AccordionIndicator> {
+  _AccordionState _visual = _AccordionState();
+  ScrollPosition? _position;
+  Drag? _gapDrag;
+  ScrollHoldController? _gapHold;
+
+  bool _isInGap(Offset point) {
+    if (_visual.overscroll == 0) return false;
+    final vertical = axisDirectionToAxis(widget.axisDirection) == Axis.vertical;
+    final extent = vertical ? context.size!.height : context.size!.width;
+    final coordinate = vertical ? point.dy : point.dx;
+    final forward =
+        widget.axisDirection == AxisDirection.down ||
+        widget.axisDirection == AxisDirection.right;
+    final start = (_visual.overscroll < 0) == forward;
+    final gap =
+        (1 - _visual.scale) * UixScrollSimulation.compressOffset * uixScale;
+    return start ? coordinate < gap : coordinate > extent - gap;
+  }
+
+  bool _onNotification(ScrollNotification notification) {
+    if (notification.depth != 0 ||
+        notification.metrics.axisDirection != widget.axisDirection) {
+      return false;
+    }
+    final context = notification.context;
+    final position = context == null
+        ? null
+        : Scrollable.maybeOf(context)?.position;
+    if (position == null) return false;
+    final state = _stateFor(position);
+    if (!identical(state, _visual)) {
       setState(() {
-        _overscrollAmount *= (1.0 - _controller.value);
-        // 同步到状态管理器
-        OverscrollStateManager.setOverscrollAmount(
-          _scrollViewId,
-          _overscrollAmount,
-        );
+        _position = position;
+        _visual = state;
       });
-    });
+    }
+    if (notification is ScrollUpdateNotification &&
+        state.overscroll != 0 &&
+        state.boundary != notification.metrics.pixels) {
+      state.reset();
+    }
+    return false;
+  }
+
+  void _startGapDrag(DragStartDetails details) {
+    // Handles a pull begun in the blank strip outside the transformed child.
+    final position = _position;
+    if (position == null ||
+        !position.physics.allowUserScrolling ||
+        !position.physics.shouldAcceptUserOffset(position)) {
+      return;
+    }
+    _visual.inputScale = 1;
+    _gapDrag = position.drag(details, () => _gapDrag = null);
   }
 
   @override
   void dispose() {
-    _debugTimer?.cancel();
-    _controller.dispose();
-    OverscrollStateManager.removeNotifier(_scrollViewId);
+    _gapDrag?.cancel();
     super.dispose();
-  }
-
-  bool _handleScrollNotification(ScrollNotification notification) {
-    // 只处理当前层级的滚动事件，忽略内部嵌套的滚动组件向上冒泡的通知
-    // 这样内部的 SingleChildScrollView 就不会触发外部的超缩放效果
-    if (notification.depth != 0) {
-      return false;
-    }
-
-    // 滚动更新 - 从 ScrollMetrics 获取超滚动信息
-    if (notification is ScrollUpdateNotification) {
-      final metrics = notification.metrics;
-
-      // 计算当前的超滚动量
-      double currentOverscroll = 0.0;
-
-      if (metrics.pixels < metrics.minScrollExtent) {
-        // 超出顶部边界
-        currentOverscroll = metrics.pixels - metrics.minScrollExtent;
-      } else if (metrics.pixels > metrics.maxScrollExtent) {
-        // 超出底部边界
-        currentOverscroll = metrics.pixels - metrics.maxScrollExtent;
-      }
-
-      // 更新超滚动状态
-      if (currentOverscroll != _overscrollAmount) {
-        setState(() {
-          _overscrollAmount = currentOverscroll;
-          OverscrollStateManager.setOverscrollAmount(
-            _scrollViewId,
-            _overscrollAmount,
-          );
-        });
-
-        // 如果正在超滚动，停止回弹动画
-        if (currentOverscroll != 0.0 && _controller.isAnimating) {
-          _controller.stop();
-        }
-        // 如果从超滚动恢复到正常，开始回弹动画
-        else if (currentOverscroll == 0.0 && _overscrollAmount != 0.0) {
-          _controller.forward(from: 0.0);
-        }
-      }
-    }
-    // 滚动结束 - 触发回弹动画
-    else if (notification is ScrollEndNotification) {
-      if (_overscrollAmount != 0.0 && !_controller.isAnimating) {
-        _controller.forward(from: 0.0);
-      }
-    }
-
-    return false;
   }
 
   @override
   Widget build(BuildContext context) {
+    final vertical = axisDirectionToAxis(widget.axisDirection) == Axis.vertical;
     return NotificationListener<ScrollNotification>(
-      onNotification: _handleScrollNotification,
-      child: ClipRect(
-        clipBehavior: widget.clipBehavior,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // 计算缩放效果
-            final scaleValue = _calculateScale();
-            final alignment = _calculateAlignment(constraints);
-
-            return Transform.scale(
-              scaleY: scaleValue,
-              alignment: alignment,
+      onNotification: _onNotification,
+      child: Listener(
+        onPointerDown: (event) {
+          // Pointer events retain the transform captured in the down hit test.
+          _visual.inputScale = _visual.scale;
+          _visual.generation++;
+          if (_isInGap(event.localPosition)) {
+            _gapHold = _position?.hold(() => _gapHold = null);
+          }
+        },
+        onPointerUp: (_) => _gapHold?.cancel(),
+        onPointerCancel: (_) => _gapHold?.cancel(),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onVerticalDragStart: vertical ? _startGapDrag : null,
+          onVerticalDragUpdate: vertical ? (d) => _gapDrag?.update(d) : null,
+          onVerticalDragEnd: vertical ? (d) => _gapDrag?.end(d) : null,
+          onVerticalDragCancel: vertical ? () => _gapDrag?.cancel() : null,
+          onHorizontalDragStart: vertical ? null : _startGapDrag,
+          onHorizontalDragUpdate: vertical ? null : (d) => _gapDrag?.update(d),
+          onHorizontalDragEnd: vertical ? null : (d) => _gapDrag?.end(d),
+          onHorizontalDragCancel: vertical ? null : () => _gapDrag?.cancel(),
+          child: ClipRect(
+            clipBehavior: widget.clipBehavior,
+            child: _AccordionTransform(
+              state: _visual,
+              direction: widget.axisDirection,
               child: widget.child,
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
   }
+}
 
-  /// 计算缩放值
-  ///
-  /// 根据超距离滑动的距离计算缩放比例
-  double _calculateScale() {
-    // 缩放因子：超距离越大，缩放越明显
-    // 使用非线性函数使效果更自然
-    final scaleFactor = (_overscrollAmount.abs() / 1000).clamp(0.0, 0.3);
+class _AccordionTransform extends SingleChildRenderObjectWidget {
+  const _AccordionTransform({
+    required this.state,
+    required this.direction,
+    required super.child,
+  });
+  final _AccordionState state;
+  final AxisDirection direction;
+  @override
+  _RenderAccordionTransform createRenderObject(BuildContext context) =>
+      _RenderAccordionTransform(state, direction);
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderAccordionTransform renderObject,
+  ) {
+    renderObject
+      ..state = state
+      ..direction = direction;
+  }
+}
 
-    // 向上滑动（overscroll为负）或向下滑动时都变扁
-    return 1.0 - scaleFactor;
+class _RenderAccordionTransform extends RenderProxyBox {
+  _RenderAccordionTransform(this._state, this._direction);
+  _AccordionState _state;
+  AxisDirection _direction;
+  set state(_AccordionState value) {
+    if (identical(value, _state)) return;
+    if (attached) _state.removeListener(_changed);
+    _state = value;
+    if (attached) _state.addListener(_changed);
+    _changed();
   }
 
-  /// 计算变换的对齐点
-  ///
-  /// 向上滑动：以容器顶部向上320单位为原点
-  /// 向下滑动：以容器底部向下320单位为原点
-  Alignment _calculateAlignment(BoxConstraints constraints) {
-    final height = constraints.maxHeight;
-
-    if (height == 0 || height.isInfinite) {
-      return Alignment.topCenter;
-    }
-
-    // 向下滑动（overscroll为正）
-    if (_overscrollAmount > 0) {
-      // 320单位向上 = 顶部 - 320
-      // 将这个点转换为 Alignment 坐标系
-      // Alignment.y: -1.0 是顶部, 1.0 是底部
-      // y = -1.0 - (320 / (height / 2))
-      final alignmentY = -1.0 - (0.0 / (height / 2));
-      return Alignment(0.0, alignmentY);
-    }
-    // 向上滑动（overscroll为负）
-    else if (_overscrollAmount < 0) {
-      // 320单位向下 = 底部 + 320
-      // y = 1.0 + (320 / (height / 2))
-      final alignmentY = 1.0 + (0.0 / (height / 2));
-      return Alignment(0.0, alignmentY);
-    }
-    // 没有超滚动
-    else {
-      return Alignment.center;
-    }
+  set direction(AxisDirection value) {
+    if (value == _direction) return;
+    _direction = value;
+    _changed();
   }
+
+  void _changed() {
+    markNeedsPaint();
+    markNeedsSemanticsUpdate();
+  }
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    _state.addListener(_changed);
+  }
+
+  @override
+  void detach() {
+    _state.removeListener(_changed);
+    super.detach();
+  }
+
+  Matrix4 get _transform {
+    final vertical = axisDirectionToAxis(_direction) == Axis.vertical;
+    final extent = vertical ? size.height : size.width;
+    if (_state.overscroll == 0 || !extent.isFinite || extent <= 0) {
+      return Matrix4.identity();
+    }
+    final forward =
+        _direction == AxisDirection.down || _direction == AxisDirection.right;
+    final physicalStart = (_state.overscroll < 0) == forward;
+    const denominator = UixScrollSimulation.compressOffset * uixScale;
+    // Recovered D/H and 1-D/H centers, adapted to this viewport.
+    // The source target Visual's exact container layering remains unverified.
+    final origin = physicalStart ? denominator : extent - denominator;
+    return Matrix4.identity()
+      ..setEntry(vertical ? 1 : 0, vertical ? 1 : 0, _state.scale)
+      ..setEntry(vertical ? 1 : 0, 3, origin * (1 - _state.scale));
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    context.pushTransform(needsCompositing, offset, _transform, super.paint);
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      result.addWithPaintTransform(
+        transform: _transform,
+        position: position,
+        hitTest: (result, point) =>
+            super.hitTestChildren(result, position: point),
+      );
+  @override
+  void applyPaintTransform(RenderBox child, Matrix4 transform) =>
+      transform.multiply(_transform);
 }
