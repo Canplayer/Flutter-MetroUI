@@ -2,7 +2,7 @@
 
 项目结构、默认文字排版及逆向落地规则见 [技术规范](TECHNICAL_SPEC.md)。
 
-全应用可以在 `MetroApp` 上设置 `version`、`themeMode`、`metroColor` 和 `highContrast`。省略 `highContrast` 时读取系统设置。
+`MetroApp` 和 `MetroApp.router` 默认使用 `MetroDesignVersion.wp8`。可通过 `version`、`themeMode`、`metroColor` 和 `highContrast` 调整全局预设。省略 `highContrast` 时读取系统设置。`MetroThemeData.fromPreset` 默认同样使用 WP8。
 
 普通 Flutter 应用可以从 `package:metro_ui/metro_theme.dart` 导入独立主题，并仅包住需要的子树。
 
