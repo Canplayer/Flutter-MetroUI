@@ -67,7 +67,12 @@ class MetroAppBarTheme extends ThemeExtension<MetroAppBarTheme> {
   /// MetroAppBar的收缩动画时间
   final Duration? collapseDuration;
 
+  final Color? captionColor;
+  final TextStyle? captionStyle;
+
   const MetroAppBarTheme({
+    this.captionColor,
+    this.captionStyle,
     this.backgroundColor,
     this.expandedBackgroundColor,
     this.buttonColor,
@@ -82,8 +87,27 @@ class MetroAppBarTheme extends ThemeExtension<MetroAppBarTheme> {
     this.collapseDuration,
   });
 
+  MetroAppBarTheme merge(MetroAppBarTheme other) => copyWith(
+    backgroundColor: other.backgroundColor,
+    expandedBackgroundColor: other.expandedBackgroundColor,
+    buttonColor: other.buttonColor,
+    buttonIconColor: other.buttonIconColor,
+    disabledButtonIconColor: other.disabledButtonIconColor,
+    pressedButtonIconColor: other.pressedButtonIconColor,
+    menuItemColor: other.menuItemColor,
+    disabledMenuItemColor: other.disabledMenuItemColor,
+    expandCurve: other.expandCurve,
+    collapseCurve: other.collapseCurve,
+    expandDuration: other.expandDuration,
+    collapseDuration: other.collapseDuration,
+    captionColor: other.captionColor,
+    captionStyle: other.captionStyle,
+  );
+
   @override
-  ThemeExtension<MetroAppBarTheme> copyWith({
+  MetroAppBarTheme copyWith({
+    Color? captionColor,
+    TextStyle? captionStyle,
     Color? backgroundColor,
     Color? expandedBackgroundColor,
     Color? buttonColor,
@@ -98,6 +122,8 @@ class MetroAppBarTheme extends ThemeExtension<MetroAppBarTheme> {
     Duration? collapseDuration,
   }) {
     return MetroAppBarTheme(
+      captionColor: captionColor ?? this.captionColor,
+      captionStyle: captionStyle ?? this.captionStyle,
       backgroundColor: backgroundColor ?? this.backgroundColor,
       expandedBackgroundColor:
           expandedBackgroundColor ?? this.expandedBackgroundColor,
@@ -124,6 +150,8 @@ class MetroAppBarTheme extends ThemeExtension<MetroAppBarTheme> {
   ) {
     if (other is! MetroAppBarTheme) return this;
     return MetroAppBarTheme(
+      captionColor: Color.lerp(captionColor, other.captionColor, t),
+      captionStyle: TextStyle.lerp(captionStyle, other.captionStyle, t),
       backgroundColor: Color.lerp(backgroundColor, other.backgroundColor, t),
       expandedBackgroundColor: Color.lerp(
         expandedBackgroundColor,
@@ -172,8 +200,16 @@ class MetroButtonThemeData extends ThemeExtension<MetroButtonThemeData> {
     this.disabledTextColor,
   });
 
+  MetroButtonThemeData merge(MetroButtonThemeData other) => copyWith(
+    normalBorderColor: other.normalBorderColor,
+    pressedBackgroundColor: other.pressedBackgroundColor,
+    pressedTextColor: other.pressedTextColor,
+    disabledBorderColor: other.disabledBorderColor,
+    disabledTextColor: other.disabledTextColor,
+  );
+
   @override
-  ThemeExtension<MetroButtonThemeData> copyWith({
+  MetroButtonThemeData copyWith({
     Color? normalBorderColor,
     Color? pressedBackgroundColor,
     Color? pressedTextColor,
@@ -334,8 +370,19 @@ class MetroContextMenuThemeData
     this.itemHeight,
   });
 
+  MetroContextMenuThemeData merge(MetroContextMenuThemeData other) => copyWith(
+    backgroundColor: other.backgroundColor,
+    lineColor: other.lineColor,
+    pushBackDuration: other.pushBackDuration,
+    restoreDuration: other.restoreDuration,
+    lineAnimationDuration: other.lineAnimationDuration,
+    menuAnimationDuration: other.menuAnimationDuration,
+    itemTextStyle: other.itemTextStyle,
+    itemHeight: other.itemHeight,
+  );
+
   @override
-  ThemeExtension<MetroContextMenuThemeData> copyWith({
+  MetroContextMenuThemeData copyWith({
     Color? backgroundColor,
     Color? lineColor,
     Duration? pushBackDuration,
@@ -378,6 +425,304 @@ class MetroContextMenuThemeData
           : other.menuAnimationDuration,
       itemTextStyle: TextStyle.lerp(itemTextStyle, other.itemTextStyle, t),
       itemHeight: t < 0.5 ? itemHeight : other.itemHeight,
+    );
+  }
+}
+
+/// The track, thumb, outline and labels of a toggle switch.
+class MetroToggleSwitchTheme extends ThemeExtension<MetroToggleSwitchTheme> {
+  const MetroToggleSwitchTheme({
+    this.activeColor,
+    this.inactiveColor,
+    this.thumbColor,
+    this.borderColor,
+    this.disabledColor,
+    this.labelColor,
+    this.statusColor,
+    this.disabledOpacity,
+  });
+  final Color? activeColor;
+  final Color? inactiveColor;
+  final Color? thumbColor;
+  final Color? borderColor;
+  final Color? disabledColor;
+  final Color? labelColor;
+  final Color? statusColor;
+  final double? disabledOpacity;
+
+  @override
+  MetroToggleSwitchTheme copyWith({
+    Color? activeColor,
+    Color? inactiveColor,
+    Color? thumbColor,
+    Color? borderColor,
+    Color? disabledColor,
+    Color? labelColor,
+    Color? statusColor,
+    double? disabledOpacity,
+  }) => MetroToggleSwitchTheme(
+    activeColor: activeColor ?? this.activeColor,
+    inactiveColor: inactiveColor ?? this.inactiveColor,
+    thumbColor: thumbColor ?? this.thumbColor,
+    borderColor: borderColor ?? this.borderColor,
+    disabledColor: disabledColor ?? this.disabledColor,
+    labelColor: labelColor ?? this.labelColor,
+    statusColor: statusColor ?? this.statusColor,
+    disabledOpacity: disabledOpacity ?? this.disabledOpacity,
+  );
+
+  @override
+  MetroToggleSwitchTheme lerp(
+    covariant MetroToggleSwitchTheme? other,
+    double t,
+  ) {
+    if (other == null) return this;
+    return MetroToggleSwitchTheme(
+      activeColor: Color.lerp(activeColor, other.activeColor, t),
+      inactiveColor: Color.lerp(inactiveColor, other.inactiveColor, t),
+      thumbColor: Color.lerp(thumbColor, other.thumbColor, t),
+      borderColor: Color.lerp(borderColor, other.borderColor, t),
+      disabledColor: Color.lerp(disabledColor, other.disabledColor, t),
+      labelColor: Color.lerp(labelColor, other.labelColor, t),
+      statusColor: Color.lerp(statusColor, other.statusColor, t),
+      disabledOpacity: t < .5 ? disabledOpacity : other.disabledOpacity,
+    );
+  }
+}
+
+/// Shared colors for linear and circular progress indicators.
+class MetroProgressTheme extends ThemeExtension<MetroProgressTheme> {
+  const MetroProgressTheme({this.barColor, this.trackColor, this.ringColor});
+  final Color? barColor;
+  final Color? trackColor;
+  final Color? ringColor;
+
+  @override
+  MetroProgressTheme copyWith({
+    Color? barColor,
+    Color? trackColor,
+    Color? ringColor,
+  }) => MetroProgressTheme(
+    barColor: barColor ?? this.barColor,
+    trackColor: trackColor ?? this.trackColor,
+    ringColor: ringColor ?? this.ringColor,
+  );
+
+  @override
+  MetroProgressTheme lerp(covariant MetroProgressTheme? other, double t) {
+    if (other == null) return this;
+    return MetroProgressTheme(
+      barColor: Color.lerp(barColor, other.barColor, t),
+      trackColor: Color.lerp(trackColor, other.trackColor, t),
+      ringColor: Color.lerp(ringColor, other.ringColor, t),
+    );
+  }
+}
+
+/// EditBox colors and borders for idle, focused and disabled states.
+class MetroEditBoxTheme extends ThemeExtension<MetroEditBoxTheme> {
+  const MetroEditBoxTheme({
+    this.textColor,
+    this.hintColor,
+    this.selectionColor,
+    this.idleFill,
+    this.focusedFill,
+    this.disabledFill,
+    this.idleBorder,
+    this.focusedBorder,
+    this.disabledBorder,
+  });
+  final Color? textColor;
+  final Color? hintColor;
+  final Color? selectionColor;
+  final Color? idleFill;
+  final Color? focusedFill;
+  final Color? disabledFill;
+  final BorderSide? idleBorder;
+  final BorderSide? focusedBorder;
+  final BorderSide? disabledBorder;
+
+  @override
+  MetroEditBoxTheme copyWith({
+    Color? textColor,
+    Color? hintColor,
+    Color? selectionColor,
+    Color? idleFill,
+    Color? focusedFill,
+    Color? disabledFill,
+    BorderSide? idleBorder,
+    BorderSide? focusedBorder,
+    BorderSide? disabledBorder,
+  }) => MetroEditBoxTheme(
+    textColor: textColor ?? this.textColor,
+    hintColor: hintColor ?? this.hintColor,
+    selectionColor: selectionColor ?? this.selectionColor,
+    idleFill: idleFill ?? this.idleFill,
+    focusedFill: focusedFill ?? this.focusedFill,
+    disabledFill: disabledFill ?? this.disabledFill,
+    idleBorder: idleBorder ?? this.idleBorder,
+    focusedBorder: focusedBorder ?? this.focusedBorder,
+    disabledBorder: disabledBorder ?? this.disabledBorder,
+  );
+
+  @override
+  MetroEditBoxTheme lerp(covariant MetroEditBoxTheme? other, double t) {
+    if (other == null) return this;
+    return MetroEditBoxTheme(
+      textColor: Color.lerp(textColor, other.textColor, t),
+      hintColor: Color.lerp(hintColor, other.hintColor, t),
+      selectionColor: Color.lerp(selectionColor, other.selectionColor, t),
+      idleFill: Color.lerp(idleFill, other.idleFill, t),
+      focusedFill: Color.lerp(focusedFill, other.focusedFill, t),
+      disabledFill: Color.lerp(disabledFill, other.disabledFill, t),
+      idleBorder: t < .5 ? idleBorder : other.idleBorder,
+      focusedBorder: t < .5 ? focusedBorder : other.focusedBorder,
+      disabledBorder: t < .5 ? disabledBorder : other.disabledBorder,
+    );
+  }
+}
+
+/// Visual overrides for a ListPicker.
+class MetroListPickerTheme extends ThemeExtension<MetroListPickerTheme> {
+  const MetroListPickerTheme({
+    this.foreground,
+    this.disabledForeground,
+    this.placeholderColor,
+    this.accentColor,
+    this.focusedForeground,
+    this.focusedFill,
+    this.borderWidth,
+    this.textStyle,
+  });
+  final Color? foreground;
+  final Color? disabledForeground;
+  final Color? placeholderColor;
+  final Color? accentColor;
+  final Color? focusedForeground;
+  final Color? focusedFill;
+  final double? borderWidth;
+  final TextStyle? textStyle;
+
+  @override
+  MetroListPickerTheme copyWith({
+    Color? foreground,
+    Color? disabledForeground,
+    Color? placeholderColor,
+    Color? accentColor,
+    Color? focusedForeground,
+    Color? focusedFill,
+    double? borderWidth,
+    TextStyle? textStyle,
+  }) => MetroListPickerTheme(
+    foreground: foreground ?? this.foreground,
+    disabledForeground: disabledForeground ?? this.disabledForeground,
+    placeholderColor: placeholderColor ?? this.placeholderColor,
+    accentColor: accentColor ?? this.accentColor,
+    focusedForeground: focusedForeground ?? this.focusedForeground,
+    focusedFill: focusedFill ?? this.focusedFill,
+    borderWidth: borderWidth ?? this.borderWidth,
+    textStyle: textStyle ?? this.textStyle,
+  );
+
+  @override
+  MetroListPickerTheme lerp(covariant MetroListPickerTheme? other, double t) {
+    if (other == null) return this;
+    return MetroListPickerTheme(
+      foreground: Color.lerp(foreground, other.foreground, t),
+      disabledForeground: Color.lerp(
+        disabledForeground,
+        other.disabledForeground,
+        t,
+      ),
+      placeholderColor: Color.lerp(placeholderColor, other.placeholderColor, t),
+      accentColor: Color.lerp(accentColor, other.accentColor, t),
+      focusedForeground: Color.lerp(
+        focusedForeground,
+        other.focusedForeground,
+        t,
+      ),
+      focusedFill: Color.lerp(focusedFill, other.focusedFill, t),
+      borderWidth: t < .5 ? borderWidth : other.borderWidth,
+      textStyle: TextStyle.lerp(textStyle, other.textStyle, t),
+    );
+  }
+}
+
+/// Visual overrides for one- and two-line list rows.
+class MetroListItemTheme extends ThemeExtension<MetroListItemTheme> {
+  const MetroListItemTheme({
+    this.headerStyle,
+    this.subHeaderStyle,
+    this.disabledColor,
+  });
+  final TextStyle? headerStyle;
+  final TextStyle? subHeaderStyle;
+  final Color? disabledColor;
+
+  @override
+  MetroListItemTheme copyWith({
+    TextStyle? headerStyle,
+    TextStyle? subHeaderStyle,
+    Color? disabledColor,
+  }) => MetroListItemTheme(
+    headerStyle: headerStyle ?? this.headerStyle,
+    subHeaderStyle: subHeaderStyle ?? this.subHeaderStyle,
+    disabledColor: disabledColor ?? this.disabledColor,
+  );
+
+  @override
+  MetroListItemTheme lerp(covariant MetroListItemTheme? other, double t) {
+    if (other == null) return this;
+    return MetroListItemTheme(
+      headerStyle: TextStyle.lerp(headerStyle, other.headerStyle, t),
+      subHeaderStyle: TextStyle.lerp(subHeaderStyle, other.subHeaderStyle, t),
+      disabledColor: Color.lerp(disabledColor, other.disabledColor, t),
+    );
+  }
+}
+
+/// Visual overrides for panel and Pivot headings.
+class MetroHeadingTheme extends ThemeExtension<MetroHeadingTheme> {
+  const MetroHeadingTheme({
+    this.panelTopStyle,
+    this.panelBottomStyle,
+    this.pivotSelectedStyle,
+    this.pivotIdleStyle,
+  });
+  final TextStyle? panelTopStyle;
+  final TextStyle? panelBottomStyle;
+  final TextStyle? pivotSelectedStyle;
+  final TextStyle? pivotIdleStyle;
+
+  @override
+  MetroHeadingTheme copyWith({
+    TextStyle? panelTopStyle,
+    TextStyle? panelBottomStyle,
+    TextStyle? pivotSelectedStyle,
+    TextStyle? pivotIdleStyle,
+  }) => MetroHeadingTheme(
+    panelTopStyle: panelTopStyle ?? this.panelTopStyle,
+    panelBottomStyle: panelBottomStyle ?? this.panelBottomStyle,
+    pivotSelectedStyle: pivotSelectedStyle ?? this.pivotSelectedStyle,
+    pivotIdleStyle: pivotIdleStyle ?? this.pivotIdleStyle,
+  );
+
+  @override
+  MetroHeadingTheme lerp(covariant MetroHeadingTheme? other, double t) {
+    if (other == null) return this;
+    return MetroHeadingTheme(
+      panelTopStyle: TextStyle.lerp(panelTopStyle, other.panelTopStyle, t),
+      panelBottomStyle: TextStyle.lerp(
+        panelBottomStyle,
+        other.panelBottomStyle,
+        t,
+      ),
+      pivotSelectedStyle: TextStyle.lerp(
+        pivotSelectedStyle,
+        other.pivotSelectedStyle,
+        t,
+      ),
+      pivotIdleStyle: TextStyle.lerp(pivotIdleStyle, other.pivotIdleStyle, t),
     );
   }
 }

@@ -7,7 +7,6 @@ import 'package:metro_ui/app.dart';
 import 'package:metro_ui/page_scaffold.dart';
 import 'package:metro_ui/metro_theme_extensions.dart';
 import 'package:metro_ui/widgets/metro_circle_button.dart';
-import 'package:metro_ui/widgets/tile.dart';
 
 void main() {
   Widget buildHost({required MetroApplicationBar bar}) {
@@ -178,11 +177,11 @@ void main() {
     expect(textHeight, lessThan(20), reason: '稍长标签不应换行（当前高度 $textHeight）');
     // Text 明确强制单行
     expect(tester.widget<Text>(find.text('新建项目')).maxLines, 1);
-    // 按钮（Tile 层）宽度 = 圆环直径 + 原按钮间距（36.25*0.8），
+    // 应用栏按钮宽度 = 圆环直径 + 原按钮间距（36.25*0.8），
     // 圆环在按钮内水平居中
     const double circleSize = 48.125 * 0.8;
     const double buttonWidth = circleSize + 36.25 * 0.8;
-    final buttonSize = tester.getSize(find.byType(Tile).first);
+    final buttonSize = tester.getSize(find.byType(MetroAppBarButton));
     expect(
       buttonSize.width,
       closeTo(buttonWidth, 0.001),
@@ -191,7 +190,7 @@ void main() {
     final circleCenter = tester
         .getCenter(find.byType(MetroCircleButton).first)
         .dx;
-    final buttonLeft = tester.getTopLeft(find.byType(Tile).first).dx;
+    final buttonLeft = tester.getTopLeft(find.byType(MetroAppBarButton)).dx;
     final circleOffsetInButton = circleCenter - buttonLeft;
     expect(
       circleOffsetInButton,

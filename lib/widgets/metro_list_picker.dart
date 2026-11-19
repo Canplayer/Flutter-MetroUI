@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:metro_ui/animations.dart';
+import 'package:metro_ui/metro_theme_extensions.dart';
 import 'package:metro_ui/uix_metrics.dart';
 import 'package:metro_ui/widgets/tile.dart';
+
+import 'uix_tight_text.dart';
 
 /// Windows Phone 8.0 native (UIX) ListPicker.
 ///
@@ -22,6 +25,7 @@ class ListPicker<T> extends StatefulWidget {
     this.onChanged,
     this.placeholder = '',
     this.title = '',
+    this.style,
   });
 
   final List<T> items;
@@ -30,6 +34,7 @@ class ListPicker<T> extends StatefulWidget {
   final ValueChanged<T>? onChanged;
   final String placeholder;
   final String title;
+  final MetroListPickerTheme? style;
 
   @override
   State<ListPicker<T>> createState() => _ListPickerState<T>();
@@ -49,6 +54,7 @@ class _ListPickerState<T> extends State<ListPicker<T>>
   );
 
   bool _expanded = false;
+  bool _openingPage = false;
 
   /// `Clicker.Clicking`: while the frame is held down it already shows the
   /// focused background (`FocusedBackgroundImage` / `FocusedToPickerBox…`).
@@ -134,33 +140,82 @@ class _ListPickerState<T> extends State<ListPicker<T>>
   }
 
   @override
+  void didUpdateWidget(covariant ListPicker<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_expanded && (!_expandsInPlace || !_enabled || widget.items.isEmpty)) {
+      _setExpanded(false);
+    }
+  }
+
+  MetroListPickerTheme _style(BuildContext context) {
+    final inherited =
+        Theme.of(context).extension<MetroListPickerTheme>() ??
+        const MetroListPickerTheme();
+    final style = widget.style;
+    return style == null
+        ? inherited
+        : inherited.copyWith(
+            foreground: style.foreground,
+            disabledForeground: style.disabledForeground,
+            placeholderColor: style.placeholderColor,
+            accentColor: style.accentColor,
+            focusedForeground: style.focusedForeground,
+            focusedFill: style.focusedFill,
+            borderWidth: style.borderWidth,
+            textStyle: style.textStyle,
+          );
+  }
+
+  @override
   void dispose() {
     _expand.dispose();
     super.dispose();
   }
 
   Future<void> _openPage() async {
-    final selection = await Navigator.of(context).push<T>(
-      MaterialPageRoute<T>(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: Text(widget.title)),
-          body: ListView.builder(
-            itemCount: widget.items.length,
-            itemBuilder: (context, index) {
-              final item = widget.items[index];
-              return ListTile(
-                title: Text(
-                  widget.itemLabel(item),
-                  style: TextStyle(fontSize: _fontSize),
-                ),
-                onTap: () => Navigator.pop(context, item),
-              );
-            },
+    if (_openingPage) return;
+    final navigator = Navigator.of(context);
+    final captured = InheritedTheme.capture(
+      from: context,
+      to: navigator.context,
+    );
+    final style = _style(context);
+    final items = List<T>.of(widget.items);
+    final label = widget.itemLabel;
+    final title = widget.title;
+    _openingPage = true;
+    try {
+      final selection = await navigator.push<T>(
+        MaterialPageRoute<T>(
+          builder: (context) => captured.wrap(
+            Scaffold(
+              appBar: AppBar(title: Text(title)),
+              body: ListView.builder(
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  return ListTile(
+                    title: UixTightText.fromText(
+                      Text(
+                        label(item),
+                        style: TextStyle(fontSize: _fontSize)
+                            .merge(style.textStyle),
+                      ),
+                    ),
+                    onTap: () => Navigator.pop(context, item),
+                  );
+                },
+              ),
+            ),
           ),
         ),
-      ),
-    );
-    if (mounted && selection != null) widget.onChanged?.call(selection);
+      );
+      if (mounted && selection != null && widget.items.contains(selection)) {
+        widget.onChanged?.call(selection);
+      }
+    } finally {
+      _openingPage = false;
+    }
   }
 
   void _select(T item) {
@@ -174,10 +229,24 @@ class _ListPickerState<T> extends State<ListPicker<T>>
     // ListPickerStyle: Foreground=TextHighColor, PlaceholderColor=TextMidColor,
     // DisabledBackgroundImage=MediumBorderDisabled (alpha 102/255),
     // FocusedBackgroundImage=MediumBorderAccentWhiteFill.
-    final foreground = theme.colorScheme.onSurface;
-    final accent = theme.colorScheme.primary;
-    final disabledForeground = foreground.withValues(alpha: 102 / 255);
-    final placeholderColor = foreground.withValues(alpha: 0.6);
+    final style = _style(context);
+    final contrast = MetroSystemThemeData.of(context).highContrast;
+    final foreground = style.foreground ?? theme.colorScheme.onSurface;
+    final accent = style.accentColor ?? theme.colorScheme.primary;
+    final disabledForeground =
+        style.disabledForeground ??
+        (contrast
+            ? theme.disabledColor
+            : foreground.withValues(alpha: 102 / 255));
+    final placeholderColor =
+        style.placeholderColor ??
+        (contrast ? foreground : foreground.withValues(alpha: .6));
+    final focusedForeground =
+        style.focusedForeground ??
+        (contrast ? theme.colorScheme.onSurface : Colors.black);
+    final focusedFill =
+        style.focusedFill ??
+        (contrast ? theme.colorScheme.surface : Colors.white);
 
     final normalBorder = !_enabled ? disabledForeground : foreground;
     // ListPicker.private_UpdateAppearance:
@@ -190,18 +259,17 @@ class _ListPickerState<T> extends State<ListPicker<T>>
     final accentFrame = _expanded || _pressed;
     final accentFilled = _pressed && !_expandsInPlace;
 
-    final hasValue = widget.value != null;
+    final hasValue =
+        widget.value != null && widget.items.contains(widget.value);
     final text = hasValue
         ? widget.itemLabel(widget.value as T)
         : widget.placeholder;
     final textColor = !_enabled
         ? disabledForeground
         : accentFilled
-        ? Colors
-              .white // PressedForegroundToPickerBox = BaseWhiteColor
+        ? (contrast ? theme.colorScheme.onPrimary : Colors.white)
         : _expanded || _pressed
-        ? Colors
-              .black // PressedForeground = BaseBlackColor
+        ? focusedForeground
         : hasValue
         ? foreground
         : placeholderColor;
@@ -226,7 +294,7 @@ class _ListPickerState<T> extends State<ListPicker<T>>
             : accentFilled
             ? accent
             : _expanded || _pressed
-            ? Colors.white
+            ? focusedFill
             : null;
         return Container(
           height: height,
@@ -238,7 +306,10 @@ class _ListPickerState<T> extends State<ListPicker<T>>
           // side and shorten the list viewport, which pushed the selected row
           // 2.4 px below the centre of the collapsed frame.
           foregroundDecoration: BoxDecoration(
-            border: Border.all(color: borderColor, width: _borderWidth),
+            border: Border.all(
+              color: borderColor,
+              width: style.borderWidth ?? _borderWidth,
+            ),
           ),
           child: ClipRect(
             child: Stack(
@@ -259,12 +330,25 @@ class _ListPickerState<T> extends State<ListPicker<T>>
                       // through each other.
                       child: Opacity(
                         opacity: placeholderVisible ? 0 : 1,
-                        child: _buildItems(accent, foreground),
+                        child: _buildItems(
+                          accent,
+                          foreground,
+                          focusedForeground,
+                          disabledForeground,
+                          style.textStyle,
+                        ),
                       ),
                     ),
                   ),
-                if (placeholderVisible)
-                  Positioned.fill(child: _buildCollapsed(text, textColor)),
+                if (placeholderVisible || !_expandsInPlace)
+                  Positioned.fill(
+                    child: _buildCollapsed(
+                      text,
+                      textColor,
+                      style.textStyle,
+                      placeholderVisible,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -283,11 +367,13 @@ class _ListPickerState<T> extends State<ListPicker<T>>
             child: frame,
           )
         : Tile(
-            onTap: _toggle,
+            onTap: _enabled ? _toggle : null,
             allowBack: false,
-            onTouch: (pressed) {
-              if (_pressed != pressed) setState(() => _pressed = pressed);
-            },
+            onTouch: !_enabled
+                ? null
+                : (pressed) {
+                    if (_pressed != pressed) setState(() => _pressed = pressed);
+                  },
             child: frame,
           );
 
@@ -298,23 +384,35 @@ class _ListPickerState<T> extends State<ListPicker<T>>
     );
   }
 
-  Widget _buildCollapsed(String text, Color textColor) {
+  Widget _buildCollapsed(
+    String text,
+    Color textColor,
+    TextStyle? style,
+    bool placeholder,
+  ) {
+    final label = Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(fontSize: _fontSize, color: textColor).merge(style),
+    );
     // Placeholder.Margins = (0,3,0,0).
     return Padding(
       padding: const EdgeInsets.only(top: 3 * 0.8),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Text(
-          text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: _fontSize, color: textColor),
-        ),
+        child: placeholder ? label : UixTightText.fromText(label),
       ),
     );
   }
 
-  Widget _buildItems(Color accent, Color foreground) {
+  Widget _buildItems(
+    Color accent,
+    Color foreground,
+    Color focused,
+    Color disabled,
+    TextStyle? style,
+  ) {
     return SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -323,14 +421,28 @@ class _ListPickerState<T> extends State<ListPicker<T>>
           for (var i = 0; i < widget.items.length; i++)
             Padding(
               padding: EdgeInsets.only(top: i == 0 ? 0 : _itemSpacing),
-              child: _buildItem(accent, foreground, i),
+              child: _buildItem(
+                accent,
+                foreground,
+                focused,
+                disabled,
+                style,
+                i,
+              ),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildItem(Color accent, Color foreground, int index) {
+  Widget _buildItem(
+    Color accent,
+    Color foreground,
+    Color focused,
+    Color disabled,
+    TextStyle? style,
+    int index,
+  ) {
     final item = widget.items[index];
     final selected = widget.value == item;
     // ListPickerItem.private_UpdateAppearance checks in this order:
@@ -342,11 +454,11 @@ class _ListPickerState<T> extends State<ListPicker<T>>
     // colour only appears once the list is open and the row is not pressed.
     final clicking = _pressedRow == index || _pressed;
     final color = !_enabled
-        ? Colors.black.withValues(alpha: 0.3)
+        ? disabled
         : clicking
-        ? Colors.black
+        ? focused
         : _expanded
-        ? (selected ? accent : Colors.black)
+        ? (selected ? accent : focused)
         : foreground;
     return GestureDetector(
       // Empty space in the row still selects, without the 3D tilt.
@@ -364,11 +476,16 @@ class _ListPickerState<T> extends State<ListPicker<T>>
               final next = down ? index : null;
               if (_pressedRow != next) setState(() => _pressedRow = next);
             },
-            child: Text(
-              widget.itemLabel(item),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: _fontSize, color: color),
+            child: UixTightText.fromText(
+              Text(
+                widget.itemLabel(item),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: _fontSize,
+                  color: color,
+                ).merge(style),
+              ),
             ),
           ),
         ),

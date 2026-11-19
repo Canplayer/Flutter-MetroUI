@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:metro_ui/metro_theme_extensions.dart';
 import 'package:metro_ui/animations.dart';
 
 /// Windows Phone 8.0 native (UIX) ProgressBar, decoded from
@@ -92,8 +93,16 @@ class _ProgressBarState extends State<ProgressBar>
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.foreground ?? Theme.of(context).colorScheme.primary;
-    final track = widget.background ?? color.withValues(alpha: 0.1);
+    final theme = Theme.of(context);
+    final tokens = theme.extension<MetroProgressTheme>();
+    final contrast =
+        theme.extension<MetroSystemThemeData>()?.highContrast ?? false;
+    final color =
+        widget.foreground ?? tokens?.barColor ?? theme.colorScheme.primary;
+    final track =
+        widget.background ??
+        tokens?.trackColor ??
+        (contrast ? theme.colorScheme.surface : color.withValues(alpha: .1));
     return Semantics(
       label: widget.semanticLabel,
       child: ConstrainedBox(

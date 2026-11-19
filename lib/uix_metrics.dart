@@ -4,6 +4,10 @@ library;
 /// 480-wide design units -> Flutter logical pixels (480 -> 384).
 const double uixScale = 0.8;
 
+/// UIX point sizes to Flutter logical pixels. Use [uixScale] alone for
+/// geometry defined in 480-wide design units.
+const double uixFontScale = (96 / 72) * uixScale;
+
 /// Converts a UIX `FontSize` value to a Flutter `fontSize`.
 ///
 /// The value stored in the UIX resources is a point size: the renderer
@@ -12,7 +16,7 @@ const double uixScale = 0.8;
 /// multiply it by the double at 0x10019bc8 = 4/3 and pass it together with a
 /// 700 font weight). The project then applies [uixScale].
 ///
-/// Cross-check: the WP8 panorama title is 128 design units; 128 * 4/3 * 0.8 =
+/// Cross-check: the WP8 panorama title is 128 points; 128 * 4/3 * 0.8 =
 /// 136.5, matching the 135 measured from device screenshots
 /// (`WP8与Flutter的Panorama字号差异.md`).
-double uixFontSize(double points) => points * (4 / 3) * uixScale;
+double uixFontSize(double points) => points * uixFontScale;

@@ -8,6 +8,8 @@ import 'package:flutter/rendering.dart';
 import 'package:metro_ui/animations.dart';
 import 'package:metro_ui/metro_theme_extensions.dart';
 import 'package:metro_ui/page_scaffold.dart';
+import 'package:metro_ui/uix_metrics.dart';
+import 'package:metro_ui/uix_typography.dart';
 
 /// 三层视差中，大标题层与背景层相对内容的当前偏移。
 class PanoramaParallax {
@@ -228,7 +230,7 @@ class PanoramaConfig {
     this.titleOverflowRight = 2000.0,
     this.titleTextLeftMargin = 0.0,
     this.paneTopPadding = 198 * 0.8,
-    this.paneHeaderFontSize = 50 * 0.8 * 4 / 3,
+    this.paneHeaderFontSize = 50 * uixFontScale,
     this.snapCurve = const UixLog(300),
     this.snapDuration = const Duration(milliseconds: 800),
     this.paneHeaderForwardRate = 1 / 1.18,
@@ -405,6 +407,7 @@ class PanoramaScrollPhysics extends ScrollPhysics {
 ///   过滤模式会改宽度输入与 margin。
 class MetroPanorama extends StatefulWidget {
   final Widget title;
+  final TextStyle? titleStyle;
   final Widget? background;
   final List<MetroPanoramaItem> items;
   final ValueChanged<int>? onPageChange;
@@ -413,6 +416,7 @@ class MetroPanorama extends StatefulWidget {
   const MetroPanorama({
     super.key,
     required this.title,
+    this.titleStyle,
     this.background,
     required this.items,
     this.onPageChange,
@@ -1214,9 +1218,14 @@ class _MetroPanoramaState extends State<MetroPanorama>
                                 onChange: (Size size) =>
                                     _updateTitleTextWidth(size.width),
                                 child: DefaultTextStyle.merge(
-                                  style: Theme.of(context)
-                                      .extension<MetroTitleTextTheme>()
-                                      ?.titleTextStyle,
+                                  style:
+                                      (Theme.of(context)
+                                                  .extension<
+                                                    MetroTitleTextTheme
+                                                  >()
+                                                  ?.titleTextStyle ??
+                                              const TextStyle())
+                                          .merge(widget.titleStyle),
                                   child: widget.title,
                                 ),
                               ),
@@ -1563,7 +1572,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
                     _updatePaneHeaderWidth(realIndex, size.width),
                 child: DefaultTextStyle.merge(
                   style: TextStyle(
-                    fontWeight: FontWeight.w200,
+                    fontWeight: UixFontWeight.semiLight,
                     fontSize: _config.paneHeaderFontSize,
                     //color: Colors.white,
                   ),

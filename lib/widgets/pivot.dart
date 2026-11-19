@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:metro_ui/metro_theme_extensions.dart';
 import 'package:metro_ui/uix_metrics.dart';
+import 'package:metro_ui/uix_typography.dart';
 import 'package:metro_ui/widgets/pivot_pane_view.dart';
 
 export 'pivot_pane_view.dart' show PivotTransition, PivotController;
@@ -41,7 +43,7 @@ const double kPivotHeaderEATitleGap = 40 * uixScale;
 ///
 /// `PivotStyle.HeaderFont` = `FontFaceSemiLight` @ 该字号；项目字体把
 /// SemiLight 注册在 `w300`。
-const double kPivotHeaderFontSize = 54 * (4 / 3) * uixScale;
+const double kPivotHeaderFontSize = 54 * uixFontScale;
 
 /// `ThemeResources.PivotColorDark` = `0x66FFFFFF`（白 40%）[读出]。
 ///
@@ -81,6 +83,7 @@ abstract class PivotBase extends StatefulWidget {
     super.key,
     required this.items,
     this.initialPage,
+    this.interactive = true,
     this.transition = PivotTransition.contentChange,
     this.swipeThreshold,
     this.maxDragDistance,
@@ -99,6 +102,9 @@ abstract class PivotBase extends StatefulWidget {
 
   /// 页面条目列表（标题 + 页面）。
   final List<PivotItem> items;
+
+  /// Enables header navigation and horizontal pane dragging.
+  final bool interactive;
 
   final PivotTransition transition;
 
@@ -165,6 +171,7 @@ class Pivot extends PivotBase {
     super.key,
     required super.items,
     super.initialPage,
+    super.interactive,
     super.transition,
     super.swipeThreshold,
     super.maxDragDistance,
@@ -202,6 +209,7 @@ class PivotStack extends PivotBase {
     super.key,
     required super.items,
     super.initialPage,
+    super.interactive,
     super.transition,
     super.swipeThreshold,
     super.maxDragDistance,
@@ -272,6 +280,7 @@ mixin _PivotSyncState<T extends PivotBase> on State<T> {
   Widget buildIndicator() {
     return PivotHeader(
       titles: [for (final e in widget.items) e.title],
+      interactive: widget.interactive,
       clipBehavior: Clip.none,
       currentIndex: _currentIndex,
       progress: _progress,
@@ -298,6 +307,7 @@ mixin _PivotSyncState<T extends PivotBase> on State<T> {
     final n = widget.items.length;
     return PivotPaneView(
       controller: _viewController,
+      interactive: widget.interactive,
       clipBehavior: Clip.none,
       transition: widget.transition,
       hideDuration: widget.hideDuration ?? kPivotPaneViewHideDuration,
@@ -411,6 +421,7 @@ class PivotHeader extends StatefulWidget {
     required this.titles,
     required this.currentIndex,
     this.progress = 0,
+    this.interactive = true,
     this.clipBehavior = Clip.hardEdge,
     this.swapTargetIndex,
     this.titleGap = kPivotHeaderTitleGap,
@@ -423,6 +434,7 @@ class PivotHeader extends StatefulWidget {
 
   /// 所有标题（顺序与页面一一对应，可循环）。
   final List<Widget> titles;
+  final bool interactive;
   final Clip clipBehavior;
 
   /// 当前页面索引（可为负数，内部循环映射）。
@@ -626,17 +638,13 @@ class _PivotHeaderState extends State<PivotHeader>
         builder: (context, constraints) {
           final anchor = _anchorX(constraints.maxWidth);
           final base = _slotX(cur);
-          // 槽位坐标用的是全局累计宽度，换页那一刻不会出现标题瞬移；
-          // 换页期间再多画「前进方向」上的一个槽位，否则它在提交的瞬间
-          // 会从无到有地冒到屏幕边缘（就是观众看到的"标题跳一下"）。
+          // Keep a full cycle on the right, including during a backward wrap.
+          // A fixed cur+1 limit drops the still-visible B when A wraps to C.
           var lo = _n > 1 ? cur - 1 : cur;
-          var hi = _n > 1 ? cur + 1 : cur;
-          if (_swapping && _n > 2) {
-            if (_sign < 0) {
-              hi = cur + 2;
-            } else {
-              lo = cur - 2;
-            }
+          var hi = _n > 1 ? cur + _n - 1 : cur;
+          if (_swapping && _n > 1) {
+            lo = _sign > 0 ? cur - 2 : lo;
+            hi = _sign < 0 ? hi + 1 : hi;
           }
           return SizedBox(
             height: _titleHeight,
@@ -674,34 +682,57 @@ class _PivotHeaderState extends State<PivotHeader>
 
   Widget _title(int index, {required bool selected}) {
     final theme = Theme.of(context);
-    final selectedColor = theme.textTheme.bodyLarge?.color ?? Colors.white;
-    final idleColor = theme.brightness == Brightness.dark
+    final headings = theme.extension<MetroHeadingTheme>();
+    final contrast = MetroSystemThemeData.of(context).highContrast;
+    final selectedColor =
+        theme.textTheme.bodyLarge?.color ?? theme.colorScheme.onSurface;
+    final idleColor = contrast
+        ? theme.disabledColor
+        : theme.brightness == Brightness.dark
         ? kPivotHeaderIdleColorDark
         : kPivotHeaderIdleColorLight;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: widget.onTitleTap == null ? null : () => widget.onTitleTap!(index),
-      child: _MeasureSize(
-        onSize: (size) {
-          final changedWidth = size.width != (_widths[index % _n] ?? -1);
-          final changedHeight = size.height != _titleHeight;
-          if (!changedWidth && !changedHeight) return;
-          setState(() {
-            if (changedWidth) _widths[index % _n] = size.width;
-            if (changedHeight) _titleHeight = size.height;
-          });
-        },
-        child: DefaultTextStyle.merge(
-          style: TextStyle(
-            // PivotStyle.HeaderFont：FontFaceSemiLight（项目注册为 w300）
-            fontSize: kPivotHeaderFontSize,
-            fontWeight: FontWeight.w300,
-            overflow: TextOverflow.visible,
-            color: selected ? selectedColor : idleColor,
-            // Constants.PivotHeaderCharacterSpacing = 0.0（非东亚语言）
-            letterSpacing: 0,
+    // UIX PivotHeader.private_UpdateAppearance, 0x1024–0x1095.
+    final selectedIndex = widget.swapTargetIndex ?? widget.currentIndex;
+    final show =
+        selected || (widget.interactive && index - selectedIndex <= _n - 1);
+    return Opacity(
+      key: ValueKey('pivot-header-slot-$index'),
+      opacity: show ? 1 : 0,
+      child: IgnorePointer(
+        ignoring: !show,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTitleTap == null
+              ? null
+              : () => widget.onTitleTap!(index),
+          child: _MeasureSize(
+            onSize: (size) {
+              final changedWidth = size.width != (_widths[index % _n] ?? -1);
+              final changedHeight = size.height != _titleHeight;
+              if (!changedWidth && !changedHeight) return;
+              setState(() {
+                if (changedWidth) _widths[index % _n] = size.width;
+                if (changedHeight) _titleHeight = size.height;
+              });
+            },
+            child: DefaultTextStyle.merge(
+              style:
+                  TextStyle(
+                    // PivotStyle.HeaderFont：FontFaceSemiLight (OS/2 350)
+                    fontSize: kPivotHeaderFontSize,
+                    fontWeight: UixFontWeight.semiLight,
+                    overflow: TextOverflow.visible,
+                    color: selected ? selectedColor : idleColor,
+                    // Constants.PivotHeaderCharacterSpacing = 0.0（非东亚语言）
+                    letterSpacing: 0,
+                  ).merge(
+                    selected
+                        ? headings?.pivotSelectedStyle
+                        : headings?.pivotIdleStyle,
+                  ),
+              child: widget.titles[index % _n],
+            ),
           ),
-          child: widget.titles[index % _n],
         ),
       ),
     );

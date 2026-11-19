@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:metro_ui/metro_theme_extensions.dart';
 
 /// Metro 风格的 StackPanel 组件
 ///
@@ -10,7 +11,15 @@ class StackPanel extends StatelessWidget {
   /// 创建一个 StackPanel
   ///
   /// [top] 和 [bottom] 参数通常传入 Text 小部件。
-  const StackPanel({super.key, this.top, this.bottom});
+  const StackPanel({
+    super.key,
+    this.top,
+    this.bottom,
+    this.topStyle,
+    this.bottomStyle,
+  });
+
+  final TextStyle? topStyle, bottomStyle;
 
   /// 上方的小部件
   final Widget? top;
@@ -20,6 +29,7 @@ class StackPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final heading = Theme.of(context).extension<MetroHeadingTheme>();
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,7 +50,7 @@ class StackPanel extends StatelessWidget {
               color: Theme.of(context).textTheme.bodyLarge?.color,
               fontWeight: FontWeight(400),
               letterSpacing: 0.6,
-            ),
+            ).merge(heading?.panelTopStyle).merge(topStyle),
             child: top ?? const SizedBox.shrink(),
           ),
         ),
@@ -55,7 +65,7 @@ class StackPanel extends StatelessWidget {
                 overflow: TextOverflow.visible,
                 color: Theme.of(context).textTheme.bodyLarge?.color,
                 letterSpacing: 0.3,
-              ),
+              ).merge(heading?.panelBottomStyle).merge(bottomStyle),
               child: bottom ?? const SizedBox.shrink(),
             ),
           ),

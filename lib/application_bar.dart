@@ -7,9 +7,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:metro_ui/animations.dart';
-import 'package:metro_ui/metro_theme_extensions.dart';
+import 'package:metro_ui/metro_theme.dart';
+import 'package:metro_ui/uix_metrics.dart';
+import 'package:metro_ui/uix_typography.dart';
 import 'package:metro_ui/widgets/metro_circle_button.dart';
 import 'package:metro_ui/widgets/tile.dart';
+import 'package:metro_ui/widgets/uix_tight_text.dart';
 
 // ---------------- 配置常量 ----------------
 const double kMetroAppBarMiniHeight = 30.0 * 0.8; // 折叠时的 mini 条高度
@@ -115,6 +118,7 @@ class MetroAppBarButton extends StatelessWidget {
     required this.icon,
     this.color,
     this.iconColor,
+    this.backgroundBuilder,
     required this.label,
     this.onPressed,
   });
@@ -128,6 +132,10 @@ class MetroAppBarButton extends StatelessWidget {
   /// 图标颜色
   final Color? iconColor;
 
+  /// Supplies a stateful frame behind the 48-unit icon canvas.
+  final Widget Function(BuildContext context, bool pressed, Color foreground)?
+  backgroundBuilder;
+
   /// 按钮的说明文字；菜单展开或拖动时显示，同时用于无障碍提示。
   final String label;
 
@@ -136,75 +144,105 @@ class MetroAppBarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double circleSize = kMetroAppBarButtonSize;
-    final bool isDisabled = onPressed == null;
-    final bool labelVisible = _AppBarLabelVisibility.of(context);
-    // 文字区域高度（圆环底部间距 + 文字行高），用于撑高按钮命中区域，
-    // 保证菜单展开后点击文字也能触发按压/点击
-    final double labelAreaHeight = labelVisible
-        ? kMetroAppBarButtonLabelAreaHeight
-        : 0.0;
-    // 按钮（Tile 层）宽度 = 圆环直径 + 原按钮间距：
-    // 圆环在按钮内居中、位置不变，圆环中心距保持最初的视觉间距；
-    // 文字可用宽度 = 按钮宽度，单行完整显示。
-    final double buttonWidth = kMetroAppBarButtonWidth;
-
+    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context).extension<MetroAppBarTheme>();
+    final colors = _AppBarColors.of(context);
+    final enabled = onPressed != null;
+    final foreground =
+        iconColor ??
+        colors?.iconColor ??
+        theme?.buttonIconColor ??
+        scheme.onSurface;
+    final disabled =
+        theme?.disabledButtonIconColor ?? foreground.withValues(alpha: .5);
+    final border = enabled
+        ? color ?? colors?.buttonColor ?? theme?.buttonColor ?? foreground
+        : disabled;
+    final frame = backgroundBuilder;
+    final captionVisible = _AppBarLabelVisibility.of(context);
+    final wp8 =
+        MetroSystemThemeData.of(context).version == MetroDesignVersion.wp8;
+    final captionStyle =
+        (Theme.of(context).textTheme.bodyMedium ?? const TextStyle())
+            .copyWith(
+              // ShellChrome!ApplicationBarCaptionLabelStyle (480×800).
+              fontSize: wp8 ? uixFontSize(10) : 13 * uixScale,
+              fontWeight: wp8 ? UixFontWeight.semiBold : UixFontWeight.normal,
+              letterSpacing: wp8 ? 0 : .3,
+              color: enabled ? (theme?.captionColor ?? foreground) : disabled,
+            )
+            .merge(theme?.captionStyle);
+    final caption = Text(
+      label,
+      textAlign: TextAlign.center,
+      style: captionStyle,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
     return Transform.rotate(
       angle: _AppBarPivotRotation.of(context),
-      child: Opacity(
-        opacity: isDisabled ? 0.5 : 1,
-        child: Tile(
-          // Tile 不再承担点击事件（保留其 3D 回弹/旋转动画），
-          // 点击与按压状态由内部 MetroPressDetector 负责。
-          child: MetroPressDetector(
-            onPressed: onPressed,
+      child: Semantics(
+        button: true,
+        enabled: enabled,
+        label: label,
+        onTap: onPressed,
+        child: MetroPressDetector(
+          onPressed: onPressed,
+          child: ExcludeSemantics(
             child: SizedBox(
-              width: buttonWidth,
-              height: circleSize + labelAreaHeight,
+              width: kMetroAppBarButtonWidth,
+              height:
+                  kMetroAppBarButtonSize +
+                  (captionVisible ? kMetroAppBarButtonLabelAreaHeight : 0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  MetroCircleButton(
-                    icon: icon,
-                    borderColor:
-                        color ?? _AppBarColors.of(context)?.buttonColor,
-                    iconColor:
-                        iconColor ?? _AppBarColors.of(context)?.iconColor,
-                    semanticLabel: label,
-                    iconMode: true,
-                    pressed: isDisabled ? false : null,
-                  ),
-                  if (labelVisible) ...[
-                    const SizedBox(height: 7 * 0.8),
-                    SizedBox(
-                      height: 14,
-                      width: buttonWidth,
-                      child: Align(
-                        alignment: Alignment.topCenter,
-                        child: DefaultTextStyle(
-                          style:
-                              (Theme.of(context).textTheme.bodyMedium ??
-                                      const TextStyle())
-                                  .copyWith(
-                                    color:
-                                        _AppBarColors.of(context)?.iconColor ??
-                                        Theme.of(context)
-                                            .extension<MetroAppBarTheme>()
-                                            ?.buttonIconColor ??
-                                        Colors.white,
-                                    fontSize: 13 * 0.8,
-                                    fontWeight: FontWeight.w400,
-                                    letterSpacing: 0.3,
-                                  ),
-                          child: Text(
-                            label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                  if (frame == null)
+                    MetroCircleButton(
+                      icon: icon,
+                      borderColor: border,
+                      iconColor: enabled ? foreground : disabled,
+                      iconMode: true,
+                      pressed: enabled ? null : false,
+                    )
+                  else
+                    Builder(
+                      builder: (context) {
+                        final pressed =
+                            enabled &&
+                            (MetroPressScope.maybeOf(context) ?? false);
+                        final iconTint = pressed
+                            ? theme?.pressedButtonIconColor ?? Colors.white
+                            : enabled
+                            ? foreground
+                            : disabled;
+                        return SizedBox.square(
+                          dimension: kMetroAppBarButtonSize,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              frame(context, pressed, border),
+                              ColorFiltered(
+                                colorFilter: ColorFilter.mode(
+                                  iconTint,
+                                  BlendMode.srcIn,
+                                ),
+                                child: icon,
+                              ),
+                            ],
                           ),
+                        );
+                      },
+                    ),
+                  if (captionVisible)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 7 * .8),
+                        child: SizedBox(
+                          width: kMetroAppBarButtonWidth,
+                          child: wp8 ? UixTightText.fromText(caption) : caption,
                         ),
                       ),
                     ),
-                  ],
                 ],
               ),
             ),
@@ -263,6 +301,8 @@ class MetroApplicationBar {
   const MetroApplicationBar({
     this.buttons = const <Widget>[],
     this.customContent,
+    this.showMenuIndicator = true,
+    this.theme,
     this.menuItems = const [],
     this.backgroundColor,
     this.expandedBackgroundColor,
@@ -289,6 +329,16 @@ class MetroApplicationBar {
   /// 非空时替代 [buttons]，保留应用栏自己的展开入口和菜单。
   /// 具体输入、焦点与键盘行为由该内容自行管理。
   final Widget? customContent;
+
+  /// Whether the bar reserves space for and paints the menu indicator.
+  final bool showMenuIndicator;
+
+  /// Local preset for this bar, including when it is rendered in MetroApp's overlay.
+  final MetroThemeData? theme;
+
+  bool usesContinuousHost(BuildContext context) =>
+      (theme?.version ?? MetroSystemThemeData.of(context).version) ==
+      MetroDesignVersion.wp7;
 
   /// 点击「•••」后展开的文本菜单项列表。
   final List<MetroAppBarMenuItem> menuItems;
@@ -352,6 +402,7 @@ class MetroApplicationBar {
 class MetroAppBarController extends ChangeNotifier {
   MetroApplicationBar? _currentBar;
   Object? _owner;
+  bool? _continuousHost;
   bool _expanded = false;
   VoidCallback? _close;
   VoidCallback? _open;
@@ -363,7 +414,7 @@ class MetroAppBarController extends ChangeNotifier {
 
   /// Hide during the outgoing page animation; the next page registers its bar.
   void beginNavigation({required bool continuous}) {
-    if (continuous || _currentBar == null) return;
+    if ((_continuousHost ?? continuous) || _currentBar == null) return;
     _close?.call();
     _expanded = false;
     _currentBar = null;
@@ -432,22 +483,21 @@ class MetroApplicationBarOverlay extends StatelessWidget {
       animation: controller,
       builder: (context, _) {
         final bar = controller.currentBar;
+        final continuous =
+            bar?.usesContinuousHost(context) ??
+            controller._continuousHost ??
+            MetroSystemThemeData.of(context).continuousApplicationBar;
+        controller._continuousHost = continuous;
         // bar 为 null 时立即忽略所有指针事件，避免淡出动画期间遮挡底部内容
         return IgnorePointer(
           ignoring: bar == null,
           child: AnimatedSwitcher(
-            duration: Duration(
-              milliseconds:
-                  MetroSystemThemeData.of(context).continuousApplicationBar
-                  ? 100
-                  : 200,
-            ),
+            duration: Duration(milliseconds: continuous ? 100 : 200),
             reverseDuration: const Duration(milliseconds: 100),
-            switchInCurve:
-                MetroSystemThemeData.of(context).continuousApplicationBar
+            switchInCurve: continuous
                 ? const UixEaseIn(10, .5)
                 : const UixLog(150),
-            switchOutCurve: const UixEaseIn(10, .5),
+            switchOutCurve: const UixEaseIn(10, .5).flipped,
             transitionBuilder: (child, animation) {
               return AnimatedBuilder(
                 animation: animation,
@@ -462,10 +512,7 @@ class MetroApplicationBarOverlay extends StatelessWidget {
                 ? MetroApplicationBarView(
                     // 仅 buttons 变化时不触发整条 Application Bar 的切换淡入淡出。
                     key: ValueKey<Object>(
-                      (Theme.of(context)
-                                  .extension<MetroSystemThemeData>()
-                                  ?.continuousApplicationBar ??
-                              false)
+                      continuous
                           ? '__wp7_continuous_bar__'
                           : controller._owner ?? _barStructureKey(bar),
                     ),
@@ -624,7 +671,9 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
         ((elapsed - index * widget.bar.menuItemStagger.inMicroseconds) /
                 duration)
             .clamp(0.0, 1.0);
-    return 1 - const UixLog(150).transform(local);
+    final earlyPreset = widget.bar.usesContinuousHost(context);
+    final curve = earlyPreset ? const UixEaseIn(10, .5) : const UixLog(150);
+    return 1 - curve.transform(local);
   }
 
   Offset _menuItemEntryOffset(BuildContext context, double remaining) {
@@ -786,7 +835,8 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
     _setDragging(false);
     _setExpandedChromeVisible(expand);
 
-    final theme = Theme.of(context).extension<MetroAppBarTheme>();
+    final theme = (widget.bar.theme?.resolve(context) ?? Theme.of(context))
+        .extension<MetroAppBarTheme>();
     final Curve eCurve =
         widget.bar.expandCurve ?? theme?.expandCurve ?? const UixLog(150);
     final Curve cCurve =
@@ -805,6 +855,17 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
     } else {
       _animationController.animateTo(0.0, duration: cDur, curve: cCurve);
     }
+  }
+
+  Color _menuForeground(BuildContext context, MetroAppBarMenuItem item) {
+    final theme = Theme.of(context).extension<MetroAppBarTheme>();
+    final normal =
+        widget.bar.menuItemTextColor ??
+        theme?.menuItemColor ??
+        Theme.of(context).colorScheme.onSurface;
+    return item.onPressed != null
+        ? normal
+        : theme?.disabledMenuItemColor ?? normal.withValues(alpha: .5);
   }
 
   void _toggleMenu() {
@@ -858,6 +919,16 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
 
   @override
   Widget build(BuildContext context) {
+    final data = widget.bar.theme;
+    return data == null
+        ? _build(context)
+        : MetroTheme(
+            data: data,
+            child: Builder(builder: _build),
+          );
+  }
+
+  Widget _build(BuildContext context) {
     //const Color fgColor = Colors.white;
 
     return AnimatedBuilder(
@@ -944,54 +1015,57 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                     children: [
                       // 拖拽区域 + ••• 按钮（覆盖折叠状态的完整可见高度）
                       // 此区域应该在底层，内容在此之上操作优先级更高
-                      Positioned(
-                        left: 0,
-                        top: 0,
-                        right: 0,
-                        height: _collapsedHeight,
-                        child: GestureDetector(
-                          dragStartBehavior: DragStartBehavior.down,
-                          behavior: HitTestBehavior.translucent,
-                          onVerticalDragStart: _onVerticalDragStart,
-                          onVerticalDragUpdate: _onVerticalDragUpdate,
-                          onVerticalDragCancel: _onVerticalDragCancel,
-                          onVerticalDragEnd: _onVerticalDragEnd,
-                          onTap: () {
-                            if (useExpandedChrome)
-                              _closeMenu();
-                            else
-                              _toggleMenu();
-                          },
-                          child: Stack(
-                            children: [
-                              //if (_canExpand)
-                              Positioned(
-                                top: 11.875 * 0.8,
-                                right: 23.75 * 0.8,
-                                child: SizedBox(
-                                  width: 41 * 0.625 * 0.8,
-                                  height: 9 * 0.625 * 0.8,
-                                  child: FittedBox(
-                                    // 自动等比缩放并居中
-                                    fit: BoxFit.contain,
-                                    child: CustomPaint(
-                                      size: const Size(41, 9),
-                                      painter: _ThreeDotsP(
-                                        color:
-                                            widget.bar.buttonIconColor ??
-                                            Theme.of(context)
-                                                .extension<MetroAppBarTheme>()
-                                                ?.buttonIconColor ??
-                                            Colors.white,
+                      if (widget.bar.showMenuIndicator || _canExpand)
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          right: 0,
+                          height: _collapsedHeight,
+                          child: GestureDetector(
+                            dragStartBehavior: DragStartBehavior.down,
+                            behavior: HitTestBehavior.translucent,
+                            onVerticalDragStart: _onVerticalDragStart,
+                            onVerticalDragUpdate: _onVerticalDragUpdate,
+                            onVerticalDragCancel: _onVerticalDragCancel,
+                            onVerticalDragEnd: _onVerticalDragEnd,
+                            onTap: () {
+                              if (useExpandedChrome)
+                                _closeMenu();
+                              else
+                                _toggleMenu();
+                            },
+                            child: Stack(
+                              children: [
+                                if (widget.bar.showMenuIndicator)
+                                  Positioned(
+                                    top: 11.875 * 0.8,
+                                    right: 23.75 * 0.8,
+                                    child: SizedBox(
+                                      width: 41 * 0.625 * 0.8,
+                                      height: 9 * 0.625 * 0.8,
+                                      child: FittedBox(
+                                        // 自动等比缩放并居中
+                                        fit: BoxFit.contain,
+                                        child: CustomPaint(
+                                          size: const Size(41, 9),
+                                          painter: _ThreeDotsP(
+                                            color:
+                                                widget.bar.buttonIconColor ??
+                                                Theme.of(context)
+                                                    .extension<
+                                                      MetroAppBarTheme
+                                                    >()
+                                                    ?.buttonIconColor ??
+                                                Colors.white,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
 
                       // 内容列（撑开 Stack 的完整布局高度）
                       Column(
@@ -1015,9 +1089,10 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                                           child: widget.bar.customContent!,
                                         ),
                                       ),
-                                      const SizedBox(
-                                        width: kMetroAppBarMoreButtonSize,
-                                      ),
+                                      if (widget.bar.showMenuIndicator)
+                                        const SizedBox(
+                                          width: kMetroAppBarMoreButtonSize,
+                                        ),
                                     ],
                                   ),
                                 ),
@@ -1282,16 +1357,10 @@ class _MetroApplicationBarViewState extends State<MetroApplicationBarView>
                                             height: _menuItemHeight,
                                             child: _MetroMenuItemTile(
                                               item: entry.$2,
-                                              fgColor:
-                                                  widget
-                                                      .bar
-                                                      .menuItemTextColor ??
-                                                  Theme.of(context)
-                                                      .extension<
-                                                        MetroAppBarTheme
-                                                      >()!
-                                                      .menuItemColor ??
-                                                  Colors.white,
+                                              fgColor: _menuForeground(
+                                                context,
+                                                entry.$2,
+                                              ),
                                               onTap: entry.$2.onPressed == null
                                                   ? null
                                                   : () {
@@ -1422,28 +1491,27 @@ class _MetroMenuItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: onTap == null ? 0.5 : 1,
-      child: AbsorbPointer(
-        absorbing: onTap == null,
-        child: Tile(
-          onTap: onTap,
-          //behavior: HitTestBehavior.opaque,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 0),
-            alignment: Alignment.centerLeft,
-            child: DefaultTextStyle(
-              style:
-                  (Theme.of(context).textTheme.bodyMedium ?? const TextStyle())
-                      .copyWith(
-                        color: fgColor,
-                        fontSize: 32 * 0.8,
-                        fontWeight: FontWeight.w300,
-                        //字宽
-                        //letterSpacing: 0.1,
-                      ),
-              child: Text(item.label),
-            ),
+    return AbsorbPointer(
+      absorbing: onTap == null,
+      child: Tile(
+        onTap: onTap,
+        //behavior: HitTestBehavior.opaque,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 0),
+          alignment: Alignment.centerLeft,
+          child: DefaultTextStyle(
+            style: (Theme.of(context).textTheme.bodyMedium ?? const TextStyle())
+                .copyWith(
+                  color: fgColor,
+                  // ShellChrome!Assets.MenuItemStyler uses 24pt SemiLight on WP8.
+                  fontSize: uixFontSize(24),
+                  fontWeight:
+                      MetroSystemThemeData.of(context).version ==
+                          MetroDesignVersion.wp8
+                      ? UixFontWeight.semiLight
+                      : UixFontWeight.light,
+                ),
+            child: Text(item.label),
           ),
         ),
       ),

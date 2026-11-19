@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:metro_ui/metro_theme_extensions.dart';
 import 'package:metro_ui/uix_metrics.dart';
 
 /// Windows Phone 8.0 native (UIX) EditBox, scaled by 0.8.
@@ -55,15 +56,21 @@ class _EditBoxState extends State<EditBox> {
     final dark = theme.brightness == Brightness.dark;
     // `EditBoxStyle.Foreground` = BaseBlackColor, `PlaceholderColor` =
     // BlendWithPageBackground(TextMidColor), `HighlightColor` = accent.
-    const foreground = Colors.black;
-    final placeholderColor = Colors.black.withValues(alpha: 0.55);
-    final accent = theme.colorScheme.primary;
+    final tokens = theme.extension<MetroEditBoxTheme>();
+    final contrast =
+        theme.extension<MetroSystemThemeData>()?.highContrast ?? false;
+    final foreground =
+        tokens?.textColor ??
+        (contrast ? theme.colorScheme.onSurface : Colors.black);
+    final placeholderColor =
+        tokens?.hintColor ?? foreground.withValues(alpha: contrast ? 1 : .55);
+    final accent = tokens?.selectionColor ?? theme.colorScheme.primary;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12 * 0.8),
       child: TextSelectionTheme(
         data: TextSelectionThemeData(
           cursorColor: foreground,
-          selectionColor: accent,
+          selectionColor: contrast ? accent.withValues(alpha: .4) : accent,
           selectionHandleColor: accent,
         ),
         child: ListenableBuilder(
@@ -73,6 +80,8 @@ class _EditBoxState extends State<EditBox> {
             focused: _focusNode.hasFocus,
             accent: accent,
             dark: dark,
+            theme: tokens,
+            highContrast: contrast,
             child: TextField(
               controller: widget.controller,
               focusNode: _focusNode,
@@ -115,6 +124,8 @@ class _EditBoxFrame extends StatelessWidget {
     required this.focused,
     required this.accent,
     required this.dark,
+    required this.theme,
+    required this.highContrast,
     required this.child,
   });
 
@@ -122,6 +133,8 @@ class _EditBoxFrame extends StatelessWidget {
   final bool focused;
   final Color accent;
   final bool dark;
+  final bool highContrast;
+  final MetroEditBoxTheme? theme;
   final Widget child;
 
   /// `Constants.EditBoxPadding` = 10,4,10,10 design units. The border is drawn
@@ -156,17 +169,33 @@ class _EditBoxFrame extends StatelessWidget {
               ? Colors.white.withValues(alpha: 191 / 255)
               // ui.light.editbox.background.png: black at alpha 38/255.
               : Colors.black.withValues(alpha: 38 / 255));
+    final scheme = Theme.of(context).colorScheme;
+    final border = !enabled
+        ? theme?.disabledBorder
+        : focused
+        ? theme?.focusedBorder
+        : theme?.idleBorder;
+    final fill = !enabled
+        ? theme?.disabledFill
+        : focused
+        ? theme?.focusedFill
+        : theme?.idleFill;
+    final outline = borderColor ?? (highContrast ? scheme.onSurface : null);
     return Container(
       // EditBoxStyle.MinimumSize = ButtonMinimumSize + AA*2 = (138, 50); the
       // two 1-unit anti-aliasing edges are painted outside the layout box, so
       // the frame is 48 design units tall.
       constraints: const BoxConstraints.tightFor(height: 48 * 0.8),
       padding: _padding,
-      decoration: BoxDecoration(color: fillColor),
+      decoration: BoxDecoration(
+        color: fill ?? (highContrast ? scheme.surface : fillColor),
+      ),
       foregroundDecoration: BoxDecoration(
-        border: borderColor == null
+        border: border != null
+            ? Border.fromBorderSide(border)
+            : outline == null
             ? null
-            : Border.all(color: borderColor, width: 3 * 0.8),
+            : Border.all(color: outline, width: 3 * .8),
       ),
       // `EditBoxPadding` (4 top / 10 bottom) sits on the horizontal
       // ScrollViewer's content, and a ScrollViewer centres its content on the

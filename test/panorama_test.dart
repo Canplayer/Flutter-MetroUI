@@ -100,7 +100,7 @@ void main() {
     // Pane 内容顶部 = PanoramaVScrollContentMargins.top(198)×0.8
     expect(tester.getTopLeft(find.text('header0')).dy, closeTo(198 * 0.8, 0.5));
 
-    // Pane 标题字号 = PanoramaGroupHeaderFontSize(50)×0.8
+    // Pane 标题的 50 pt 先换算成 96 dpi 设计单位，再乘 0.8。
     final DefaultTextStyle headerStyle = tester.widget<DefaultTextStyle>(
       find
           .ancestor(
@@ -109,7 +109,7 @@ void main() {
           )
           .first,
     );
-    expect(headerStyle.style.fontSize, closeTo(50 * 0.8, 0.01));
+    expect(headerStyle.style.fontSize, closeTo(50 * (4 / 3) * 0.8, 0.01));
   });
 
   testWidgets('可见宽度规则：未过半吸附回原页，过半吸附到下一页', (WidgetTester tester) async {

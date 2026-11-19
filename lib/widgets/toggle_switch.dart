@@ -3,6 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:metro_ui/uix_metrics.dart';
+import 'package:metro_ui/uix_typography.dart';
+import 'package:metro_ui/metro_theme_extensions.dart';
+
+import 'uix_tight_text.dart';
 
 class _UixLog150 extends Curve {
   const _UixLog150();
@@ -21,7 +25,9 @@ class ToggleSwitchBase extends StatefulWidget {
   final Color? activeColor;
 
   /// 非激活状态的颜色（右侧颜色）
-  final Color inactiveColor;
+  Color get inactiveColor => _inactiveColor ?? Colors.transparent;
+
+  final Color? _inactiveColor;
 
   /// 滑块宽度：`Constants.ToggleSwitchThumbSize.Width` = 20
   final double thumbWidth;
@@ -55,7 +61,7 @@ class ToggleSwitchBase extends StatefulWidget {
     required this.value,
     this.onChanged,
     this.activeColor,
-    this.inactiveColor = Colors.transparent,
+    Color? inactiveColor,
     this.thumbWidth = 20 * 0.8,
     this.thumbHeight = 38 * 0.8,
     this.thumbColor,
@@ -65,7 +71,7 @@ class ToggleSwitchBase extends StatefulWidget {
     this.borderColor,
     this.innerPadding = 4 * 0.8,
     this.gap = 4 * 0.8,
-  });
+  }) : _inactiveColor = inactiveColor;
 
   @override
   State<ToggleSwitchBase> createState() => _ToggleSwitchBaseState();
@@ -122,9 +128,23 @@ class _ToggleSwitchBaseState extends State<ToggleSwitchBase>
   Widget build(BuildContext context) {
     // 检查控件是否可交互
     final isInteractive = widget.onChanged != null;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final tokens = theme.extension<MetroToggleSwitchTheme>();
+    final contrast =
+        theme.extension<MetroSystemThemeData>()?.highContrast ?? false;
+    final disabled =
+        tokens?.disabledColor ??
+        (contrast
+            ? (theme.brightness == Brightness.dark
+                  ? const Color(0xffb3b3b3)
+                  : const Color(0xff595959))
+            : scheme.onSurface);
 
     return Opacity(
-      opacity: isInteractive ? 1.0 : 0.4,
+      opacity: isInteractive
+          ? 1.0
+          : tokens?.disabledOpacity ?? (contrast ? 1 : .4),
       child: Semantics(
         toggled: widget.value,
         enabled: isInteractive,
@@ -200,23 +220,32 @@ class _ToggleSwitchBaseState extends State<ToggleSwitchBase>
                         return CustomPaint(
                           painter: _SwitchPainter(
                             progress: _controller.value,
-                            activeColor: !isInteractive
-                                ? Theme.of(context).colorScheme.onSurface
-                                : widget.activeColor ??
-                                      Theme.of(context).colorScheme.primary,
-                            inactiveColor: widget.inactiveColor,
+                            activeColor: isInteractive
+                                ? widget.activeColor ??
+                                      tokens?.activeColor ??
+                                      scheme.primary
+                                : disabled,
+                            inactiveColor:
+                                widget._inactiveColor ??
+                                tokens?.inactiveColor ??
+                                Colors.transparent,
                             thumbWidth: widget.thumbWidth,
                             thumbHeight: widget.thumbHeight,
                             thumbColor:
                                 widget.thumbColor ??
-                                Theme.of(context).colorScheme.onSurface,
+                                tokens?.thumbColor ??
+                                (isInteractive ? scheme.onSurface : disabled),
                             switchWidth: widget.switchWidth,
                             switchHeight: widget.switchHeight,
                             borderWidth: widget.borderWidth,
                             borderColor:
                                 widget.borderColor ??
-                                (Theme.of(context).brightness ==
-                                        Brightness.light
+                                tokens?.borderColor ??
+                                (contrast
+                                    ? (isInteractive
+                                          ? scheme.onSurface
+                                          : disabled)
+                                    : theme.brightness == Brightness.light
                                     ? const Color(0xDE000000)
                                     : Colors.white),
                             innerPadding: widget.innerPadding,
@@ -486,10 +515,23 @@ class ToggleSwitch extends StatelessWidget {
   final String label, description, onLabel, offLabel;
   @override
   Widget build(BuildContext context) {
-    final foreground = Theme.of(context).colorScheme.onSurface;
+    final theme = Theme.of(context);
+    final foreground = theme.colorScheme.onSurface;
+    final tokens = theme.extension<MetroToggleSwitchTheme>();
+    final contrast =
+        theme.extension<MetroSystemThemeData>()?.highContrast ?? false;
     final enabled = onChanged != null;
-    final mid = foreground.withValues(alpha: enabled ? .6 : .2);
-    final high = foreground.withValues(alpha: enabled ? 1 : .2);
+    final disabled =
+        tokens?.disabledColor ??
+        (contrast
+            ? (theme.brightness == Brightness.dark
+                  ? const Color(0xffb3b3b3)
+                  : const Color(0xff595959))
+            : foreground.withValues(alpha: .2));
+    final mid = enabled
+        ? tokens?.labelColor ?? foreground.withValues(alpha: contrast ? 1 : .6)
+        : disabled;
+    final high = enabled ? tokens?.statusColor ?? foreground : disabled;
     return MergeSemantics(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -501,14 +543,16 @@ class ToggleSwitch extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      label,
-                      maxLines: 2,
-                      softWrap: true,
-                      style: TextStyle(
-                        fontSize: uixFontSize(15),
-                        fontWeight: FontWeight.w400,
-                        color: mid,
+                    UixTightText.fromText(
+                      Text(
+                        label,
+                        maxLines: 2,
+                        softWrap: true,
+                        style: TextStyle(
+                          fontSize: uixFontSize(15),
+                          fontWeight: UixFontWeight.normal,
+                          color: mid,
+                        ),
                       ),
                     ),
                     Padding(
@@ -516,13 +560,15 @@ class ToggleSwitch extends StatelessWidget {
                         top: 18 * uixScale,
                         bottom: 36 * uixScale,
                       ),
-                      child: Text(
-                        value ? onLabel : offLabel,
-                        softWrap: true,
-                        style: TextStyle(
-                          fontSize: uixFontSize(24),
-                          fontWeight: FontWeight.w300,
-                          color: high,
+                      child: UixTightText.fromText(
+                        Text(
+                          value ? onLabel : offLabel,
+                          softWrap: true,
+                          style: TextStyle(
+                            fontSize: uixFontSize(24),
+                            fontWeight: UixFontWeight.semiLight,
+                            color: high,
+                          ),
                         ),
                       ),
                     ),
@@ -538,13 +584,15 @@ class ToggleSwitch extends StatelessWidget {
           if (description.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 40 * uixScale),
-              child: Text(
-                description,
-                softWrap: true,
-                style: TextStyle(
-                  fontSize: uixFontSize(15),
-                  fontWeight: FontWeight.w400,
-                  color: mid,
+              child: UixTightText.fromText(
+                Text(
+                  description,
+                  softWrap: true,
+                  style: TextStyle(
+                    fontSize: uixFontSize(15),
+                    fontWeight: UixFontWeight.normal,
+                    color: mid,
+                  ),
                 ),
               ),
             ),

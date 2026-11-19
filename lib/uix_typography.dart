@@ -1,5 +1,27 @@
 import 'package:flutter/material.dart';
 
+import 'uix_metrics.dart';
+
+/// The OS/2 usWeightClass of the bundled WP8 Segoe WP faces, indexed by
+/// UIXMobile!Styles.uix!FontNames. All faces are in the same Flutter family.
+abstract final class UixFontWeight {
+  static const light = FontWeight.w300;
+  static const semiLight = FontWeight(350);
+  static const normal = FontWeight.w400;
+  static const semiBold = FontWeight.w600;
+  static const bold = FontWeight.w700;
+  static const black = FontWeight.w800;
+}
+
+/// WP8 LabelStyle uses the regular face at FontMediumSize (15pt) and zero tracking.
+TextTheme uixTextTheme(TextTheme theme) => theme.copyWith(
+  bodyMedium: _nativeLineHeight(theme.bodyMedium)?.copyWith(
+    fontSize: uixFontSize(15),
+    fontWeight: UixFontWeight.normal,
+    letterSpacing: 0,
+  ),
+);
+
 /// Material's geometry supplies a fixed line height for every script. Metro
 /// instead uses the active font's native line metrics unless a style opts in.
 Typography uixTypography(Typography base) => Typography(

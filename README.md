@@ -1,39 +1,8 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# Flutter Metro UI
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+面向 Flutter 的 Windows Phone 风格控件与页面框架，包含系统版本预设、主题、页面导航、Application Bar、Pivot、Panorama 和常用控件。`MetroApp` 用于整套应用，`MetroTheme` 可单独应用到普通 Flutter 应用的子树。
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
+- [技术规范](TECHNICAL_SPEC.md) 介绍框架结构、控件用法、文字排版、WP 资源换算和验收流程。
+- [系统版本与主题接入](THEME_ARCHITECTURE.md) 描述局部预设、主题扩展及跨版本动画配置。
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
-
-## Features
-
-TODO: List what your package can do. Maybe include images, gifs, or videos.
-
-## Getting started
-
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
-
-## Usage
-
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
-
-```dart
-const like = 'sample';
-```
-
-## Additional information
-
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+本仓库的 `.fvmrc` 指定开发使用的 Flutter 版本。运行 `flutter test` 验证控件与页面行为。

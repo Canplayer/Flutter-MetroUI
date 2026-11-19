@@ -2,41 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:ui' as ui;
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:metro_ui/widgets/panorama.dart';
 import 'package:metro_ui/metro_scroll_behavior.dart';
 import 'package:metro_ui/page_scaffold.dart';
 
 import './application_bar.dart';
-import './animations.dart' show UixLog, UixEaseIn;
 import './route_aware_provider.dart';
-import './metro_theme_extensions.dart';
-import './uix_typography.dart';
+import './metro_theme.dart';
 
 // 示例可以假设：
 // typedef GlobalWidgetsLocalizations = DefaultWidgetsLocalizations;
 // typedef GlobalMaterialLocalizations = DefaultMaterialLocalizations;
-
-/// [MetroApp] 使用这个 [TextStyle] 作为其 [DefaultTextStyle]，以鼓励
-/// 开发者对他们的 [DefaultTextStyle] 保持有意为之。
-///
-/// 在 Material 设计中，大多数 [Text] 小部件包含在 [Material] 小部件中，
-/// 它设置了特定的 [DefaultTextStyle]。如果你看到使用这个文本样式的文本，
-/// 考虑将你的文本放在一个 [Material] 小部件中（或其他设置了 [DefaultTextStyle] 的小部件）。
-const TextStyle _errorTextStyle = TextStyle(
-  color: Color(0xD0FF0000),
-  fontFamily: 'monospace',
-  fontSize: 48.0,
-  fontWeight: FontWeight.w900,
-  decoration: TextDecoration.underline,
-  decorationColor: Color(0xFFFFFF00),
-  decorationStyle: TextDecorationStyle.double,
-  debugLabel: 'fallback style; consider putting your text in a Material',
-);
 
 /// 描述 [MetroApp]能使用哪些主题.
 enum MetroThemeMode {
@@ -55,9 +33,7 @@ enum MetroThemeMode {
 /// 一个方便的小部件，它包装了许多常用于 Metro Design 应用程序的小部件。
 /// 它在 [WidgetsApp] 的基础上添加了特定于 Metro Design 的功能，例如 [AnimatedTheme] 和 [GridPaper]。
 ///
-/// [MetroApp]配置其 [WidgetsApp.textStyle] 为一个丑陋的红色/黄色文本样式，旨在警告开发者他们的
-/// 应用程序尚未定义默认文本样式。通常，应用程序的 [MetroPageScaffold] 构建一个 [Material] 小部件，
-/// 其默认 [Material.textStyle] 定义了整个脚手架的文本样式。
+/// 路由和应用栏继承当前预设的默认文字样式。
 ///
 /// [MetroApp] 配置顶层 [Navigator] 按以下顺序搜索路由：
 ///
@@ -141,27 +117,6 @@ enum MetroThemeMode {
 /// ```
 /// {@end-tool}
 ///
-/// ## 故障排除
-///
-/// ### 为什么我的应用程序的文本是红色并带有黄色下划线？
-///
-/// 缺少 [Material] 父级的 [Text] 小部件将以难看的红色/黄色文本样式渲染。
-///
-/// ![](https://flutter.github.io/assets-for-api-docs/assets/material/material_app_unspecified_textstyle.png)
-///
-/// 典型的修复方法是为小部件提供一个 [MetroPageScaffold] 父级。[MetroPageScaffold] 创建一个 [Material] 小部件，定义其默认文本样式。
-///
-/// ```dart
-/// const MaterialApp(
-///   title: 'Material App',
-///   home: Scaffold(
-///     body: Center(
-///       child: Text('Hello World'),
-///     ),
-///   ),
-/// )
-/// ```
-///
 /// 另请参见：
 ///
 ///  * [MetroPageScaffold]，提供标准的应用程序元素，如 [AppBar] 和 [Drawer]。
@@ -180,6 +135,7 @@ class MetroApp extends StatefulWidget {
   /// 此类创建一个 [WidgetsApp] 的实例。
   const MetroApp({
     this.version = MetroDesignVersion.wp8,
+    this.highContrast,
     super.key,
     this.navigatorKey,
     this.home,
@@ -245,6 +201,7 @@ class MetroApp extends StatefulWidget {
   /// {@macro flutter.widgets.WidgetsApp.router}
   const MetroApp.router({
     this.version = MetroDesignVersion.wp8,
+    this.highContrast,
     super.key,
     this.routeInformationProvider,
     this.routeInformationParser,
@@ -648,6 +605,9 @@ class MetroApp extends StatefulWidget {
   /// The design version of the Metro UI.
   final MetroDesignVersion version;
 
+  /// Overrides the platform contrast setting when supplied.
+  final bool? highContrast;
+
   @override
   State<MetroApp> createState() => _MetroAppState();
 }
@@ -677,219 +637,28 @@ class _MetroAppState extends State<MetroApp> {
   }
 
   ThemeData _themeBuilder(BuildContext context) {
-    ThemeData? theme;
-
-    final MetroThemeMode mode = widget.themeMode ?? MetroThemeMode.system;
-    final Brightness platformBrightness = MediaQuery.platformBrightnessOf(
-      context,
-    );
-    final bool useDarkTheme =
-        mode == MetroThemeMode.dark ||
-        (mode == MetroThemeMode.system &&
-            platformBrightness == ui.Brightness.dark);
-    final bool useWhiteTheme = !useDarkTheme;
-
-    // Default Colors
-    final Color whiteColor = const Color.fromARGB(255, 255, 255, 255);
-    final Color blackColor = const Color.fromARGB(255, 0, 0, 0);
-    final Color surfaceColor = useWhiteTheme
-        ? const Color.fromARGB(255, 221, 221, 221)
-        : const Color.fromARGB(255, 31, 31, 31);
-    final Color textBlackColor = const ui.Color.fromARGB(255, 0, 0, 0);
-    final Color primaryColor =
-        widget.metroColor ?? const Color.fromARGB(255, 27, 161, 226);
-
-    // Metro Extensions Builder
-    List<ThemeExtension<dynamic>> buildMetroExtensions(
-      Color textColor,
-      Color onSurface,
-    ) {
-      Curve appBarExpandCurve = const UixLog(150);
-      Curve appBarCollapseCurve = const UixLog(150);
-      Duration appBarExpandDuration = const Duration(milliseconds: 400);
-      Duration appBarCollapseDuration = const Duration(milliseconds: 200);
-
-      double panoramaTitleEntryTranslate = 2000 * 0.8;
-      double panoramaBgEntryTranslate = 1200 * 0.8;
-      double panoramaContentEntryTranslate = 1500 * 0.8;
-      Duration panoramaRotationDuration = const Duration(milliseconds: 500);
-
-      Color buttonPressedBg = primaryColor;
-      Color buttonPressedText = whiteColor;
-
-      Color contextMenuBg = useWhiteTheme ? blackColor : whiteColor;
-      Color contextMenuLine = useWhiteTheme ? blackColor : whiteColor;
-
-      if (widget.version == MetroDesignVersion.wp7) {
-        appBarExpandCurve = const UixEaseIn(10, .5);
-        appBarCollapseCurve = const UixEaseIn(10, .5);
-        appBarExpandDuration = const Duration(
-          milliseconds: 400,
-        ); // ShellFrame Assets MenuMoveShowLength
-        appBarCollapseDuration = const Duration(milliseconds: 200);
-
-        panoramaTitleEntryTranslate = 2600.0;
-        panoramaBgEntryTranslate = 1400.0;
-        panoramaRotationDuration = const Duration(milliseconds: 750);
-
-        buttonPressedBg = onSurface;
-        buttonPressedText = useWhiteTheme ? whiteColor : blackColor;
-      }
-
-      return <ThemeExtension<dynamic>>[
-        MetroTitleTextTheme(
-          titleTextStyle: TextStyle(
-            fontFamily: 'Segoe WP',
-            package: 'metro_ui',
-            // WP8 PanoramaTitleFontSize = 128、CharacterSpacing = −6（480 资源，×0.8）字体大小pt换算还要*4/3
-            fontSize: 128 * 0.8 * 4 / 3,
-            fontWeight: FontWeight.w300,
-            letterSpacing: -6 * 0.8,
-            color: textColor,
-          ),
-        ),
-        MetroAppBarTheme(
-          backgroundColor: surfaceColor,
-          expandedBackgroundColor: surfaceColor,
-          buttonColor: useWhiteTheme ? blackColor : whiteColor,
-          buttonIconColor: useWhiteTheme
-              ? const Color.fromARGB(255, 29, 29, 29)
-              : whiteColor,
-          disabledButtonIconColor: useWhiteTheme ? textBlackColor : whiteColor,
-          pressedButtonIconColor: whiteColor,
-          menuItemColor: useWhiteTheme ? textBlackColor : whiteColor,
-          disabledMenuItemColor: useWhiteTheme ? textBlackColor : whiteColor,
-          expandCurve: appBarExpandCurve,
-          collapseCurve: appBarCollapseCurve,
-          expandDuration: appBarExpandDuration,
-          collapseDuration: appBarCollapseDuration,
-        ),
-        MetroButtonThemeData(
-          normalBorderColor: onSurface,
-          pressedBackgroundColor: buttonPressedBg,
-          pressedTextColor: buttonPressedText,
-          disabledBorderColor: onSurface.withValues(alpha: 0.5),
-          disabledTextColor: onSurface.withValues(alpha: 0.5),
-        ),
-        MetroPanoramaThemeData(
-          config: PanoramaConfig(
-            titleEntryTranslate: panoramaTitleEntryTranslate,
-            backgroundEntryTranslate: panoramaBgEntryTranslate,
-            contentEntryTranslate: panoramaContentEntryTranslate,
-            rotationDuration: panoramaRotationDuration,
-          ),
-        ),
-        MetroContextMenuThemeData(
-          backgroundColor: contextMenuBg,
-          lineColor: contextMenuLine,
-          pushBackDuration: const Duration(milliseconds: 500),
-          restoreDuration: const Duration(milliseconds: 350),
-          lineAnimationDuration: const Duration(milliseconds: 500),
-          menuAnimationDuration: const Duration(milliseconds: 400),
-          itemTextStyle: TextStyle(
-            fontSize: 24,
-            fontFamily: 'Segoe WP',
-            package: 'metro_ui',
-            fontWeight: FontWeight.w300,
-            color: useWhiteTheme ? whiteColor : blackColor,
-          ),
-          itemHeight: 70.0,
-        ),
-        MetroSystemThemeData(
-          version: widget.version,
-          highContrast: MediaQuery.highContrastOf(context),
-        ),
-        MetroPageThemeData.forVersion(widget.version),
-      ];
-    }
-
-    if (widget.theme != null ||
-        widget.darkTheme != null ||
-        widget.highContrastTheme != null ||
-        widget.highContrastDarkTheme != null) {
-      final bool highContrast = MediaQuery.highContrastOf(context);
-      ThemeData? selected;
-      if (useDarkTheme &&
-          highContrast &&
-          widget.highContrastDarkTheme != null) {
-        selected = widget.highContrastDarkTheme;
-      } else if (useDarkTheme && widget.darkTheme != null) {
-        selected = widget.darkTheme;
-      } else if (highContrast && widget.highContrastTheme != null) {
-        selected = widget.highContrastTheme;
-      }
-
-      // 如果没有匹配到上面的（例如用户只提供了 theme 而非 darkTheme），回退到 widget.theme
-      selected ??= widget.theme ?? ThemeData.light();
-
-      // —— 关键：如果整体策略（useDarkTheme）需要暗色，但用户只提供了一个 theme（未提供 darkTheme）,
-      // 则强制将返回的 ThemeData 设置为暗色模式（不会覆盖其他字段）
-      if (useDarkTheme) {
-        selected = selected.copyWith(brightness: Brightness.dark);
-        // 可选：如果你希望同时让 colorScheme 也匹配暗色风格，可以基于 seed 生成暗色 colorScheme：
-        // final Color seed = selected.colorScheme.primary;
-        // selected = ThemeData.from(colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark), textTheme: selected.textTheme).copyWith(
-        //   // 保留用户自定义的其它属性（如字体 family 等）
-        //   fontFamily: selected.fontFamily,
-        // );
-      }
-
-      theme = selected;
-
-      // 保留字体家族覆盖逻辑（跟原实现一致）
-      if (widget.fontFamily != null && widget.fontFamily!.isNotEmpty) {
-        theme = theme.copyWith(
-          textTheme: theme.textTheme.apply(fontFamily: widget.fontFamily),
-        );
-      } else {
-        theme = theme.copyWith(
-          textTheme: theme.textTheme.apply(
-            fontFamily: 'Segoe WP',
-            package: 'metro_ui',
-          ),
-        );
-      }
-
-      // 注入 MetroTitleTextTheme 扩展
-      final Color textColor = theme.textTheme.bodyMedium?.color ?? Colors.black;
-      final Color onSurface = theme.colorScheme.onSurface;
-      theme = theme.copyWith(
-        extensions: [
-          ...buildMetroExtensions(textColor, onSurface),
-          ...theme.extensions.values,
-        ],
-      );
-
-      return theme;
-    }
-
-    final ThemeData metroTheme = ThemeData(
-      colorSchemeSeed: primaryColor,
-      brightness: useDarkTheme ? Brightness.dark : Brightness.light,
-      fontFamily: widget.fontFamily ?? 'Segoe WP',
-      package: widget.fontFamily != null ? null : 'metro_ui',
-    );
-
-    final Color onSurface = useWhiteTheme ? blackColor : whiteColor;
-    final Color defaultTextColor = useWhiteTheme ? textBlackColor : whiteColor;
-
-    return metroTheme.copyWith(
-      typography: uixTypography(metroTheme.typography),
-      colorScheme: metroTheme.colorScheme.copyWith(
-        primary: primaryColor,
-        onSurface: onSurface,
-        surfaceContainer: surfaceColor,
-      ),
-      textTheme: metroTheme.textTheme.apply(
-        fontFamily: widget.fontFamily ?? 'Segoe WP',
-        package: widget.fontFamily != null ? null : 'metro_ui',
-        bodyColor: defaultTextColor,
-        displayColor: defaultTextColor,
-        decorationColor: useWhiteTheme ? blackColor : whiteColor,
-      ),
-      primaryColor: primaryColor,
-      scaffoldBackgroundColor: useWhiteTheme ? whiteColor : blackColor,
-      extensions: buildMetroExtensions(defaultTextColor, onSurface),
+    final mode = widget.themeMode ?? MetroThemeMode.system;
+    final brightness = switch (mode) {
+      MetroThemeMode.light => Brightness.light,
+      MetroThemeMode.dark => Brightness.dark,
+      MetroThemeMode.system => MediaQuery.platformBrightnessOf(context),
+    };
+    final highContrast =
+        widget.highContrast ?? MediaQuery.highContrastOf(context);
+    final selected = brightness == Brightness.dark
+        ? (highContrast ? widget.highContrastDarkTheme : null) ??
+              widget.darkTheme ??
+              widget.theme
+        : (highContrast ? widget.highContrastTheme : null) ?? widget.theme;
+    return MetroThemeData.fromPreset(
+      version: widget.version,
+      brightness: brightness,
+      highContrast: highContrast,
+      accentColor: widget.metroColor,
+    ).toThemeData(
+      brightness: brightness,
+      base: selected,
+      fontFamily: widget.fontFamily,
     );
   }
 
@@ -941,6 +710,7 @@ class _MetroAppState extends State<MetroApp> {
           },
         );
       }
+      final content = childWidget;
       childWidget = AnimatedTheme(
         data: theme,
         duration: widget.themeAnimationStyle == AnimationStyle.noAnimation
@@ -948,38 +718,34 @@ class _MetroAppState extends State<MetroApp> {
             : widget.themeAnimationStyle?.duration ??
                   widget.themeAnimationDuration,
         curve: widget.themeAnimationStyle?.curve ?? widget.themeAnimationCurve,
-        child: Stack(
-          children: [
-            childWidget,
-            AnimatedBuilder(
-              animation: _appBarController,
-              builder: (context, child) => _appBarController.isExpanded
-                  ? Positioned.fill(
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: _appBarController.closeMenu,
-                      ),
-                    )
-                  : const SizedBox.shrink(),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              // AppBar Overlay 挂在 Navigator 之外，没有 Material 祖先，
-              // DefaultTextStyle 会穿透到 WidgetsApp 的 fallback 错误样式
-              // （红字 + 黄双下划线）。这里提供中性底座，
-              // 让 AppBar 内的文字（内置按钮/菜单项/自定义内容）正常渲染。
-              child: DefaultTextStyle(
-                style:
-                    theme.textTheme.bodyMedium ??
-                    const TextStyle(color: Colors.white),
-                child: MetroApplicationBarOverlay(
-                  controller: _appBarController,
+        child: Builder(
+          builder: (context) => DefaultTextStyle(
+            style: Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
+            child: Stack(
+              children: [
+                content,
+                AnimatedBuilder(
+                  animation: _appBarController,
+                  builder: (context, child) => _appBarController.isExpanded
+                      ? Positioned.fill(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: _appBarController.closeMenu,
+                          ),
+                        )
+                      : const SizedBox.shrink(),
                 ),
-              ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: MetroApplicationBarOverlay(
+                    controller: _appBarController,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       );
     }
@@ -1086,7 +852,6 @@ class _MetroAppState extends State<MetroApp> {
         builder: _materialBuilder,
         title: widget.title,
         onGenerateTitle: widget.onGenerateTitle,
-        textStyle: _errorTextStyle,
         color: materialColor,
         locale: widget.locale,
         localizationsDelegates: _localizationsDelegates,
@@ -1129,7 +894,6 @@ class _MetroAppState extends State<MetroApp> {
       builder: _materialBuilder,
       title: widget.title,
       onGenerateTitle: widget.onGenerateTitle,
-      textStyle: _errorTextStyle,
       color: materialColor,
       locale: widget.locale,
       localizationsDelegates: _localizationsDelegates,

@@ -90,13 +90,61 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('三页：同时显示上一页/当前页/下一页三个标题', (tester) async {
+  testWidgets('A向前循环到C，仍在视口内的B不能在提交帧消失', (tester) async {
+    var current = 0;
+    int? target;
+    late StateSetter update;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 500,
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                update = setState;
+                return PivotHeader(
+                  titles: const [
+                    SizedBox(width: 100, child: Text('A')),
+                    SizedBox(width: 100, child: Text('B')),
+                    SizedBox(width: 100, child: Text('C')),
+                  ],
+                  currentIndex: current,
+                  swapTargetIndex: target,
+                  titleGap: 24,
+                  onSwapEnded: () => update(() {
+                    current = target!;
+                    target = null;
+                  }),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    update(() {
+      target = -1;
+    });
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 499));
+    final before = tester.getTopLeft(find.text('B').last).dx;
+    expect(before, inInclusiveRange(0, 500));
+    await tester.pump(const Duration(milliseconds: 2));
+    expect(find.text('B'), findsWidgets);
+    final after = tester.getTopLeft(find.text('B').last).dx;
+    expect(after, closeTo(before, 1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('三页：标题条保留完整循环的标题', (tester) async {
     await tester.pumpWidget(buildHost());
     await tester.pump(); // 等待宽度测量
 
-    expect(find.text('A'), findsOneWidget);
-    expect(find.text('B'), findsOneWidget);
-    expect(find.text('C'), findsOneWidget);
+    expect(find.text('A'), findsAtLeastNWidgets(1));
+    expect(find.text('B'), findsAtLeastNWidgets(1));
+    expect(find.text('C'), findsAtLeastNWidgets(1));
     // 当前页索引 0 → 中心标题为 A（bar-0）
     expect(find.byKey(const ValueKey('bar-0')), findsOneWidget);
   });
@@ -114,7 +162,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('A'), findsOneWidget);
+    expect(find.text('A'), findsAtLeastNWidgets(1));
     // 只有一个标题，无左右标题
     expect(find.byKey(const ValueKey('bar-0')), findsOneWidget);
   });
@@ -136,7 +184,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('A'), findsOneWidget); // 中心
+    expect(find.text('A'), findsAtLeastNWidgets(1)); // 中心
     expect(find.text('B'), findsNWidgets(2)); // 左右都是 B
   });
 
@@ -162,14 +210,14 @@ void main() {
 
     // bar-0：C(左) A(中) B(右)
     // A 左边缘对齐父容器左侧（x ≈ 0）
-    expect(tester.getTopLeft(find.text('A')).dx, closeTo(0, 1));
+    expect(tester.getTopLeft(find.text('A').first).dx, closeTo(0, 1));
     // C 在 A 左侧：C 右边缘 ≈ A 左边缘 - titleGap(24)
-    final aLeft = tester.getTopLeft(find.text('A')).dx;
-    expect(tester.getTopRight(find.text('C')).dx, closeTo(aLeft - 24, 1));
+    final aLeft = tester.getTopLeft(find.text('A').first).dx;
+    expect(tester.getTopRight(find.text('C').first).dx, closeTo(aLeft - 24, 1));
 
     // B 在 A 右侧：B 左边缘 ≈ A 右边缘 + titleGap(24)
-    final aRight = tester.getTopRight(find.text('A')).dx;
-    expect(tester.getTopLeft(find.text('B')).dx, closeTo(aRight + 24, 1));
+    final aRight = tester.getTopRight(find.text('A').first).dx;
+    expect(tester.getTopLeft(find.text('B').first).dx, closeTo(aRight + 24, 1));
   });
 
   testWidgets('Pivot 默认整体内边距：水平 19.2（HorizontalPagePadding）', (tester) async {
@@ -198,7 +246,7 @@ void main() {
 
     // 整体内缩 19.2：当前标题 A 左边缘 = 19.2（而非 0）
     expect(
-      tester.getTopLeft(find.text('A')).dx,
+      tester.getTopLeft(find.text('A').first).dx,
       closeTo(kPivotPadding.resolve(TextDirection.ltr).left, 0.6),
     );
   });
@@ -208,14 +256,14 @@ void main() {
     await tester.pump(); // 等待宽度测量
 
     // 测试屏幕宽 800，当前标题 A 的中心应在 400 附近
-    expect(tester.getCenter(find.text('A')).dx, closeTo(400, 2));
+    expect(tester.getCenter(find.text('A').first).dx, closeTo(400, 2));
 
     // 左侧标题 C 在 A 左侧（间隔 gap），右侧标题 B 在 A 右侧
-    final aLeft = tester.getTopLeft(find.text('A')).dx;
-    expect(tester.getTopRight(find.text('C')).dx, closeTo(aLeft - 24, 1));
+    final aLeft = tester.getTopLeft(find.text('A').first).dx;
+    expect(tester.getTopRight(find.text('C').first).dx, closeTo(aLeft - 24, 1));
     expect(
-      tester.getTopLeft(find.text('B')).dx,
-      closeTo(tester.getTopRight(find.text('A')).dx + 24, 1),
+      tester.getTopLeft(find.text('B').first).dx,
+      closeTo(tester.getTopRight(find.text('A').first).dx + 24, 1),
     );
   });
 
@@ -224,12 +272,12 @@ void main() {
     await tester.pump(); // 等待宽度测量
 
     // 测试屏幕宽 800，当前标题 A 右边缘应在 800 附近
-    expect(tester.getTopRight(find.text('A')).dx, closeTo(800, 1));
+    expect(tester.getTopRight(find.text('A').first).dx, closeTo(800, 1));
 
     // 左侧标题 C 在 A 左侧（间隔 gap），B 在屏幕外（A 右侧）
-    final aLeft = tester.getTopLeft(find.text('A')).dx;
-    expect(tester.getTopRight(find.text('C')).dx, closeTo(aLeft - 24, 1));
-    expect(tester.getTopLeft(find.text('B')).dx, greaterThan(800));
+    final aLeft = tester.getTopLeft(find.text('A').first).dx;
+    expect(tester.getTopRight(find.text('C').first).dx, closeTo(aLeft - 24, 1));
+    expect(tester.getTopLeft(find.text('B').first).dx, greaterThan(800));
   });
 
   testWidgets('center 模式：换页动画结束后新标题仍居中', (tester) async {
@@ -245,8 +293,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300)); // 动画结束
 
     // 新当前标题 C 中心应仍在父容器中心（400）
-    expect(find.text('C'), findsOneWidget);
-    expect(tester.getCenter(find.text('C')).dx, closeTo(400, 2));
+    expect(find.text('C'), findsAtLeastNWidgets(1));
+    expect(tester.getCenter(find.text('C').first).dx, closeTo(400, 2));
   });
 
   testWidgets('end 模式：换页动画结束后新标题仍右对齐', (tester) async {
@@ -262,15 +310,15 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300)); // 动画结束
 
     // 新当前标题 B 右边缘应仍在父容器右侧（800）
-    expect(find.text('B'), findsOneWidget);
-    expect(tester.getTopRight(find.text('B')).dx, closeTo(800, 2));
+    expect(find.text('B'), findsAtLeastNWidgets(1));
+    expect(tester.getTopRight(find.text('B').first).dx, closeTo(800, 2));
   });
 
   testWidgets('start 模式右拖满：标题移动量 = 上一个标题宽度（恰好归位）', (tester) async {
     await tester.pumpWidget(buildHost(titleGap: 0));
     await tester.pump(); // 等待宽度测量
 
-    final wPrev = tester.getSize(find.text('C')).width; // A 的上一页是 C
+    final wPrev = tester.getSize(find.text('C').first).width; // A 的上一页是 C
     final g = await tester.startGesture(const Offset(200, 300));
     await g.moveBy(const Offset(150, 0)); // progress = 150/150 = 1
     await tester.pump();
@@ -286,7 +334,7 @@ void main() {
     await tester.pumpWidget(buildHost(titleGap: 0));
     await tester.pump(); // 等待宽度测量
 
-    final wCur = tester.getSize(find.text('A')).width;
+    final wCur = tester.getSize(find.text('A').first).width;
     final g = await tester.startGesture(const Offset(200, 300));
     await g.moveBy(const Offset(-150, 0)); // progress = -1
     await tester.pump();
@@ -301,7 +349,7 @@ void main() {
     await tester.pumpWidget(buildHost(titleGap: 24));
     await tester.pump(); // 等待宽度测量
 
-    final wPrev = tester.getSize(find.text('C')).width;
+    final wPrev = tester.getSize(find.text('C').first).width;
     final g = await tester.startGesture(const Offset(200, 300));
     await g.moveBy(const Offset(150, 0)); // progress = 1
     await tester.pump();
@@ -324,14 +372,15 @@ void main() {
         of: find.byKey(const ValueKey('bar-0')),
         matching: find.text(text),
       );
-      final widget = tester.widget<Text>(textFinder);
-      final inherited = DefaultTextStyle.of(tester.element(textFinder)).style;
+      final widget = tester.widget<Text>(textFinder.first);
+      final inherited = DefaultTextStyle.of(tester.element(textFinder.first))
+          .style;
       return widget.style?.color ?? inherited.color!;
     }
 
     final idle =
         ThemeData.estimateBrightnessForColor(
-              Scaffold.of(tester.element(find.text('A')))
+              Scaffold.of(tester.element(find.text('A').first))
                       .widget
                       .backgroundColor ??
                   Colors.white,
@@ -367,9 +416,9 @@ void main() {
     expect(changed, ['0->-1']);
     expect(find.byKey(const ValueKey('bar-2')), findsOneWidget);
     expect(find.byKey(const ValueKey('bar-0')), findsNothing);
-    expect(find.text('C'), findsOneWidget);
-    expect(find.text('B'), findsOneWidget);
-    expect(find.text('A'), findsOneWidget);
+    expect(find.text('C'), findsAtLeastNWidgets(1));
+    expect(find.text('B'), findsAtLeastNWidgets(1));
+    expect(find.text('A'), findsAtLeastNWidgets(1));
     // 动画结束后新条停在中心（位移为 0）
     expect(barOffset(tester, 'bar-2'), 0);
   });
@@ -407,12 +456,12 @@ void main() {
     await tester.pump(); // 等待宽度测量
 
     // 三个标题同时显示（悬浮在页面之上）
-    expect(find.text('A'), findsOneWidget);
-    expect(find.text('B'), findsOneWidget);
-    expect(find.text('C'), findsOneWidget);
+    expect(find.text('A'), findsAtLeastNWidgets(1));
+    expect(find.text('B'), findsAtLeastNWidgets(1));
+    expect(find.text('C'), findsAtLeastNWidgets(1));
 
     // 标题位于屏幕顶部区域（A 标题的 y 坐标很小）
-    expect(tester.getTopLeft(find.text('A')).dy, lessThan(100));
+    expect(tester.getTopLeft(find.text('A').first).dy, lessThan(100));
 
     // 从标题之外的页面区域拖动（标题区域本身响应点击，不挡页面其余区域）
     final g = await tester.startGesture(const Offset(200, 400));
@@ -425,7 +474,7 @@ void main() {
 
     expect(changed, ['0->-1']);
     // 新当前页 C 成为中心标题
-    expect(find.text('C'), findsOneWidget);
+    expect(find.text('C'), findsAtLeastNWidgets(1));
   });
 
   testWidgets('PivotStack：indicatorAlign 控制标题悬浮位置', (tester) async {
@@ -453,8 +502,8 @@ void main() {
     await tester.pump();
 
     // 左对齐 + topLeft：当前标题 A 左边缘贴容器左上角
-    expect(tester.getTopLeft(find.text('A')).dx, closeTo(0, 1));
-    expect(tester.getTopLeft(find.text('A')).dy, closeTo(0, 1));
+    expect(tester.getTopLeft(find.text('A').first).dx, closeTo(0, 1));
+    expect(tester.getTopLeft(find.text('A').first).dy, closeTo(0, 1));
   });
 
   testWidgets('点击半透明标题切换到对应页（Pivot）', (tester) async {
@@ -465,17 +514,17 @@ void main() {
     await tester.pump(); // 等待宽度测量
 
     // 当前 A，点击下一页标题 B → 切到第 1 页
-    await tester.tap(find.text('B'));
+    await tester.tap(find.text('B').first);
     await tester.pump(); // 触发换页
     // 换页是「隐藏 → 换内容 → 显示」两段，等到全部结束
     await tester.pumpAndSettle();
 
     expect(changed, ['0->1']);
-    expect(find.text('B'), findsOneWidget);
+    expect(find.text('B'), findsAtLeastNWidgets(1));
 
     // 现在当前 B（start 对齐下 prev 标题 A 在屏幕外），点击下一页标题 C
     // → 切到第 2 页
-    await tester.tap(find.text('C'));
+    await tester.tap(find.text('C').first);
     await tester.pump();
     await tester.pumpAndSettle();
 
@@ -516,12 +565,12 @@ void main() {
 
     // 当前 A（start 对齐下 prev 标题 C 在屏幕外），点击下一页标题 B
     // → 切到第 1 页
-    await tester.tap(find.text('B'));
+    await tester.tap(find.text('B').first);
     await tester.pump(); // 触发换页
     await tester.pump(const Duration(milliseconds: 300)); // 动画结束
 
     expect(changed, ['0->1']);
-    expect(find.text('B'), findsOneWidget);
+    expect(find.text('B'), findsAtLeastNWidgets(1));
   });
 
   testWidgets('换页动画期间：单条标题整体向右推入，到达后换成新条', (tester) async {

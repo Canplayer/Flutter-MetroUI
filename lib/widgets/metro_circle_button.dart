@@ -53,14 +53,14 @@ class MetroCircleButton extends StatefulWidget {
   final Widget icon;
 
   /// 圆环边框颜色，为 null 时使用 [MetroAppBarTheme.buttonColor]，
-  /// 仍未提供则回退为白色。
+  /// 仍未提供则使用主题前景色。
   final Color? borderColor;
 
   /// 主题色（按下时圆环的填充色），为 null 时使用 [ColorScheme.primary]。
   final Color? themeColor;
 
   /// 图标颜色，为 null 时使用 [MetroAppBarTheme.buttonIconColor]，
-  /// 仍未提供则回退为白色。
+  /// 仍未提供则使用主题前景色。
   final Color? iconColor;
 
   /// 点击回调，为 null 时显示为禁用状态。
@@ -160,7 +160,7 @@ class _MetroCircleButtonState extends State<MetroCircleButton> {
                       Theme.of(context)
                           .extension<MetroAppBarTheme>()
                           ?.buttonColor ??
-                      Colors.white,
+                      Theme.of(context).colorScheme.onSurface,
                   width: borderWidth,
                 ),
               ),
@@ -184,7 +184,7 @@ class _MetroCircleButtonState extends State<MetroCircleButton> {
                             Theme.of(context)
                                 .extension<MetroAppBarTheme>()
                                 ?.buttonIconColor ??
-                            Colors.white,
+                            Theme.of(context).colorScheme.onSurface,
                   BlendMode.srcIn,
                 ),
                 child: IconTheme(

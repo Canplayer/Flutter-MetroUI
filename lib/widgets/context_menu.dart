@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -52,11 +53,19 @@ class MetroContextMenuState extends State<MetroContextMenu> {
   bool _isDismissing = false;
   Size? _savedSize;
   OverlayEntry? _overlayEntry;
+  Timer? _dismissTimer;
+
+  void _removeOverlay() {
+    final entry = _overlayEntry;
+    _overlayEntry = null;
+    entry?.remove();
+    entry?.dispose();
+  }
 
   @override
   void dispose() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
+    _dismissTimer?.cancel();
+    _removeOverlay();
     super.dispose();
   }
 
@@ -118,11 +127,11 @@ class MetroContextMenuState extends State<MetroContextMenu> {
                   overlaySize: overlayRenderBox.size,
                   menu: Container(
                     color:
-                        Theme.of(context)
-                            .extension<MetroContextMenuThemeData>()
-                            ?.backgroundColor ??
-                        Theme.of(context).colorScheme.surface,
-                    child: widget.menu,
+                        themeData?.backgroundColor ?? theme.colorScheme.surface,
+                    child: _MetroContextMenuActions(
+                      dismiss: dismissMenu,
+                      child: widget.menu,
+                    ),
                   ),
                   themeData: themeData,
                   childClone: SizedBox(
@@ -148,38 +157,29 @@ class MetroContextMenuState extends State<MetroContextMenu> {
     overlayState.insert(_overlayEntry!);
   }
 
-  void dismissMenu() async {
-    if (_isDismissing) return;
-
-    // 进入隐藏菜单动画并等待背景回归
-    setState(() {
-      _isDismissing = true;
-    });
-    // 强制立即隐藏 Overlay 中的菜单，使它瞬间消失
+  void dismissMenu() {
+    if (!_isOpen || _isDismissing) return;
+    _isDismissing = true;
     _overlayKey.currentState?.hideMenu();
 
-    final themeData = Theme.of(context).extension<MetroContextMenuThemeData>();
-    final scaffoldState = MetroPageScaffold.maybeOf(context);
-    scaffoldState?.restoreBackground(
-      duration:
-          widget.restoreDuration ??
-          themeData?.restoreDuration ??
-          const Duration(milliseconds: 350),
-      curve: widget.restoreCurve,
-    );
+    final scaffold = MetroPageScaffold.maybeOf(context);
+    if (scaffold == null || !scaffold.widget.enableZAxisEffect) {
+      _finishDismiss();
+      return;
+    }
 
-    // 等待背景动画执行完毕后再销毁 Overlay 并放回原 Widget
-    await Future.delayed(
-      widget.restoreDuration ??
-          themeData?.restoreDuration ??
-          const Duration(milliseconds: 350),
-    );
+    final theme = Theme.of(context).extension<MetroContextMenuThemeData>();
+    final duration =
+        widget.restoreDuration ??
+        theme?.restoreDuration ??
+        const Duration(milliseconds: 350);
+    scaffold.restoreBackground(duration: duration, curve: widget.restoreCurve);
+    _dismissTimer = Timer(duration, _finishDismiss);
+  }
 
-    if (!mounted) return;
-
-    _overlayEntry?.remove();
-    _overlayEntry = null;
-
+  void _finishDismiss() {
+    _dismissTimer = null;
+    _removeOverlay();
     setState(() {
       _isOpen = false;
       _isDismissing = false;
@@ -409,6 +409,16 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
 /// 上下文菜单子项，专为 Metro 设计。
 ///
 /// 常作为 [MetroContextMenu.menu] 的子元素（放入 Column 中等）出现。
+class _MetroContextMenuActions extends InheritedWidget {
+  const _MetroContextMenuActions({required this.dismiss, required super.child});
+
+  final VoidCallback dismiss;
+
+  @override
+  bool updateShouldNotify(_MetroContextMenuActions oldWidget) =>
+      dismiss != oldWidget.dismiss;
+}
+
 class MetroContextMenuItem extends StatefulWidget {
   const MetroContextMenuItem({
     super.key,
@@ -439,6 +449,7 @@ class MetroContextMenuItem extends StatefulWidget {
 }
 
 class _MetroContextMenuItemState extends State<MetroContextMenuItem> {
+  bool _pressed = false;
   @override
   Widget build(BuildContext context) {
     final themeData = Theme.of(context).extension<MetroContextMenuThemeData>();
@@ -448,16 +459,33 @@ class _MetroContextMenuItemState extends State<MetroContextMenuItem> {
         themeData?.itemTextStyle ??
         const TextStyle(fontSize: 24, fontWeight: FontWeight.w400);
 
+    final onTap = widget.onTap;
+    final dismiss = context
+        .dependOnInheritedWidgetOfExactType<_MetroContextMenuActions>()
+        ?.dismiss;
+    final scheme = Theme.of(context).colorScheme;
+    final pressed = _pressed && onTap != null;
     return Tile(
-      onTap: widget.onTap,
+      onTap: onTap == null
+          ? null
+          : () {
+              dismiss?.call();
+              onTap();
+            },
+      onTouch: onTap == null
+          ? null
+          : (pressed) => setState(() => _pressed = pressed),
       child: Container(
+        color: pressed ? widget.pressedBackgroundColor ?? scheme.primary : null,
         height: defaultItemHeight,
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
         alignment: Alignment.centerLeft,
         child: DefaultTextStyle(
           style: (Theme.of(context).textTheme.bodyMedium ?? const TextStyle())
               .merge(defaultTextStyle)
-              .copyWith(color: defaultTextStyle.color),
+              .copyWith(
+                color: pressed ? scheme.onPrimary : defaultTextStyle.color,
+              ),
           child: widget.child,
         ),
       ),

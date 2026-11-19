@@ -3,6 +3,8 @@ import 'package:metro_ui/uix_metrics.dart';
 import 'package:metro_ui/widgets/tile.dart';
 import 'package:metro_ui/metro_theme_extensions.dart';
 
+import 'uix_tight_text.dart';
+
 //Windows Phone 核心风格的按钮设计组件
 
 class MetroButton extends StatefulWidget {
@@ -77,6 +79,7 @@ class MetroButtoState extends State<MetroButton> {
         ? disabledTextColor
         : (_isTouch ? pressedTextColor : normalTextColor);
 
+    final child = widget.child;
     return Tile(
       onTap: widget.onTap,
       onTouch: isDisabled
@@ -109,7 +112,9 @@ class MetroButtoState extends State<MetroButton> {
           child: Center(
             widthFactor: 1,
             heightFactor: 1,
-            child: widget.child ?? const SizedBox.shrink(),
+            child: child is Text
+                ? UixTightText.fromText(child)
+                : child ?? const SizedBox.shrink(),
           ),
         ),
       ),

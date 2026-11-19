@@ -58,18 +58,13 @@ flutter:
     - assets/ic_back.svg
 
   fonts:
-    # Segoe WP 字体集（Windows Phone 7 系统字体），全部归入一个家族，用字重区分。
-    # 各文件实际 usWeightClass：Light=300 / SemiLight=350（非标准，pubspec 只接受
-    # 100–900 整百值故按 300 注册）/ Regular=400 / Semibold=600 / Bold=700 /
-    # Black=800（字体名是 Black，但实际 usWeightClass=800）。
-    # 注意：SemiLight 与 Light 同为 300，同家族同字重的多个文件，引擎按注册顺序
-    # 匹配（先注册者优先）；Dart 中请求 FontWeight(350) 时会取最接近的已注册字重。
+    # The Flutter manifest accepts hundred-step weights only. SemiLight
+    # keeps its native OS/2 weight (350), read from the TTF by the engine.
     - family: Segoe WP
       fonts:
         - asset: fonts/SegoeWP-Light.ttf
           weight: 300
         - asset: fonts/SegoeWP-Semilight.ttf
-          weight: 300
         - asset: fonts/SegoeWP.ttf
           weight: 400
         - asset: fonts/SegoeWP-Semibold.ttf

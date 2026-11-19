@@ -145,6 +145,7 @@ class PivotPaneView extends StatefulWidget {
     this.onTransitionEnd,
     this.onSlideProgress,
     this.controller,
+    this.interactive = true,
     this.clipBehavior = Clip.hardEdge,
     this.transition = PivotTransition.contentChange,
     this.initialPage = kPivotPaneViewInitialPage,
@@ -162,6 +163,7 @@ class PivotPaneView extends StatefulWidget {
   /// 页面构建器。index 可以是任意整数，超出当前页范围时同样会被调用，
   /// 由使用者决定如何呈现（实现无限滚动）。
   final PageItemBuilder itemBuilder;
+  final bool interactive;
   final Clip clipBehavior;
 
   final PivotTransition transition;
@@ -496,9 +498,9 @@ class _PivotPaneViewState extends State<PivotPaneView>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onHorizontalDragUpdate: _handleDragUpdate,
-      onHorizontalDragEnd: _handleDragEnd,
-      onHorizontalDragCancel: _handleDragCancel,
+      onHorizontalDragUpdate: widget.interactive ? _handleDragUpdate : null,
+      onHorizontalDragEnd: widget.interactive ? _handleDragEnd : null,
+      onHorizontalDragCancel: widget.interactive ? _handleDragCancel : null,
       behavior: HitTestBehavior.opaque,
       child: LayoutBuilder(
         builder: (context, constraints) {

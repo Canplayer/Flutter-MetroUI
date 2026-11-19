@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:metro_ui/widgets/metro_text_box.dart';
+import 'package:metro_ui/metro_theme.dart';
 import 'package:metro_ui/widgets/metro_list_picker.dart';
 
 void main() {
@@ -36,22 +37,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(chosen, 'b');
   });
-  testWidgets('list picker opens route for more than five choices', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: MetroListPicker<int>(
-            items: const [1, 2, 3, 4, 5, 6],
-            itemLabel: (x) => '$x',
-            onChanged: (_) {},
+  testWidgets(
+    'list picker retains its selected label and scoped style across its route',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MetroTheme(
+              data: const MetroThemeData.fromPreset(
+                extensions: [
+                  MetroListPickerTheme(textStyle: TextStyle(fontSize: 21)),
+                ],
+              ),
+              child: MetroListPicker<int>(
+                items: const [1, 2, 3, 4, 5, 6],
+                value: 2,
+                itemLabel: (x) => '$x',
+                onChanged: (_) {},
+              ),
+            ),
           ),
         ),
-      ),
-    );
-    await tester.tap(find.byType(MetroListPicker<int>));
-    await tester.pumpAndSettle();
-    expect(find.byType(ListTile), findsNWidgets(6));
-  });
+      );
+      expect(find.text('2'), findsOneWidget);
+      await tester.tap(find.byType(MetroListPicker<int>));
+      await tester.pumpAndSettle();
+      expect(find.byType(ListTile), findsNWidgets(6));
+      expect(tester.widget<Text>(find.text('2')).style?.fontSize, 21);
+    },
+  );
 }

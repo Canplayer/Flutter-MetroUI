@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:metro_ui/metro_theme_extensions.dart';
 
 /// Windows Phone 8.1 XAML ProgressRing, using the phone GENERIC.XBF template.
 /// Size constants are scaled from the 480-wide resource by 0.8.
@@ -68,7 +69,11 @@ class _ProgressRingState extends State<ProgressRing>
               builder: (context, _) => CustomPaint(
                 painter: _RingPainter(
                   _clock.value * 4.305,
-                  widget.foreground ?? Theme.of(context).colorScheme.onSurface,
+                  widget.foreground ??
+                      Theme.of(context)
+                          .extension<MetroProgressTheme>()
+                          ?.ringColor ??
+                      Theme.of(context).colorScheme.onSurface,
                   widget.showSixthCircle,
                 ),
               ),

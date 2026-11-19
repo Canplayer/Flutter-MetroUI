@@ -23,6 +23,7 @@ class _BodyBuilder extends StatefulWidget {
     this.disableDefaultPopAnimation = false,
     required this.animatedPageKey,
     required this.backButtonAlignment,
+    required this.showSoftwareBackButton,
   });
 
   final Widget body;
@@ -32,6 +33,7 @@ class _BodyBuilder extends StatefulWidget {
   final bool disableDefaultPopAnimation;
   final GlobalKey<MetroAnimatedPageState> animatedPageKey;
   final AlignmentGeometry backButtonAlignment;
+  final bool showSoftwareBackButton;
 
   @override
   State<_BodyBuilder> createState() => _BodyBuilderState();
@@ -62,9 +64,8 @@ class _BodyBuilderState extends State<_BodyBuilder> {
     // 添加返回按钮逻辑
     final ModalRoute<dynamic>? route = ModalRoute.of(context);
     final bool canPop = route?.canPop ?? false;
-    final bool isAndroid = Theme.of(context).platform == TargetPlatform.android;
 
-    if (canPop && !isAndroid) {
+    if (widget.showSoftwareBackButton && (canPop || widget.onWillPop != null)) {
       content = Stack(
         fit: StackFit.loose,
         clipBehavior: Clip.none,
@@ -91,6 +92,7 @@ class _BodyBuilderState extends State<_BodyBuilder> {
                     child: Center(
                       child: SvgPicture.asset(
                         'assets/ic_back.svg',
+                        semanticsLabel: 'Back',
                         colorFilter: ColorFilter.mode(
                           Theme.of(context).colorScheme.onSurface,
                           BlendMode.srcIn,
@@ -128,7 +130,7 @@ class _BodyBuilderState extends State<_BodyBuilder> {
           final bool shouldPop = widget.onWillPop != null
               ? await widget.onWillPop!()
               : true;
-          if (shouldPop) {
+          if (shouldPop && context.mounted) {
             MetroAppBarScope.controllerOf(context)?.beginNavigation(
               continuous: MetroSystemThemeData.of(context)
                   .continuousApplicationBar,
@@ -181,6 +183,8 @@ class MetroPageScaffold extends StatefulWidget {
     this.onDidPushNext,
     this.onDidPopNext,
     this.backButtonAlignment = Alignment.topLeft,
+    this.showSoftwareBackButton = true,
+    this.useMaterialSurface = true,
     this.applicationBar,
     this.extendBodyToApplicationBar = true,
     this.enableZAxisEffect = false,
@@ -192,8 +196,14 @@ class MetroPageScaffold extends StatefulWidget {
 
   /// 返回按钮的对齐方式，当页面被推入导航栈具有上层页面时，会自动显示返回按钮。
   ///
-  /// 默认显示在左下角 [Alignment.bottomLeft]。
+  /// 默认显示在左上角 [Alignment.topLeft]。
   final AlignmentGeometry backButtonAlignment;
+
+  /// Whether to show the Metro software Back button on this page.
+  final bool showSoftwareBackButton;
+
+  /// Use a Material surface for descendants that require Ink painting.
+  final bool useMaterialSurface;
 
   /// 整个页面的主要内容。
   ///
@@ -404,6 +414,11 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
     await _metroAnimatedPageKey.currentState?.didPushNext();
   }
 
+  /// Restore the page with its preset BackwardIn track.
+  void playDefaultPopNextAnimation() {
+    _metroAnimatedPageKey.currentState?.didPopNext();
+  }
+
   /// 播放 MetroAnimatedPage 的默认进入动画。
   Future<void> playDefaultPushAnimation() async {
     await _metroAnimatedPageKey.currentState?.didPush();
@@ -537,7 +552,7 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
     // 决定是否播放默认 popNext（从下一页返回）动画
     final bool playDefault = !widget.disableDefaultPopNextAnimation;
     if (playDefault) {
-      _metroAnimatedPageKey.currentState?.didPopNext();
+      playDefaultPopNextAnimation();
     }
     // 同时调用用户传入的自定义回调（若提供）
     widget.onDidPopNext?.call();
@@ -552,14 +567,10 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
         ?.setAppBar(widget.applicationBar, owner: this);
   }
 
-  /// 当前页面 Application Bar 折叠状态下占据的屏幕高度（含底部安全区）。
-  ///
-  /// 只有当 [MetroAppBarScope] 存在且当前存在 Application Bar 时才返回实际高度，
-  /// 否则返回 0。手动拖拽展开的高度不参与计算。
+  /// Reserve the page's collapsed bar while the overlay switches ownership.
   double _applicationBarHeight(BuildContext context) {
-    final MetroApplicationBar? bar = MetroAppBarScope.maybeOf(context)
-        ?.currentBar;
-    if (bar == null) return 0.0;
+    final bar = widget.applicationBar;
+    if (bar == null || MetroAppBarScope.maybeOf(context) == null) return 0;
     return metroAppBarCollapsedHeight(bar) +
         MediaQuery.paddingOf(context).bottom;
   }
@@ -590,6 +601,7 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
               disableDefaultPopAnimation: widget.disableDefaultPopAnimation,
               animatedPageKey: _metroAnimatedPageKey,
               backButtonAlignment: widget.backButtonAlignment,
+              showSoftwareBackButton: widget.showSoftwareBackButton,
             ),
           );
 
@@ -622,14 +634,15 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
       bottomInset += _applicationBarHeight(context);
     }
 
-    // 默认构建的内容：仅 Material + 底部让出，无任何变换/透明度层
-    Widget scaffoldContent = Material(
-      color: widget.backgroundColor ?? themeData.scaffoldBackgroundColor,
-      child: Padding(
-        padding: EdgeInsets.only(bottom: bottomInset),
-        child: body,
-      ),
+    final pageColor =
+        widget.backgroundColor ?? themeData.scaffoldBackgroundColor;
+    final insetBody = Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: body,
     );
+    Widget scaffoldContent = widget.useMaterialSurface
+        ? Material(color: pageColor, child: insetBody)
+        : ColoredBox(color: pageColor, child: insetBody);
 
     // 仅在启用 Z 轴推远特性时，才包裹 3D 变换 + 半透明 + 背景垫层
     if (widget.enableZAxisEffect) {
