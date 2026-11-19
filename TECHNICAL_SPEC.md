@@ -44,6 +44,10 @@ const MetroApp(
 | 横向布局 | `Pivot`、`PivotStack` 接收 `PivotItem`，`PivotPaneView` 负责页面容器。`MetroPanorama` 管理背景、标题、内容视差及吸附。`StackPanel` 适合已有标题组合。 |
 | 数字键盘 | `PhoneKeypad` 处理数字键手势、长按和键面布局。输入内容及命令处理由宿主通过回调管理。 |
 
+### 圆框和图标
+
+`MetroCircleButton` 和 `MetroAppBarButton` 默认绘制矢量圆框。调用方可以给 `icon` 传入透明底的 SVG 或其他图案，圆框、按下填充和图案着色由控件处理。显式选择 `frameStyle: MetroCircleFrameStyle.classicBitmap` 时使用包内 WP8 Shell 圆框 PNG，并把按下贴图的红色填充映射到当前强调色。两种圆框共用按压状态和图标着色。自定义 `backgroundBuilder` 优先于预设圆框。
+
 ### 文字规范
 
 - 业务页面默认写 `Text(...)`。`MetroApp` 的默认 UIX 标签用 Segoe WP Regular、15 pt 换算后字号、零字距。传给 `MetroButton(child: Text(...))` 等已有控件的文字，由控件内部选择排版规则。

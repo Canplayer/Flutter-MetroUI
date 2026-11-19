@@ -11,6 +11,8 @@ import 'package:metro_ui/page_scaffold.dart';
 import './application_bar.dart';
 import './route_aware_provider.dart';
 import './metro_theme.dart';
+import './uix_metrics.dart';
+import './widgets/uix_popup.dart';
 
 // 示例可以假设：
 // typedef GlobalWidgetsLocalizations = DefaultWidgetsLocalizations;
@@ -753,7 +755,7 @@ class _MetroAppState extends State<MetroApp> {
     return DefaultSelectionStyle(
       selectionColor: effectiveSelectionColor,
       cursorColor: effectiveCursorColor,
-      child: childWidget,
+      child: UixPopupLayer(child: childWidget),
 
       // Stack(
       //   children: [
@@ -916,10 +918,9 @@ class _MetroAppState extends State<MetroApp> {
 
     // 2.建立全局3D透视转换层，开发者写3D动画无需再考虑摄像机位置
     //全局3D坐标观察点固定到屏幕中心
-    //不要问我为什么是0.000795，我一点一点调出来的，我也不知道这个该怎么换算和为什么是这个值
     result = Transform(
       alignment: FractionalOffset.center,
-      transform: Matrix4.identity()..setEntry(3, 2, 0.000795), // 设置Z轴偏移
+      transform: Matrix4.identity()..setEntry(3, 2, uixPerspective),
       child: result,
     );
 

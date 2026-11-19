@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import '../metro_theme_extensions.dart';
 import '../uix_metrics.dart';
 import '../uix_typography.dart';
+import 'tile.dart';
 import 'uix_popup.dart';
 import 'uix_tight_text.dart';
 
@@ -19,11 +20,13 @@ class MetroMessageBox extends StatelessWidget {
 
   final String title, message, confirmLabel, cancelLabel;
 
+  /// Opens the modal with the panel inset to the device's safe area.
   Future<bool?> show(BuildContext context) {
     final theme = Theme.of(context);
     return Navigator.of(context).push(
       UixPopupRoute<bool>(
         brightness: theme.brightness,
+        useSafeArea: true,
         pageBuilder: (_, _, _) => Theme(
           data: theme,
           child: DefaultTextStyle(
@@ -150,26 +153,35 @@ class _MetroTextCommandState extends State<MetroTextCommand> {
         decoration: TextDecoration.none,
       ),
     );
+    final face = Container(
+      height: 48 * uixScale,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: _down ? scheme.primary : null,
+        border: Border.all(width: 3 * uixScale, color: onSurface),
+      ),
+      child: widget._isDialogButton ? UixTightText.fromText(label) : label,
+    );
     return Semantics(
       button: true,
       enabled: enabled,
       label: widget.label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onPressed,
-        onTapDown: enabled ? (_) => _setDown(true) : null,
-        onTapUp: enabled ? (_) => _setDown(false) : null,
-        onTapCancel: enabled ? () => _setDown(false) : null,
-        child: Container(
-          height: 48 * uixScale,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: _down ? scheme.primary : null,
-            border: Border.all(width: 3 * uixScale, color: onSurface),
-          ),
-          child: widget._isDialogButton ? UixTightText.fromText(label) : label,
-        ),
-      ),
+      child: widget._isDialogButton
+          ? Tile(
+              // UIX MessageBoxButton inherits Button → ButtonBase → TiltBase.
+              localTiltProjection: true,
+              onTap: widget.onPressed,
+              onTouch: enabled ? _setDown : null,
+              child: face,
+            )
+          : GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: widget.onPressed,
+              onTapDown: enabled ? (_) => _setDown(true) : null,
+              onTapUp: enabled ? (_) => _setDown(false) : null,
+              onTapCancel: enabled ? () => _setDown(false) : null,
+              child: face,
+            ),
     );
   }
 }

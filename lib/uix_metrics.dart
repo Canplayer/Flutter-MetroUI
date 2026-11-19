@@ -4,6 +4,9 @@ library;
 /// 480-wide design units -> Flutter logical pixels (480 -> 384).
 const double uixScale = 0.8;
 
+/// Project perspective coefficient used by MetroApp and local tilt projection.
+const double uixPerspective = 0.000795;
+
 /// UIX point sizes to Flutter logical pixels. Use [uixScale] alone for
 /// geometry defined in 480-wide design units.
 const double uixFontScale = (96 / 72) * uixScale;

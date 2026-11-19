@@ -3,17 +3,24 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
+import '../uix_metrics.dart';
+
 /// A pressable surface using the WP8 UIX TiltHelper timing and rotation model.
 class Tile extends StatefulWidget {
   const Tile({
     super.key,
     this.child,
     this.allowBack = true,
+    this.localTiltProjection = false,
     this.onTap,
     this.onTouch,
   });
   final Widget? child;
   final bool allowBack;
+
+  /// Projects the tilt on this surface even without a perspective ancestor.
+  final bool localTiltProjection;
+
   final Function()? onTap;
   final Function(bool isTouch)? onTouch;
   @override
@@ -209,6 +216,26 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
+  Matrix4 _tiltTransform() {
+    final transform = Matrix4.identity()
+      ..setEntry(3, 2, widget.localTiltProjection ? uixPerspective : 0)
+      ..translateByDouble(0, 0, _z, 1)
+      ..rotateX(_rx)
+      ..rotateY(_ry);
+    if (!widget.localTiltProjection) return transform;
+
+    // Keep the projected x/y/w on z=0 so MetroApp does not project this
+    // button's depth a second time. Keep the Z axis invertible for hit tests.
+    return transform
+      ..setEntry(0, 2, 0)
+      ..setEntry(1, 2, 0)
+      ..setEntry(2, 0, 0)
+      ..setEntry(2, 1, 0)
+      ..setEntry(2, 2, 1)
+      ..setEntry(2, 3, 0)
+      ..setEntry(3, 2, 0);
+  }
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
@@ -221,10 +248,7 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
 
       return Transform(
         alignment: Alignment.center,
-        transform: Matrix4.identity()
-          ..setEntry(2, 3, _z)
-          ..rotateX(_rx)
-          ..rotateY(_ry),
+        transform: _tiltTransform(),
         child: Listener(
           onPointerDown: _enabled
               ? (event) {

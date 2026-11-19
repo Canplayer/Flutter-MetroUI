@@ -119,6 +119,7 @@ class MetroAppBarButton extends StatelessWidget {
     this.color,
     this.iconColor,
     this.backgroundBuilder,
+    this.frameStyle = MetroCircleFrameStyle.vector,
     required this.label,
     this.onPressed,
   });
@@ -133,8 +134,10 @@ class MetroAppBarButton extends StatelessWidget {
   final Color? iconColor;
 
   /// Supplies a stateful frame behind the 48-unit icon canvas.
-  final Widget Function(BuildContext context, bool pressed, Color foreground)?
-  backgroundBuilder;
+  final MetroCircleBackgroundBuilder? backgroundBuilder;
+
+  /// Selects the shared circular frame used by this button.
+  final MetroCircleFrameStyle frameStyle;
 
   /// 按钮的说明文字；菜单展开或拖动时显示，同时用于无障碍提示。
   final String label;
@@ -158,7 +161,6 @@ class MetroAppBarButton extends StatelessWidget {
     final border = enabled
         ? color ?? colors?.buttonColor ?? theme?.buttonColor ?? foreground
         : disabled;
-    final frame = backgroundBuilder;
     final captionVisible = _AppBarLabelVisibility.of(context);
     final wp8 =
         MetroSystemThemeData.of(context).version == MetroDesignVersion.wp8;
@@ -186,7 +188,7 @@ class MetroAppBarButton extends StatelessWidget {
         enabled: enabled,
         label: label,
         onTap: onPressed,
-        child: MetroPressDetector(
+        child: MetroPressDetector._withTilt(
           onPressed: onPressed,
           child: ExcludeSemantics(
             child: SizedBox(
@@ -196,43 +198,16 @@ class MetroAppBarButton extends StatelessWidget {
                   (captionVisible ? kMetroAppBarButtonLabelAreaHeight : 0),
               child: Column(
                 children: [
-                  if (frame == null)
-                    MetroCircleButton(
-                      icon: icon,
-                      borderColor: border,
-                      iconColor: enabled ? foreground : disabled,
-                      iconMode: true,
-                      pressed: enabled ? null : false,
-                    )
-                  else
-                    Builder(
-                      builder: (context) {
-                        final pressed =
-                            enabled &&
-                            (MetroPressScope.maybeOf(context) ?? false);
-                        final iconTint = pressed
-                            ? theme?.pressedButtonIconColor ?? Colors.white
-                            : enabled
-                            ? foreground
-                            : disabled;
-                        return SizedBox.square(
-                          dimension: kMetroAppBarButtonSize,
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              frame(context, pressed, border),
-                              ColorFiltered(
-                                colorFilter: ColorFilter.mode(
-                                  iconTint,
-                                  BlendMode.srcIn,
-                                ),
-                                child: icon,
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+                  MetroCircleButton(
+                    icon: icon,
+                    borderColor: border,
+                    iconColor: enabled ? foreground : disabled,
+                    size: kMetroAppBarButtonSize,
+                    frameStyle: frameStyle,
+                    backgroundBuilder: backgroundBuilder,
+                    iconMode: true,
+                    pressed: enabled ? null : false,
+                  ),
                   if (captionVisible)
                     Expanded(
                       child: Padding(
@@ -1552,7 +1527,13 @@ class _ThreeDotsP extends CustomPainter {
 /// 按压状态与点击事件，两者互不干扰（本组件使用原始指针事件 [Listener]，
 /// 不参与手势竞技场，因此不会与外层 Tile 的手势竞争）。
 class MetroPressDetector extends StatefulWidget {
-  const MetroPressDetector({super.key, this.onPressed, required this.child});
+  const MetroPressDetector({super.key, this.onPressed, required this.child})
+    : _tilts = false;
+
+  const MetroPressDetector._withTilt({this.onPressed, required this.child})
+    : _tilts = true;
+
+  final bool _tilts;
 
   /// 亮起状态下抬起手指时触发。
   final VoidCallback? onPressed;
@@ -1588,6 +1569,17 @@ class _MetroPressDetectorState extends State<MetroPressDetector> {
 
   @override
   Widget build(BuildContext context) {
+    final child = MetroPressScope(isPressed: _isPressed, child: widget.child);
+    if (widget._tilts) {
+      // ShellChrome ApplicationBarItem derives from TiltBase. Its Background
+      // contains the icon and caption, and receives the shared press tilt.
+      return Tile(
+        localTiltProjection: true,
+        onTap: widget.onPressed,
+        onTouch: widget.onPressed == null ? null : _setPressed,
+        child: child,
+      );
+    }
     return Listener(
       behavior: HitTestBehavior.translucent,
       onPointerDown: (event) {
@@ -1612,7 +1604,7 @@ class _MetroPressDetectorState extends State<MetroPressDetector> {
         _setPressed(false);
         _activePointer = null;
       },
-      child: MetroPressScope(isPressed: _isPressed, child: widget.child),
+      child: child,
     );
   }
 }

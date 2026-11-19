@@ -3,6 +3,22 @@ import 'package:metro_ui/application_bar.dart';
 import 'package:metro_ui/metro_theme_extensions.dart';
 import 'package:metro_ui/widgets/tile.dart';
 
+/// Appearance of the shared circular button frame.
+enum MetroCircleFrameStyle {
+  /// Resolution-independent ring and fill.
+  vector,
+
+  /// WP8 Shell PNGs, with the red pressed fill mapped to the accent color.
+  classicBitmap,
+}
+
+/// Builds a frame behind the foreground icon.
+typedef MetroCircleBackgroundBuilder = Widget Function(
+  BuildContext context,
+  bool pressed,
+  Color foreground,
+);
+
 /// Windows Phone 风格的圆形图标按钮（圆环）。
 ///
 /// 对应 WP 原版 ApplicationBarIconButton 的圆环外观：一个带边框的圆形，
@@ -43,6 +59,8 @@ class MetroCircleButton extends StatefulWidget {
     this.semanticLabel,
     this.size,
     this.borderWidth,
+    this.frameStyle = MetroCircleFrameStyle.vector,
+    this.backgroundBuilder,
     this.iconSize = 24,
     this.version,
     this.iconMode = false,
@@ -77,6 +95,12 @@ class MetroCircleButton extends StatefulWidget {
   /// 未显式传入时，会随 [size] 等比缩放（以默认尺寸为基准），
   /// 以保持不同尺寸下的视觉比例一致；显式传入则直接使用该值。
   final double? borderWidth;
+
+  /// The default is [MetroCircleFrameStyle.vector].
+  final MetroCircleFrameStyle frameStyle;
+
+  /// A custom frame takes precedence over [frameStyle].
+  final MetroCircleBackgroundBuilder? backgroundBuilder;
 
   /// 图标尺寸，默认 24。
   final double iconSize;
@@ -120,6 +144,65 @@ class _MetroCircleButtonState extends State<MetroCircleButton> {
     return _isTouch;
   }
 
+  Widget _buildFrame(
+    BuildContext context, {
+    required double size,
+    required double borderWidth,
+    required bool pressed,
+    required Color border,
+    required Color accent,
+  }) {
+    final custom = widget.backgroundBuilder;
+    if (custom != null) return custom(context, pressed, border);
+    if (widget.frameStyle == MetroCircleFrameStyle.classicBitmap) {
+      final light = Theme.of(context).brightness == Brightness.light;
+      final name = pressed ? (light ? 'light_down' : 'dark_down') : 'rest';
+      final image = Image.asset(
+        'assets/appbar/appbar_circle_$name.png',
+        package: 'metro_ui',
+        width: size,
+        height: size,
+        fit: BoxFit.fill,
+        color: pressed ? null : border,
+        excludeFromSemantics: true,
+      );
+      if (!pressed) return image;
+
+      // The source PNG uses pure red for the fill, and blends toward black
+      // (light theme) or white (dark theme) in the rim. Preserve its alpha.
+      List<double> channel(double component) => [
+        light ? component : 0,
+        light ? 0 : 1 - component,
+        0,
+        0,
+        light ? 0 : component * 255,
+      ];
+      return ColorFiltered(
+        colorFilter: ColorFilter.matrix([
+          ...channel(accent.r),
+          ...channel(accent.g),
+          ...channel(accent.b),
+          0,
+          0,
+          0,
+          1,
+          0,
+        ]),
+        child: image,
+      );
+    }
+
+    return Container(
+      height: size,
+      width: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: pressed ? accent : null,
+        border: Border.all(color: border, width: borderWidth),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // 默认尺寸与默认边框（WP AppBar 按钮基准，保留 *0.8）
@@ -135,6 +218,20 @@ class _MetroCircleButtonState extends State<MetroCircleButton> {
     final bool useTile = !widget.iconMode && widget.onPressed != null;
     final bool disabled = !widget.iconMode && widget.onPressed == null;
 
+    final theme = Theme.of(context);
+    final barTheme = theme.extension<MetroAppBarTheme>();
+    final pressed = _isPressed;
+    final border =
+        widget.borderColor ??
+        barTheme?.buttonColor ??
+        theme.colorScheme.onSurface;
+    final accent = widget.themeColor ?? theme.colorScheme.primary;
+    final iconColor = pressed
+        ? barTheme?.pressedButtonIconColor ?? Colors.white
+        : widget.iconColor ??
+              barTheme?.buttonIconColor ??
+              theme.colorScheme.onSurface;
+
     // 圆环内容（固定结构，避免随包裹方式变化而重建）
     final Widget content = KeyedSubtree(
       key: _contentKey,
@@ -145,25 +242,13 @@ class _MetroCircleButtonState extends State<MetroCircleButton> {
           alignment: Alignment.center,
           clipBehavior: Clip.none,
           children: [
-            // 圆环主体：在 Stack 中居中
-            Container(
-              height: size,
-              width: size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _isPressed
-                    ? widget.themeColor ?? Theme.of(context).colorScheme.primary
-                    : null,
-                border: Border.all(
-                  color:
-                      widget.borderColor ??
-                      Theme.of(context)
-                          .extension<MetroAppBarTheme>()
-                          ?.buttonColor ??
-                      Theme.of(context).colorScheme.onSurface,
-                  width: borderWidth,
-                ),
-              ),
+            _buildFrame(
+              context,
+              size: size,
+              borderWidth: borderWidth,
+              pressed: pressed,
+              border: border,
+              accent: accent,
             ),
             // 图标层：独占完整的直径，负责渲染 Icon
             SizedBox(
@@ -174,21 +259,8 @@ class _MetroCircleButtonState extends State<MetroCircleButton> {
                 // 即使传入的 icon 内部自带颜色，也能被强制统一覆盖。
                 // 按下时（背景填充主题色）图标切换为 pressedButtonIconColor
                 // （未配置则纯白），保证与高亮背景的对比度。
-                colorFilter: ColorFilter.mode(
-                  _isPressed
-                      ? Theme.of(context)
-                                .extension<MetroAppBarTheme>()
-                                ?.pressedButtonIconColor ??
-                            Colors.white
-                      : widget.iconColor ??
-                            Theme.of(context)
-                                .extension<MetroAppBarTheme>()
-                                ?.buttonIconColor ??
-                            Theme.of(context).colorScheme.onSurface,
-                  BlendMode.srcIn,
-                ),
+                colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
                 child: IconTheme(
-                  // IconTheme 仅保留尺寸控制，颜色交给上方滤镜
                   data: IconThemeData(size: widget.iconSize),
                   child: widget.icon,
                 ),
