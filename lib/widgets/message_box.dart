@@ -20,13 +20,12 @@ class MetroMessageBox extends StatelessWidget {
 
   final String title, message, confirmLabel, cancelLabel;
 
-  /// Opens the modal with the panel inset to the device's safe area.
+  /// Opens the modal with its contents inset to the device's safe area.
   Future<bool?> show(BuildContext context) {
     final theme = Theme.of(context);
     return Navigator.of(context).push(
       UixPopupRoute<bool>(
         brightness: theme.brightness,
-        useSafeArea: true,
         pageBuilder: (_, _, _) => Theme(
           data: theme,
           child: DefaultTextStyle(
@@ -44,66 +43,67 @@ class MetroMessageBox extends StatelessWidget {
     final scheme = theme.colorScheme;
     // MessageBoxBodyStyle uses ChromeColor; its title is ExtraLarge/SemiBold
     // and its body is LargeHigh. MessageBoxHeaderAndBodyMargins is (24,54,24,0).
-    return ColoredBox(
-      color: scheme.surfaceContainer,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 252 * uixScale),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            24 * uixScale,
-            54 * uixScale,
-            24 * uixScale,
-            12 * uixScale,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              UixTightText.fromText(
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: uixFontSize(24),
-                    fontWeight: UixFontWeight.semiBold,
-                    color: scheme.onSurface,
-                    decoration: TextDecoration.none,
-                  ),
+    final content = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 252 * uixScale),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          24 * uixScale,
+          54 * uixScale,
+          24 * uixScale,
+          12 * uixScale,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            UixTightText.fromText(
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: uixFontSize(24),
+                  fontWeight: UixFontWeight.semiBold,
+                  color: scheme.onSurface,
+                  decoration: TextDecoration.none,
                 ),
               ),
-              const SizedBox(height: 40 * uixScale),
-              UixTightText.fromText(
-                Text(
-                  message,
-                  style: TextStyle(
-                    fontSize: uixFontSize(17),
-                    fontWeight: UixFontWeight.normal,
-                    color: scheme.onSurface,
-                    decoration: TextDecoration.none,
-                  ),
+            ),
+            const SizedBox(height: 40 * uixScale),
+            UixTightText.fromText(
+              Text(
+                message,
+                style: TextStyle(
+                  fontSize: uixFontSize(17),
+                  fontWeight: UixFontWeight.normal,
+                  color: scheme.onSurface,
+                  decoration: TextDecoration.none,
                 ),
               ),
-              const SizedBox(height: 36 * uixScale),
-              Row(
-                children: [
-                  Expanded(
-                    child: MetroTextCommand._dialog(
-                      label: confirmLabel,
-                      onPressed: () => Navigator.of(context).pop(true),
-                    ),
+            ),
+            const SizedBox(height: 36 * uixScale),
+            Row(
+              children: [
+                Expanded(
+                  child: MetroTextCommand._dialog(
+                    label: confirmLabel,
+                    onPressed: () => Navigator.of(context).pop(true),
                   ),
-                  const SizedBox(width: 24 * uixScale),
-                  Expanded(
-                    child: MetroTextCommand._dialog(
-                      label: cancelLabel,
-                      onPressed: () => Navigator.of(context).pop(false),
-                    ),
+                ),
+                const SizedBox(width: 24 * uixScale),
+                Expanded(
+                  child: MetroTextCommand._dialog(
+                    label: cancelLabel,
+                    onPressed: () => Navigator.of(context).pop(false),
                   ),
-                ],
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
+    );
+    return ColoredBox(
+      color: scheme.surfaceContainer,
+      child: SafeArea(child: content),
     );
   }
 }

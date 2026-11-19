@@ -45,10 +45,19 @@ void main() {
       final result = messageBox.show(pageContext);
       await tester.pumpAndSettle();
 
-      final rect = tester.getRect(panel());
-      expect(rect.top, closeTo(52, 0.01));
-      expect(rect.left, closeTo(11, 0.01));
-      expect(rect.right, closeTo(403, 0.01));
+      final background = tester.getRect(panel());
+      expect(background.top, closeTo(0, 0.01));
+      expect(background.left, closeTo(0, 0.01));
+      expect(background.right, closeTo(420, 0.01));
+
+      final scrollView = find.descendant(
+        of: find.byType(MetroMessageBox),
+        matching: find.byType(SingleChildScrollView),
+      );
+      final content = tester.getRect(scrollView);
+      expect(content.top, closeTo(52, 0.01));
+      expect(content.left, closeTo(11, 0.01));
+      expect(content.right, closeTo(403, 0.01));
       await tester.tap(find.text('confirm'));
       await tester.pumpAndSettle();
       expect(await result, isTrue);
