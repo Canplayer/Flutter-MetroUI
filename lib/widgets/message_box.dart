@@ -101,9 +101,15 @@ class MetroMessageBox extends StatelessWidget {
         ),
       ),
     );
-    return ColoredBox(
-      color: scheme.surfaceContainer,
-      child: SafeArea(child: content),
+    // The bottom system inset limits scrolling without adding to the panel.
+    return SafeArea(
+      top: false,
+      left: false,
+      right: false,
+      child: ColoredBox(
+        color: scheme.surfaceContainer,
+        child: SafeArea(child: content),
+      ),
     );
   }
 }

@@ -58,7 +58,27 @@ void main() {
       expect(content.top, closeTo(52, 0.01));
       expect(content.left, closeTo(11, 0.01));
       expect(content.right, closeTo(403, 0.01));
-      await tester.tap(find.text('confirm'));
+
+      final confirm = find.widgetWithText(MetroTextCommand, 'confirm');
+      double gapBelowButtons() =>
+          tester.getRect(panel()).bottom - tester.getRect(confirm).bottom;
+      final originalGap = gapBelowButtons();
+      tester.view.padding = const FakeViewPadding(
+        top: 52,
+        left: 11,
+        right: 17,
+        bottom: 34,
+      );
+      await tester.pumpAndSettle();
+      expect(gapBelowButtons(), closeTo(originalGap, 0.01));
+      expect(tester.getRect(panel()).bottom, closeTo(background.bottom, 0.01));
+
+      tester.view.physicalSize = const Size(420, 205);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(scrollView).bottom, closeTo(205 - 34, 0.01));
+      await tester.ensureVisible(confirm);
+      await tester.pumpAndSettle();
+      await tester.tap(confirm);
       await tester.pumpAndSettle();
       expect(await result, isTrue);
     });
