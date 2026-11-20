@@ -17,7 +17,7 @@ import 'route_aware_provider.dart';
 class _BodyBuilder extends StatefulWidget {
   const _BodyBuilder({
     required this.body,
-    this.stackPanel,
+    this.header,
     this.onWillPop,
     this.onDidPop,
     this.disableDefaultPopAnimation = false,
@@ -27,7 +27,7 @@ class _BodyBuilder extends StatefulWidget {
   });
 
   final Widget body;
-  final Widget? stackPanel;
+  final Widget? header;
   final Future<bool> Function()? onWillPop;
   final Future<void> Function()? onDidPop;
   final bool disableDefaultPopAnimation;
@@ -49,13 +49,12 @@ class _BodyBuilderState extends State<_BodyBuilder> {
     final double bottom = metrics.padding.bottom;
     final double top = metrics.padding.top;
 
-    // 构建实际内容：如果有 stackPanel，则使用 Column 布局
     Widget content = widget.body;
-    if (widget.stackPanel != null) {
+    if (widget.header case final header?) {
       content = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          widget.stackPanel!,
+          header,
           Expanded(child: widget.body),
         ],
       );
@@ -173,7 +172,7 @@ class MetroPageScaffold extends StatefulWidget {
   const MetroPageScaffold({
     super.key,
     this.body,
-    this.stackPanel,
+    this.header,
     this.backgroundColor,
     this.resizeToAvoidBottomInset,
     this.primary = true,
@@ -211,10 +210,8 @@ class MetroPageScaffold extends StatefulWidget {
   /// 则当屏幕键盘出现时，主体内容不会在底部退缩调整大小以避开键盘。
   final Widget? body;
 
-  /// 显示在页面顶部的面板组件。
-  ///
-  /// 如果提供，将显示在 [body] 上方的固定位置。通常用于显示页面的大标题或重要的操作入口。
-  final Widget? stackPanel;
+  /// Page header displayed above [body], typically a MetroPageHeader.
+  final Widget? header;
 
   /// 页面框架最底层的背景颜色。
   final Color? backgroundColor;
@@ -580,8 +577,9 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
     assert(debugCheckHasMediaQuery(context));
     assert(debugCheckHasDirectionality(context));
     final ThemeData themeData = Theme.of(context);
+    final header = widget.header;
 
-    Widget? body = widget.body == null
+    Widget? body = widget.body == null && header == null
         ? null
         : NotificationListener<MetroPanoramaDetectNotification>(
             onNotification: (notification) {
@@ -594,8 +592,11 @@ class MetroPageScaffoldState extends State<MetroPageScaffold>
               return true; // 拦截阻止冒泡
             },
             child: _BodyBuilder(
-              body: KeyedSubtree(key: _bodyKey, child: widget.body!),
-              stackPanel: widget.stackPanel,
+              body: KeyedSubtree(
+                key: _bodyKey,
+                child: widget.body ?? const SizedBox.shrink(),
+              ),
+              header: header,
               onWillPop: widget.onWillPop,
               onDidPop: widget.onDidPop,
               disableDefaultPopAnimation: widget.disableDefaultPopAnimation,

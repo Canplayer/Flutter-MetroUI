@@ -493,6 +493,3 @@ class _ListPickerState<T> extends State<ListPicker<T>>
     );
   }
 }
-
-/// Compatibility alias.
-typedef MetroListPicker<T> = ListPicker<T>;

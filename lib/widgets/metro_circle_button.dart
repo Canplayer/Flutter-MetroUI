@@ -62,7 +62,6 @@ class MetroCircleButton extends StatefulWidget {
     this.frameStyle = MetroCircleFrameStyle.vector,
     this.backgroundBuilder,
     this.iconSize = 24,
-    this.version,
     this.iconMode = false,
     this.pressed,
   });
@@ -104,11 +103,6 @@ class MetroCircleButton extends StatefulWidget {
 
   /// 图标尺寸，默认 24。
   final double iconSize;
-
-  /// Metro UI 设计版本（WP7 / WP8 / WP8.1）。
-  ///
-  /// 目前仅保留字段以兼容后续版本差异，尚未实现各版本间的视觉差异。
-  final MetroDesignVersion? version;
 
   /// 纯图标模式。
   ///
@@ -206,8 +200,8 @@ class _MetroCircleButtonState extends State<MetroCircleButton> {
   @override
   Widget build(BuildContext context) {
     // 默认尺寸与默认边框（WP AppBar 按钮基准，保留 *0.8）
-    final double defaultSize = 48.125 * 0.8;
-    final double defaultBorderWidth = 5 * 0.625 * 0.8;
+    const double defaultSize = 48.125 * 0.8;
+    const double defaultBorderWidth = 5 * 0.625 * 0.8;
 
     final double size = widget.size ?? defaultSize;
     // 未显式传入 borderWidth 时，随 size 等比缩放（保持视觉比例一致）

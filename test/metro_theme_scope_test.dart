@@ -7,18 +7,16 @@ import 'package:metro_ui/metro_theme.dart';
 import 'package:metro_ui/widgets/toggle_switch.dart';
 
 void main() {
-  testWidgets('MetroApp respects a supplied high contrast color scheme', (
+  testWidgets('MetroApp respects an explicit accent in high contrast', (
     tester,
   ) async {
     const marker = Key('custom high contrast');
     await tester.pumpWidget(
-      MetroApp(
+      const MetroApp(
         themeMode: MetroThemeMode.light,
         highContrast: true,
-        highContrastTheme: ThemeData(
-          colorScheme: const ColorScheme.light(primary: Colors.purple),
-        ),
-        home: const SizedBox(key: marker),
+        metroColor: Colors.purple,
+        home: SizedBox(key: marker),
       ),
     );
     final context = tester.element(find.byKey(marker));

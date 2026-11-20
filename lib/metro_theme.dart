@@ -23,11 +23,10 @@ class MetroThemeData {
   final Color? accentColor;
   final List<ThemeExtension<dynamic>> extensions;
 
-  ThemeData resolve(BuildContext context, {ThemeData? base}) {
+  ThemeData resolve(BuildContext context) {
     final ambient = Theme.of(context);
     final inherited = ambient.extension<MetroSystemThemeData>();
-    final effectiveBrightness =
-        brightness ?? base?.brightness ?? ambient.brightness;
+    final effectiveBrightness = brightness ?? ambient.brightness;
     final contrast =
         highContrast ??
         inherited?.highContrast ??
@@ -42,7 +41,6 @@ class MetroThemeData {
       brightness: effectiveBrightness,
       highContrast: contrast,
       accentColor: color,
-      base: base,
       fontFamily: inherited == null
           ? null
           : ambient.textTheme.bodyMedium?.fontFamily,
@@ -53,7 +51,6 @@ class MetroThemeData {
     required Brightness brightness,
     bool highContrast = false,
     Color accentColor = const Color(0xff1ba1e2),
-    ThemeData? base,
     String? fontFamily,
   }) {
     highContrast = this.highContrast ?? highContrast;
@@ -69,32 +66,23 @@ class MetroThemeData {
         ? const Color(0xffdddddd)
         : const Color(0xff1f1f1f);
     final primaryColor =
-        this.accentColor ??
-        base?.colorScheme.primary ??
-        (highContrast ? foreground : accentColor);
+        this.accentColor ?? (highContrast ? foreground : accentColor);
     // High contrast uses explicit solid disabled colors, so
     // compositing against a parent surface cannot change their legibility.
     final disabledColor = highContrast
         ? (useWhiteTheme ? const Color(0xff595959) : const Color(0xffb3b3b3))
-        : (base?.colorScheme.onSurface ?? foreground).withValues(alpha: .5);
+        : foreground.withValues(alpha: .5);
     final family = fontFamily ?? 'Segoe WP';
     final package = fontFamily == null ? 'metro_ui' : null;
-    final source =
-        base ??
-        ThemeData(
-          brightness: brightness,
-          colorSchemeSeed: primaryColor,
-          fontFamily: family,
-          package: package,
-        );
+    final source = ThemeData(
+      brightness: brightness,
+      colorSchemeSeed: primaryColor,
+      fontFamily: family,
+      package: package,
+    );
     final scheme = source.colorScheme;
-    final preset = base == null;
-    final textColor = preset
-        ? foreground
-        : source.textTheme.bodyMedium?.color ?? scheme.onSurface;
-    final onSurface = preset ? foreground : scheme.onSurface;
     final List<ThemeExtension<dynamic>> merged = [
-      titleDefaults(textColor),
+      titleDefaults(foreground),
       appBarDefaults(
         version,
         brightness,
@@ -106,7 +94,7 @@ class MetroThemeData {
       ),
       buttonDefaults(
         version,
-        onSurface,
+        foreground,
         primaryColor,
         disabledColor,
         pressedText: highContrast
@@ -119,7 +107,7 @@ class MetroThemeData {
       MetroSystemThemeData(version: version, highContrast: highContrast),
       MetroPageThemeData.forVersion(version),
     ];
-    for (final override in [...?base?.extensions.values, ...extensions]) {
+    for (final override in extensions) {
       final index = merged.indexWhere((value) => value.type == override.type);
       if (index < 0) {
         merged.add(override);
@@ -138,38 +126,29 @@ class MetroThemeData {
         }
       }
     }
-    final applyAccent = base == null || this.accentColor != null;
     final textTheme = source.textTheme.apply(
       fontFamily: family,
       package: package,
-      bodyColor: preset ? foreground : null,
-      displayColor: preset ? foreground : null,
-      decorationColor: preset ? foreground : null,
+      bodyColor: foreground,
+      displayColor: foreground,
+      decorationColor: foreground,
     );
     return source.copyWith(
-      disabledColor: preset && highContrast
-          ? disabledColor
-          : source.disabledColor,
+      disabledColor: highContrast ? disabledColor : source.disabledColor,
       brightness: brightness,
-      typography: base == null
-          ? uixTypography(source.typography)
-          : source.typography,
+      typography: uixTypography(source.typography),
       colorScheme: scheme.copyWith(
         brightness: brightness,
         primary: primaryColor,
-        onPrimary: applyAccent
-            ? _contrastForeground(primaryColor)
-            : scheme.onPrimary,
-        onSurface: onSurface,
-        surface: preset ? background : scheme.surface,
-        surfaceContainer: preset ? surfaceColor : scheme.surfaceContainer,
-        outline: preset && highContrast ? foreground : scheme.outline,
+        onPrimary: _contrastForeground(primaryColor),
+        onSurface: foreground,
+        surface: background,
+        surfaceContainer: surfaceColor,
+        outline: highContrast ? foreground : scheme.outline,
       ),
-      primaryColor: applyAccent ? primaryColor : source.primaryColor,
-      scaffoldBackgroundColor: preset
-          ? background
-          : source.scaffoldBackgroundColor,
-      textTheme: preset ? uixTextTheme(textTheme) : textTheme,
+      primaryColor: primaryColor,
+      scaffoldBackgroundColor: background,
+      textTheme: uixTextTheme(textTheme),
       extensions: merged,
     );
   }

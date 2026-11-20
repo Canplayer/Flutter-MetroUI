@@ -8,7 +8,7 @@
 | --- | --- |
 | 应用根节点 | [`MetroApp` / `MetroApp.router`](lib/app.dart) 基于 `WidgetsApp`，负责路由入口、主题、默认文字样式、页面底色、可选 WVGA 视口缩放，以及 Navigator 外的 Application Bar overlay。 |
 | 主题 | [`MetroThemeData` / `MetroTheme`](lib/metro_theme.dart) 构建应用或子树预设。[`MetroSystemThemeData`](lib/metro_theme_extensions.dart) 提供系统版本和高对比度状态。组件默认项由 [`component_defaults.dart`](lib/src/theme/component_defaults.dart) 和各控件的主题扩展消费点维护。 |
-| 页面 | [`MetroPageScaffold`](lib/page_scaffold.dart) 管理页面主体、独立底色、系统边距、软件返回、页面动画回调和 Application Bar 注册。`useMaterialSurface` 为依赖 Ink 的子控件提供兼容表面。 |
+| 页面 | [`MetroPageScaffold`](lib/page_scaffold.dart) 管理页面主体、独立底色、系统边距、软件返回、页面动画回调和 Application Bar 注册。`useMaterialSurface` 为依赖 Ink 的子控件提供 Material 绘制层。 |
 | 导航 | [`MetroPageRoute`](lib/page.dart) 配合 [`metroPagePush`](lib/metro_page_push.dart) 执行导航。推入前先等待当前页的退场，再调用 `Navigator.push`。调用点在 Scaffold 子树之外时传 `scaffoldKey`。默认让 `Navigator.maybePop` 走页面的返回处理和退场生命周期。 |
 | 动画 | [`MetroAnimatedPage`](lib/animations.dart) 承载默认 Turnstile。`UixPageSlide` 与 `UixPopupRoute` 用于原版另有指定轨道的页面和弹层。`MetroAppBarController` 根据导航 owner 和版本管理应用栏宿主。 |
 
@@ -38,11 +38,28 @@ const MetroApp(
 | --- | --- |
 | 操作按钮 | `MetroButton` 接收 `child` 和 `onTap`。原版标签可直接传 `Text`。`MetroCircleButton`、`MetroAppBarButton` 保持各自的按压、可用状态和标签显示规则。 |
 | 列表与长按 | `SingleLineListItem`、`DoubleLineListItem` 接收标题和样式。`PushableDoubleLineListItem` 用于有独立文字按压轨道和前导操作区的条目。长按菜单通过 `MetroContextMenu`。 |
-| 设置 | `ToggleSwitch` 提供完整标题、状态和描述。`ToggleSwitchBase` 适合从原版模板单独复用开关本体。`ListPicker<T>` 用相同值类型定义列表、当前值和 `onChanged`。 |
-| 输入和搜索 | `EditBox` 是通用输入接口。`UixEditBox` 直接持有 Flutter `EditableText`，调用方提供 controller、focus 和原版背景图。`MetroSearchBar` 复用此输入件装配搜索。controller 与 focus 的创建方负责释放。 |
+| 设置 | `ToggleSwitch` 提供完整标题、状态和描述。`ToggleSwitchBase` 适合从原版模板单独复用开关本体。[`ListPicker<T>`](lib/widgets/list_picker.dart) 用相同值类型定义列表、当前值和 `onChanged`。 |
+| 输入和搜索 | [`EditBox`](lib/widgets/edit_box.dart) 是通用输入接口。`UixEditBox` 直接持有 Flutter `EditableText`，调用方提供 controller、focus 和原版背景图。`MetroSearchBar` 复用此输入件装配搜索。controller 与 focus 的创建方负责释放。 |
 | 加载与弹层 | `ProgressBar` 为线形进度，`ProgressRing` 为环形进度。普通双按钮确认先创建 `MetroMessageBox` 实例，再调用 `show(context)`。需要原版弹层运动的自定义内容使用 `UixPopupRoute`。 |
-| 横向布局 | `Pivot`、`PivotStack` 接收 `PivotItem`，`PivotPaneView` 负责页面容器。`MetroPanorama` 管理背景、标题、内容视差及吸附。`StackPanel` 适合已有标题组合。 |
+| 页面标题 | `MetroPageScaffold.header` 接收 `MetroPageHeader`。`title` 显示页面标题，`singlePivotHeader` 显示单栏目页的大标题，两者直接传 `Text` 即可使用系统默认样式。`MetroHeadingTheme` 可覆盖两种样式。 |
+| 横向布局 | `Pivot`、`PivotStack` 接收 `PivotItem`，由 `PivotHeader` 绘制栏目标题，`PivotPaneView` 负责页面容器。`MetroPanorama` 管理背景、标题、内容视差及吸附。 |
 | 数字键盘 | `PhoneKeypad` 处理数字键手势、长按和键面布局。输入内容及命令处理由宿主通过回调管理。 |
+
+### 页面小标题与栏目标题
+
+`MetroPageHeader.title` 对应原版 `PageHeader` 的 `TitleHost`。直接传 `Text` 即可使用 WP8 默认的 17 pt SemiBold。固定单栏目页可以另外传 `singlePivotHeader`，它使用 54 pt SemiLight。两种字号都已按 `uixFontSize` 的比例换算，页眉负责安全区和默认边距。
+
+有 Pivot 的页面把栏目名传给 `PivotItem.title`，把对应内容传给 `PivotItem.page`。Pivot 自己负责栏目标题的样式、选中状态和移动。需要暂时隐藏栏目标题时使用 `Pivot.showHeader`。`MetroPageHeader.titleGap` 在普通页面默认使用 56 个设计单位，搭配 `singlePivotHeader` 时默认使用 24 个设计单位。搭配独立 Pivot 时可传 `24 * uixScale`，专用页面可按资源覆盖。
+
+```dart
+const MetroPageScaffold(
+  header: MetroPageHeader(
+    title: Text('SETTINGS'),
+    singlePivotHeader: Text('phone'),
+  ),
+  body: Center(child: Text('Settings content')),
+)
+```
 
 ### 圆框和图标
 
@@ -51,8 +68,8 @@ const MetroApp(
 ### 文字规范
 
 - 业务页面默认写 `Text(...)`。`MetroApp` 的默认 UIX 标签用 Segoe WP Regular、15 pt 换算后字号、零字距。传给 `MetroButton(child: Text(...))` 等已有控件的文字，由控件内部选择排版规则。
-- 新控件确认原版 `BoundsType = 7` 时，可在内部使用 `UixTightText`。单行字符串使用 `UixTightText('history')`，富文本用 `.rich(...)`，保留已有 `Text` 参数用 `.fromText(...)`。这一实现按原版 Segoe WP 的 ASCII 字形测量单行垂直边界。中文回退字体、其他字体、显式行高与实际换行段落沿用 Flutter 常规布局。
-- `BoundsType` 跟随原版文字角色。标准 UIX `LabelStyle` 默认为 7，普通 Pivot 标题用 5，Panorama 大标题用 4。Flutter 通用行高系数无法表达不同字形的边界。原版多行 `LineSpacing` 和通用 `CharacterSpacing` 换算仍需核对。
+- 新控件确认原版 `BoundsType = 7` 时，可在内部使用 `UixTightText`。单行字符串使用 `UixTightText('SETTINGS')`，富文本用 `.rich(...)`，保留已有 `Text` 参数用 `.fromText(...)`。这一实现按原版 Segoe WP 的 ASCII 字形测量单行垂直边界。中文回退字体、其他字体、显式行高与实际换行段落沿用 Flutter 常规布局。
+- `BoundsType` 跟随原版文字角色。标准 UIX `LabelStyle` 默认为 7，普通 Pivot 标题用 5，Panorama 大标题用 4。Flutter 通用行高系数无法表达不同字形的边界。当前 Pivot 标题使用 Flutter 行框。原版 `BoundsType = 5` 的字承和基线，以及多行 `LineSpacing` 和通用 `CharacterSpacing` 的换算，仍需单独核对。
 - 字体统一注册为 `Segoe WP`，借助 [`UixFontWeight`](lib/uix_typography.dart) 选字型。Light 300、SemiLight 350、Regular 400、SemiBold 600、Bold 700、Black 800。Flutter 清单只允许声明整百值，SemiLight 条目省略 `weight`，由引擎从字体文件读取 350。调用时用 `FontWeight(350)`。
 
 ## 从 WP 源码落实到 Flutter

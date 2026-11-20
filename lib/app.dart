@@ -14,10 +14,6 @@ import './metro_theme.dart';
 import './uix_metrics.dart';
 import './widgets/uix_popup.dart';
 
-// 示例可以假设：
-// typedef GlobalWidgetsLocalizations = DefaultWidgetsLocalizations;
-// typedef GlobalMaterialLocalizations = DefaultMaterialLocalizations;
-
 /// 描述 [MetroApp]能使用哪些主题.
 enum MetroThemeMode {
   /// 使用亮色和暗色取决于系统设置.
@@ -154,27 +150,8 @@ class MetroApp extends StatefulWidget {
     this.onGenerateTitle,
     this.color,
     this.metroColor,
-    this.metroHighContrastTheme,
-    @Deprecated(
-      '如果使用默认theme行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroColor+themeMode，这样做更接近与还原Windows Phone原版体验',
-    )
-    this.theme,
-    @Deprecated(
-      '如果使用默认theme行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroColor+themeMode，这样做更接近与还原Windows Phone原版体验',
-    )
-    this.darkTheme,
-    @Deprecated(
-      '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验',
-    )
-    this.highContrastTheme,
-    @Deprecated(
-      '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验',
-    )
-    this.highContrastDarkTheme,
     this.themeMode = MetroThemeMode.dark,
     this.fontFamily,
-    this.themeAnimationDuration = kThemeAnimationDuration,
-    this.themeAnimationCurve = Curves.linear,
     this.locale,
     this.localizationsDelegates,
     this.localeListResolutionCallback,
@@ -182,8 +159,6 @@ class MetroApp extends StatefulWidget {
     this.supportedLocales = const <Locale>[Locale('en', 'US')],
     this.debugShowMaterialGrid = false,
     this.showPerformanceOverlay = false,
-    this.checkerboardRasterCacheImages = false,
-    this.checkerboardOffscreenLayers = false,
     this.showSemanticsDebugger = false,
     this.debugShowCheckedModeBanner = true,
     this.shortcuts,
@@ -216,27 +191,8 @@ class MetroApp extends StatefulWidget {
     this.onNavigationNotification,
     this.color,
     this.metroColor,
-    this.metroHighContrastTheme,
-    @Deprecated(
-      '如果使用默认theme行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroColor+themeMode，这样做更接近与还原Windows Phone原版体验',
-    )
-    this.theme,
-    @Deprecated(
-      '如果使用默认theme行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroColor+themeMode，这样做更接近与还原Windows Phone原版体验',
-    )
-    this.darkTheme,
-    @Deprecated(
-      '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验',
-    )
-    this.highContrastTheme,
-    @Deprecated(
-      '如果使用原版高对比度行为，Metro将会忽视所有MetroColor行为由默认颜色系统接管，推荐使用MetroHighContrastTheme，这样做更接近与还原Windows Phone原版体验',
-    )
-    this.highContrastDarkTheme,
     this.themeMode = MetroThemeMode.dark,
     this.fontFamily,
-    this.themeAnimationDuration = kThemeAnimationDuration,
-    this.themeAnimationCurve = Curves.linear,
     this.locale,
     this.localizationsDelegates,
     this.localeListResolutionCallback,
@@ -244,8 +200,6 @@ class MetroApp extends StatefulWidget {
     this.supportedLocales = const <Locale>[Locale('en', 'US')],
     this.debugShowMaterialGrid = false,
     this.showPerformanceOverlay = false,
-    this.checkerboardRasterCacheImages = false,
-    this.checkerboardOffscreenLayers = false,
     this.showSemanticsDebugger = false,
     this.debugShowCheckedModeBanner = true,
     this.shortcuts,
@@ -333,115 +287,12 @@ class MetroApp extends StatefulWidget {
   /// Metro应用程序的主题颜色
   final Color? metroColor;
 
-  /// 启用高度对比度的主题
-  final bool? metroHighContrastTheme;
-
-  /// 默认的视觉属性，如颜色、字体和形状，适用于应用的材质组件。
-  ///
-  /// 可以指定一个额外的 [darkTheme] [ThemeData]，用于提供用户界面的暗色版本。
-  /// 如果提供了 [darkTheme]，则 [themeMode] 将控制使用哪个主题。
-  ///
-  /// 此属性的默认值为 [ThemeData.light()]。
-  ///
-  /// 另请参阅：
-  ///
-  ///  * [themeMode]，用于控制使用哪个主题。
-  ///  * [MediaQueryData.platformBrightness]，表示平台的期望亮度，
-  /// 并在 [MetroApp] 中自动切换 [theme] 和 [darkTheme]。
-
-  final ThemeData? theme;
-
-  /// 当系统请求“暗模式”时使用的 [ThemeData]。
-  ///
-  /// 一些平台允许用户选择全局的“暗模式”，
-  /// 或者应用程序可能希望为此应用程序选择一个暗主题。此主题将在
-  /// 这种情况下使用。[themeMode] 将控制使用哪个主题。
-  ///
-  /// 此主题的 [ThemeData.brightness] 应设置为 [Brightness.dark]。
-  ///
-  /// 如果 [darkTheme] 和 [theme] 都为 null，则使用 [theme]。如果 [theme] 也为 null，
-  /// 则默认为 [ThemeData.light()] 的值。
-  ///
-  /// 参见：
-  ///
-  ///  * [themeMode]，控制使用哪个主题。
-  ///  * [MediaQueryData.platformBrightness]，表示平台所需的亮度，并在 [MetroApp] 中
-  ///    用于自动在 [theme] 和 [darkTheme] 之间切换。
-  ///  * [ThemeData.brightness]，通常设置为 [MediaQueryData.platformBrightness] 的值。
-  final ThemeData? darkTheme;
-
-  /// 当系统请求“高对比度”时使用的 [ThemeData]。
-  ///
-  /// 一些平台（例如 iOS）允许用户通过辅助功能设置增加对比度。
-  ///
-  /// 如果设置为 null，则使用 [theme]。
-  ///
-  /// 参见：
-  ///
-  ///  * [MediaQueryData.highContrast]，它表示平台希望增加对比度。
-  final ThemeData? highContrastTheme;
-
-  /// 当系统请求“暗黑模式”和“高对比度”时使用的 [ThemeData]。
-  ///
-  /// 一些主机平台（例如 iOS）允许用户通过辅助功能设置增加对比度。
-  ///
-  /// 此主题的 [ThemeData.brightness] 应设置为 [Brightness.dark]。
-  ///
-  /// 若为 null，则使用 [darkTheme]。
-  ///
-  /// 另请参见：
-  ///
-  ///  * [MediaQueryData.highContrast]，它指示平台是否希望增加对比度。
-  final ThemeData? highContrastDarkTheme;
-
-  /// 决定当同时提供 [theme] 和 [darkTheme] 时，应用程序将使用哪种主题。
-  ///
-  /// 如果设置为 [MetroThemeMode.system]，将根据用户的系统偏好来选择使用哪种主题。
-  /// 如果 [MediaQuery.platformBrightnessOf] 是 [Brightness.light]，将使用 [theme]。
-  /// 如果是 [Brightness.dark]，将使用 [darkTheme]（除非它为 null，此时将使用 [theme]）。
-  ///
-  /// 如果设置为 [MetroThemeMode.light]，无论用户的系统偏好如何，始终使用 [theme]。
-  ///
-  /// 如果设置为 [MetroThemeMode.dark]，无论用户的系统偏好如何，始终使用 [darkTheme]。
-  /// 如果 [darkTheme] 为 null，则会退回使用 [theme]。
-  ///
-  /// 默认值是 [MetroThemeMode.system]。
-  ///
-  /// 另请参见：
-  ///
-  ///  * [theme]，当选择浅色模式时使用。
-  ///  * [darkTheme]，当选择深色模式时使用。
-  ///  * [ThemeData.brightness]，它指示系统的各个部分正在使用哪种类型的主题。
-  final MetroThemeMode? themeMode;
+  /// Determines how the Metro preset selects its brightness. Defaults to dark.
+  final MetroThemeMode themeMode;
 
   /// 应用的默认字体家族（默认：'Segoe WP'）。
   /// 如果你使用了 assets 字体，请在 pubspec.yaml 中声明并传入与之对应的 family 名称。
   final String? fontFamily;
-
-  /// 动画主题更改的持续时间。
-  ///
-  /// 当主题更改时（通过更改 [theme]、[darkTheme] 或 [themeMode]
-  /// 参数），会在一段时间内将其动画过渡到新主题。
-  /// [themeAnimationDuration] 决定了动画所需的时间。
-  ///
-  /// 若要立即更改主题，可以将此值设置为 [Duration.zero]。
-  ///
-  /// 默认值为 [kThemeAnimationDuration]。
-  ///
-  /// 另请参见：
-  ///   [themeAnimationCurve]，定义动画使用的曲线。
-  final Duration themeAnimationDuration;
-
-  /// 在应用主题变化时使用的曲线。
-  ///
-  /// 默认使用 [Curves.linear]。
-  ///
-  /// 如果 [themeAnimationDuration] 设置为 [Duration.zero]，
-  /// 则忽略此设置。
-  ///
-  /// 另请参见：
-  ///   [themeAnimationDuration]，定义动画的持续时间。
-  final Curve themeAnimationCurve;
 
   /// {@macro flutter.widgets.widgetsApp.color}
   final Color? color;
@@ -484,12 +335,6 @@ class MetroApp extends StatefulWidget {
   ///
   ///  * <https://flutter.dev/to/performance-overlay>
   final bool showPerformanceOverlay;
-
-  /// 打开栅格缓存图像的查看器。
-  final bool checkerboardRasterCacheImages;
-
-  /// 打开渲染到离屏位图的图层的查看器。
-  final bool checkerboardOffscreenLayers;
 
   /// 打开一个覆盖层，显示框架报告的辅助功能信息。
   final bool showSemanticsDebugger;
@@ -579,21 +424,8 @@ class MetroApp extends StatefulWidget {
   ///  * <https://material.io/design/layout/spacing-methods.html>
   final bool debugShowMaterialGrid;
 
-  /// 用于覆盖主题动画曲线和持续时间。
-  ///
-  /// 如果提供了 [AnimationStyle.duration]，它将用于覆盖底层 [AnimatedTheme] 小部件中的主题动画持续时间。
-  /// 如果为 null，则将使用 [themeAnimationDuration]。否则，默认为 200ms。
-  ///
-  /// 如果提供了 [AnimationStyle.curve]，它将用于覆盖底层 [AnimatedTheme] 小部件中的主题动画曲线。
-  /// 如果为 null，则将使用 [themeAnimationCurve]。否则，默认为 [Curves.linear]。
-  ///
-  /// 要禁用主题动画，请使用 [AnimationStyle.noAnimation]。
-  ///
-  /// {@tool dartpad}
-  /// 这个示例展示了如何使用 [AnimationStyle] 在 [MetroApp] 小部件中覆盖主题动画曲线和持续时间。
-  ///
-  /// ** 请参阅 examples/api/lib/material/app/app.0.dart 中的代码 **
-  /// {@end-tool}
+  /// Controls the theme transition. Defaults to 200 ms with a linear curve.
+  /// Use [AnimationStyle.noAnimation] for an immediate theme change.
   final AnimationStyle? themeAnimationStyle;
 
   /// 启用 WVGA 模式（480px 设计稿缩放）
@@ -639,29 +471,19 @@ class _MetroAppState extends State<MetroApp> {
   }
 
   ThemeData _themeBuilder(BuildContext context) {
-    final mode = widget.themeMode ?? MetroThemeMode.system;
-    final brightness = switch (mode) {
+    final brightness = switch (widget.themeMode) {
       MetroThemeMode.light => Brightness.light,
       MetroThemeMode.dark => Brightness.dark,
       MetroThemeMode.system => MediaQuery.platformBrightnessOf(context),
     };
     final highContrast =
         widget.highContrast ?? MediaQuery.highContrastOf(context);
-    final selected = brightness == Brightness.dark
-        ? (highContrast ? widget.highContrastDarkTheme : null) ??
-              widget.darkTheme ??
-              widget.theme
-        : (highContrast ? widget.highContrastTheme : null) ?? widget.theme;
     return MetroThemeData.fromPreset(
       version: widget.version,
       brightness: brightness,
       highContrast: highContrast,
       accentColor: widget.metroColor,
-    ).toThemeData(
-      brightness: brightness,
-      base: selected,
-      fontFamily: widget.fontFamily,
-    );
+    ).toThemeData(brightness: brightness, fontFamily: widget.fontFamily);
   }
 
   Widget _materialBuilder(BuildContext context, Widget? child) {
@@ -717,9 +539,8 @@ class _MetroAppState extends State<MetroApp> {
         data: theme,
         duration: widget.themeAnimationStyle == AnimationStyle.noAnimation
             ? Duration.zero
-            : widget.themeAnimationStyle?.duration ??
-                  widget.themeAnimationDuration,
-        curve: widget.themeAnimationStyle?.curve ?? widget.themeAnimationCurve,
+            : widget.themeAnimationStyle?.duration ?? kThemeAnimationDuration,
+        curve: widget.themeAnimationStyle?.curve ?? Curves.linear,
         child: Builder(
           builder: (context) => DefaultTextStyle(
             style: Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
@@ -834,14 +655,7 @@ class _MetroAppState extends State<MetroApp> {
   }
 
   Widget _buildWidgetApp(BuildContext context) {
-    // color 属性总是从浅色主题中获取，即使启用了深色模式。
-    // 这样做是为了简化切换主题的技术细节，并且被认为是可接受的，
-    // 因为这个 color 属性仅用于旧的 Android 操作系统中，
-    // 用于在 Android 的切换器 UI 中着色应用栏。
-    //
-    // 蓝色是默认主题的主色。
-    final Color materialColor =
-        widget.color ?? widget.theme?.primaryColor ?? Colors.blue;
+    final appColor = widget.color ?? Colors.blue;
     if (_usesRouter) {
       return WidgetsApp.router(
         key: GlobalObjectKey(this),
@@ -854,7 +668,7 @@ class _MetroAppState extends State<MetroApp> {
         builder: _materialBuilder,
         title: widget.title,
         onGenerateTitle: widget.onGenerateTitle,
-        color: materialColor,
+        color: appColor,
         locale: widget.locale,
         localizationsDelegates: _localizationsDelegates,
         localeResolutionCallback: widget.localeResolutionCallback,
@@ -896,7 +710,7 @@ class _MetroAppState extends State<MetroApp> {
       builder: _materialBuilder,
       title: widget.title,
       onGenerateTitle: widget.onGenerateTitle,
-      color: materialColor,
+      color: appColor,
       locale: widget.locale,
       localizationsDelegates: _localizationsDelegates,
       localeResolutionCallback: widget.localeResolutionCallback,

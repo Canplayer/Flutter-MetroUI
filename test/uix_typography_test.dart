@@ -228,27 +228,21 @@ void main() {
     expect(paragraph('explicit').text.style!.height, 1.7);
   });
 
-  testWidgets('a supplied theme keeps its explicit line height', (
+  testWidgets('MetroApp pages support an explicitly scoped line height', (
     tester,
   ) async {
-    final base = ThemeData();
-    late TextStyle style;
+    const key = Key('custom line height');
     await tester.pumpWidget(
       MetroApp(
-        // ignore: deprecated_member_use
-        theme: base.copyWith(
-          textTheme: base.textTheme.copyWith(
-            bodyMedium: base.textTheme.bodyMedium!.copyWith(height: 1.8),
-          ),
-        ),
-        home: Builder(
-          builder: (context) {
-            style = Theme.of(context).textTheme.bodyMedium!;
-            return const SizedBox();
-          },
+        home: DefaultTextStyle.merge(
+          style: const TextStyle(height: 1.8),
+          child: const UixTightText('native font metrics override', key: key),
         ),
       ),
     );
-    expect(style.height, 1.8);
+    final paragraph = tester.renderObject<RenderParagraph>(
+      find.descendant(of: find.byKey(key), matching: find.byType(RichText)),
+    );
+    expect(paragraph.text.style!.height, 1.8);
   });
 }

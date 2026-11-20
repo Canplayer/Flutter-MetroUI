@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:metro_ui/widgets/metro_text_box.dart';
+import 'package:metro_ui/widgets/edit_box.dart';
 import 'package:metro_ui/metro_theme.dart';
-import 'package:metro_ui/widgets/metro_list_picker.dart';
+import 'package:metro_ui/widgets/list_picker.dart';
 
 void main() {
   testWidgets('text box edits text and reports changes', (tester) async {
     String? changed;
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: MetroTextBox(onChanged: (s) => changed = s)),
+        home: Scaffold(body: EditBox(onChanged: (s) => changed = s)),
       ),
     );
     await tester.enterText(find.byType(TextField), 'people');
@@ -20,7 +20,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: MetroListPicker<String>(
+          body: ListPicker<String>(
             items: const ['a', 'b'],
             itemLabel: (x) => x,
             value: 'a',
@@ -29,7 +29,7 @@ void main() {
         ),
       ),
     );
-    await tester.tap(find.byType(MetroListPicker<String>));
+    await tester.tap(find.byType(ListPicker<String>));
     // ListPicker::Size animates 0 -> 0.25 s, so the rows appear over 250 ms.
     await tester.pumpAndSettle();
     expect(find.text('b'), findsOneWidget);
@@ -49,7 +49,7 @@ void main() {
                   MetroListPickerTheme(textStyle: TextStyle(fontSize: 21)),
                 ],
               ),
-              child: MetroListPicker<int>(
+              child: ListPicker<int>(
                 items: const [1, 2, 3, 4, 5, 6],
                 value: 2,
                 itemLabel: (x) => '$x',
@@ -60,7 +60,7 @@ void main() {
         ),
       );
       expect(find.text('2'), findsOneWidget);
-      await tester.tap(find.byType(MetroListPicker<int>));
+      await tester.tap(find.byType(ListPicker<int>));
       await tester.pumpAndSettle();
       expect(find.byType(ListTile), findsNWidgets(6));
       expect(tester.widget<Text>(find.text('2')).style?.fontSize, 21);

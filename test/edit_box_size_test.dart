@@ -3,8 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:metro_ui/app.dart';
 import 'package:metro_ui/uix_metrics.dart';
 import 'package:metro_ui/widgets/button.dart';
-import 'package:metro_ui/widgets/metro_list_picker.dart';
-import 'package:metro_ui/widgets/metro_text_box.dart';
+import 'package:metro_ui/widgets/list_picker.dart';
+import 'package:metro_ui/widgets/edit_box.dart';
 
 Widget _picker() => MaterialApp(
   home: Scaffold(

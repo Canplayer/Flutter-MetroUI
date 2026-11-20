@@ -205,6 +205,3 @@ class _EditBoxFrame extends StatelessWidget {
     );
   }
 }
-
-/// Compatibility alias; appearance and state handling are not yet verified.
-typedef MetroTextBox = EditBox;

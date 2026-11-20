@@ -39,12 +39,6 @@ const double kPivotHeaderTitleGap = 24 * uixScale;
 /// `Constants.PivotEAHeaderSpacing` = 40 × 0.8 [读出]。
 const double kPivotHeaderEATitleGap = 40 * uixScale;
 
-/// `Constants.PivotHeaderFontSize` = 54（点）× 4/3 × 0.8 [读出]。
-///
-/// `PivotStyle.HeaderFont` = `FontFaceSemiLight` @ 该字号；项目字体把
-/// SemiLight 注册在 `w300`。
-const double kPivotHeaderFontSize = 54 * uixFontScale;
-
 /// `ThemeResources.PivotColorDark` = `0x66FFFFFF`（白 40%）[读出]。
 ///
 /// 未选中标题的颜色；选中项用 `SystemColors.TextHighColor`。
@@ -187,10 +181,14 @@ class Pivot extends PivotBase {
     super.onTransitionEnd,
     super.onSlideProgress,
     this.padding = kPivotPadding,
+    this.showHeader = true,
   });
 
   /// 整体内边距（标题与主体统一内缩），默认水平 18。
   final EdgeInsetsGeometry padding;
+
+  /// Whether to display the pane header and its spacing above the pane.
+  final bool showHeader;
 
   @override
   State<Pivot> createState() => _PivotState();
@@ -358,8 +356,10 @@ class _PivotState extends State<Pivot> with _PivotSyncState<Pivot> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            buildIndicator(),
-            const SizedBox(height: 28 * uixScale),
+            if (widget.showHeader) ...[
+              buildIndicator(),
+              const SizedBox(height: 28 * uixScale),
+            ],
             Expanded(child: buildView()),
           ],
         ),
@@ -476,7 +476,7 @@ class _PivotHeaderState extends State<PivotHeader>
   final Map<int, double> _widths = {};
 
   /// 已测量的标题高度；Stack 必须有确定高度，先用估计值占位。
-  double _titleHeight = kPivotHeaderFontSize * 1.43;
+  double _titleHeight = uixPivotHeaderFontSize * 1.43;
 
   late final AnimationController _controller;
 
@@ -719,7 +719,7 @@ class _PivotHeaderState extends State<PivotHeader>
               style:
                   TextStyle(
                     // PivotStyle.HeaderFont：FontFaceSemiLight (OS/2 350)
-                    fontSize: kPivotHeaderFontSize,
+                    fontSize: uixPivotHeaderFontSize,
                     fontWeight: UixFontWeight.semiLight,
                     overflow: TextOverflow.visible,
                     color: selected ? selectedColor : idleColor,

@@ -4,6 +4,8 @@
 
 `MetroApp` 和 `MetroApp.router` 默认使用 `MetroDesignVersion.wp8`。可通过 `version`、`themeMode`、`metroColor` 和 `highContrast` 调整全局预设。省略 `highContrast` 时读取系统设置。`MetroThemeData.fromPreset` 默认同样使用 WP8。
 
+全局主题切换动画由 `themeAnimationStyle` 配置。默认使用 200 ms 线性动画，传入 `AnimationStyle.noAnimation` 可即时切换。组件级配色和文字覆盖通过 `MetroThemeData.fromPreset(extensions: …)` 或各控件的样式参数应用。
+
 普通 Flutter 应用可以从 `package:metro_ui/metro_theme.dart` 导入独立主题，并仅包住需要的子树。
 
 ```dart
@@ -45,7 +47,7 @@ const MetroApplicationBar(
 | EditBox、ToggleSwitch | MetroEditBoxTheme、MetroToggleSwitchTheme |
 | ListPicker | MetroListPickerTheme，或实例的 style；展开到新路由时保留发起位置的主题 |
 | 单行、双行列表项 | MetroListItemTheme、实例文字样式、leading 和 trailing |
-| StackPanel、Pivot 标题、Panorama | MetroHeadingTheme、MetroTitleTextTheme、PanoramaConfig；StackPanel 和 Panorama 也支持实例文字样式 |
+| 页面标题、Pivot 标题、Panorama | `MetroHeadingTheme` 的 `pageTitleStyle`、`singlePivotHeaderStyle`、`pivotSelectedStyle` 和 `pivotIdleStyle` 分别覆盖标题角色。`MetroPageHeader` 支持实例样式，Panorama 使用 `MetroTitleTextTheme` 和 `PanoramaConfig` |
 | 进度条与进度环 | MetroProgressTheme、实例前景色和尺寸 |
 | ContextMenu | MetroContextMenuThemeData、实例动画配置、菜单项按下颜色 |
 | Tile、PivotPaneView、页面与滚动 | 现有手势、运动及布局配置；颜色和字体由内容及主题提供 |

@@ -13,6 +13,10 @@ abstract final class UixFontWeight {
   static const black = FontWeight.w800;
 }
 
+/// UIXMobileAssets!Constants.PivotHeaderFontSize is shared by PageStyle
+/// and PivotStyle through LocalizedResources.FontSizePivotHeader.
+const double uixPivotHeaderFontSize = 54 * uixFontScale;
+
 /// WP8 LabelStyle uses the regular face at FontMediumSize (15pt) and zero tracking.
 TextTheme uixTextTheme(TextTheme theme) => theme.copyWith(
   bodyMedium: _nativeLineHeight(theme.bodyMedium)?.copyWith(

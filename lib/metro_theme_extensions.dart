@@ -681,28 +681,29 @@ class MetroListItemTheme extends ThemeExtension<MetroListItemTheme> {
   }
 }
 
-/// Visual overrides for panel and Pivot headings.
+/// Visual overrides for page and Pivot headings.
 class MetroHeadingTheme extends ThemeExtension<MetroHeadingTheme> {
   const MetroHeadingTheme({
-    this.panelTopStyle,
-    this.panelBottomStyle,
+    this.pageTitleStyle,
+    this.singlePivotHeaderStyle,
     this.pivotSelectedStyle,
     this.pivotIdleStyle,
   });
-  final TextStyle? panelTopStyle;
-  final TextStyle? panelBottomStyle;
+  final TextStyle? pageTitleStyle;
+  final TextStyle? singlePivotHeaderStyle;
   final TextStyle? pivotSelectedStyle;
   final TextStyle? pivotIdleStyle;
 
   @override
   MetroHeadingTheme copyWith({
-    TextStyle? panelTopStyle,
-    TextStyle? panelBottomStyle,
+    TextStyle? pageTitleStyle,
+    TextStyle? singlePivotHeaderStyle,
     TextStyle? pivotSelectedStyle,
     TextStyle? pivotIdleStyle,
   }) => MetroHeadingTheme(
-    panelTopStyle: panelTopStyle ?? this.panelTopStyle,
-    panelBottomStyle: panelBottomStyle ?? this.panelBottomStyle,
+    pageTitleStyle: pageTitleStyle ?? this.pageTitleStyle,
+    singlePivotHeaderStyle:
+        singlePivotHeaderStyle ?? this.singlePivotHeaderStyle,
     pivotSelectedStyle: pivotSelectedStyle ?? this.pivotSelectedStyle,
     pivotIdleStyle: pivotIdleStyle ?? this.pivotIdleStyle,
   );
@@ -711,10 +712,10 @@ class MetroHeadingTheme extends ThemeExtension<MetroHeadingTheme> {
   MetroHeadingTheme lerp(covariant MetroHeadingTheme? other, double t) {
     if (other == null) return this;
     return MetroHeadingTheme(
-      panelTopStyle: TextStyle.lerp(panelTopStyle, other.panelTopStyle, t),
-      panelBottomStyle: TextStyle.lerp(
-        panelBottomStyle,
-        other.panelBottomStyle,
+      pageTitleStyle: TextStyle.lerp(pageTitleStyle, other.pageTitleStyle, t),
+      singlePivotHeaderStyle: TextStyle.lerp(
+        singlePivotHeaderStyle,
+        other.singlePivotHeaderStyle,
         t,
       ),
       pivotSelectedStyle: TextStyle.lerp(

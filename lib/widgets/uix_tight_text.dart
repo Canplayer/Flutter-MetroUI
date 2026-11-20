@@ -54,13 +54,7 @@ class UixTightText extends StatelessWidget {
     if (MediaQuery.boldTextOf(context)) {
       resolved = resolved.merge(const TextStyle(fontWeight: FontWeight.bold));
     }
-    // ignore: deprecated_member_use
-    final scaleFactor = text.textScaleFactor;
-    final scaler =
-        text.textScaler ??
-        (scaleFactor == null
-            ? MediaQuery.textScalerOf(context)
-            : TextScaler.linear(scaleFactor));
+    final scaler = text.textScaler ?? MediaQuery.textScalerOf(context);
     final bounds = _verticalBounds(span, resolved, scaler);
     if (bounds == null) return text;
     return _TightTextBox(
