@@ -11,6 +11,10 @@ import 'package:metro_ui/page_scaffold.dart';
 import 'package:metro_ui/uix_metrics.dart';
 import 'package:metro_ui/uix_typography.dart';
 
+import 'uix_text.dart';
+
+const _panoramaTitleBounds = UixTextBounds(trimLeftSideBearing: true);
+
 /// 三层视差中，大标题层与背景层相对内容的当前偏移。
 class PanoramaParallax {
   /// 大标题层偏移（屏幕坐标，负值向左）。
@@ -1226,7 +1230,12 @@ class _MetroPanoramaState extends State<MetroPanorama>
                                                   ?.titleTextStyle ??
                                               const TextStyle())
                                           .merge(widget.titleStyle),
-                                  child: widget.title,
+                                  child: widget.title is Text
+                                      ? UixText.fromText(
+                                          widget.title as Text,
+                                          boundsType: _panoramaTitleBounds,
+                                        )
+                                      : widget.title,
                                 ),
                               ),
                             ),
@@ -1544,6 +1553,7 @@ class _MetroPanoramaState extends State<MetroPanorama>
   }
 
   Widget _buildItemWidget(MetroPanoramaItem item, int realIndex) {
+    final title = item.title;
     final topPadding = MediaQuery.of(context).padding.top;
     return Container(
       color: Colors.transparent,
@@ -1576,7 +1586,12 @@ class _MetroPanoramaState extends State<MetroPanorama>
                     fontSize: _config.paneHeaderFontSize,
                     //color: Colors.white,
                   ),
-                  child: item.title,
+                  child: title is Text
+                      ? UixText.fromText(
+                          title,
+                          boundsType: _panoramaTitleBounds,
+                        )
+                      : title,
                 ),
               ),
             ),

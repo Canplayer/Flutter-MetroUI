@@ -12,7 +12,7 @@ import 'package:metro_ui/uix_metrics.dart';
 import 'package:metro_ui/uix_typography.dart';
 import 'package:metro_ui/widgets/metro_circle_button.dart';
 import 'package:metro_ui/widgets/tile.dart';
-import 'package:metro_ui/widgets/uix_tight_text.dart';
+import 'package:metro_ui/widgets/uix_text.dart';
 
 // ---------------- 配置常量 ----------------
 const double kMetroAppBarMiniHeight = 30.0 * 0.8; // 折叠时的 mini 条高度
@@ -214,7 +214,12 @@ class MetroAppBarButton extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 7 * .8),
                         child: SizedBox(
                           width: kMetroAppBarButtonWidth,
-                          child: wp8 ? UixTightText.fromText(caption) : caption,
+                          child: wp8
+                              ? UixText.fromText(
+                                  caption,
+                                  boundsType: UixTextBounds.tight,
+                                )
+                              : caption,
                         ),
                       ),
                     ),

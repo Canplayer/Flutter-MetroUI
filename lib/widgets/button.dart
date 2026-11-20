@@ -3,7 +3,7 @@ import 'package:metro_ui/uix_metrics.dart';
 import 'package:metro_ui/widgets/tile.dart';
 import 'package:metro_ui/metro_theme_extensions.dart';
 
-import 'uix_tight_text.dart';
+import 'uix_text.dart';
 
 //Windows Phone 核心风格的按钮设计组件
 
@@ -113,7 +113,7 @@ class MetroButtoState extends State<MetroButton> {
             widthFactor: 1,
             heightFactor: 1,
             child: child is Text
-                ? UixTightText.fromText(child)
+                ? UixText.fromText(child, boundsType: UixTextBounds.tight)
                 : child ?? const SizedBox.shrink(),
           ),
         ),

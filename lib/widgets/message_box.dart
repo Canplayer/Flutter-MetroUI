@@ -6,7 +6,7 @@ import '../uix_metrics.dart';
 import '../uix_typography.dart';
 import 'tile.dart';
 import 'uix_popup.dart';
-import 'uix_tight_text.dart';
+import 'uix_text.dart';
 
 /// The standard two-button UIXMobile MessageBox (portrait, 480×800 resources).
 class MetroMessageBox extends StatelessWidget {
@@ -56,7 +56,7 @@ class MetroMessageBox extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            UixTightText.fromText(
+            UixText.fromText(
               Text(
                 title,
                 style: TextStyle(
@@ -66,9 +66,10 @@ class MetroMessageBox extends StatelessWidget {
                   decoration: TextDecoration.none,
                 ),
               ),
+              boundsType: UixTextBounds.tight,
             ),
             const SizedBox(height: 40 * uixScale),
-            UixTightText.fromText(
+            UixText.fromText(
               Text(
                 message,
                 style: TextStyle(
@@ -78,6 +79,7 @@ class MetroMessageBox extends StatelessWidget {
                   decoration: TextDecoration.none,
                 ),
               ),
+              boundsType: UixTextBounds.tight,
             ),
             const SizedBox(height: 36 * uixScale),
             Row(
@@ -166,7 +168,7 @@ class _MetroTextCommandState extends State<MetroTextCommand> {
         color: _down ? scheme.primary : null,
         border: Border.all(width: 3 * uixScale, color: onSurface),
       ),
-      child: widget._isDialogButton ? UixTightText.fromText(label) : label,
+      child: UixText.fromText(label, boundsType: UixTextBounds.tight),
     );
     return Semantics(
       button: true,

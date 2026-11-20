@@ -4,7 +4,7 @@ import 'package:metro_ui/metro_theme_extensions.dart';
 import 'package:metro_ui/uix_metrics.dart';
 import 'package:metro_ui/widgets/tile.dart';
 
-import 'uix_tight_text.dart';
+import 'uix_text.dart';
 
 /// Windows Phone 8.0 native (UIX) ListPicker.
 ///
@@ -189,18 +189,21 @@ class _ListPickerState<T> extends State<ListPicker<T>>
         MaterialPageRoute<T>(
           builder: (context) => captured.wrap(
             Scaffold(
-              appBar: AppBar(title: Text(title)),
+              appBar: AppBar(
+                title: UixText(title, boundsType: UixTextBounds.tight),
+              ),
               body: ListView.builder(
                 itemCount: items.length,
                 itemBuilder: (context, index) {
                   final item = items[index];
                   return ListTile(
-                    title: UixTightText.fromText(
+                    title: UixText.fromText(
                       Text(
                         label(item),
                         style: TextStyle(fontSize: _fontSize)
                             .merge(style.textStyle),
                       ),
+                      boundsType: UixTextBounds.tight,
                     ),
                     onTap: () => Navigator.pop(context, item),
                   );
@@ -401,7 +404,9 @@ class _ListPickerState<T> extends State<ListPicker<T>>
       padding: const EdgeInsets.only(top: 3 * 0.8),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: placeholder ? label : UixTightText.fromText(label),
+        child: placeholder
+            ? label
+            : UixText.fromText(label, boundsType: UixTextBounds.tight),
       ),
     );
   }
@@ -476,7 +481,7 @@ class _ListPickerState<T> extends State<ListPicker<T>>
               final next = down ? index : null;
               if (_pressedRow != next) setState(() => _pressedRow = next);
             },
-            child: UixTightText.fromText(
+            child: UixText.fromText(
               Text(
                 widget.itemLabel(item),
                 maxLines: 2,
@@ -486,6 +491,7 @@ class _ListPickerState<T> extends State<ListPicker<T>>
                   color: color,
                 ).merge(style),
               ),
+              boundsType: UixTextBounds.tight,
             ),
           ),
         ),

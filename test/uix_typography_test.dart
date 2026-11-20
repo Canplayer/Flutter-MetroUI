@@ -6,7 +6,7 @@ import 'package:metro_ui/app.dart';
 import 'package:metro_ui/metro_theme.dart';
 import 'package:metro_ui/uix_metrics.dart';
 import 'package:metro_ui/uix_typography.dart';
-import 'package:metro_ui/widgets/uix_tight_text.dart';
+import 'package:metro_ui/widgets/uix_text.dart';
 
 void main() {
   test('UIX point sizes and 480-wide geometry use separate scales', () {
@@ -86,6 +86,9 @@ void main() {
   testWidgets('tight labels preserve the original paragraph when it wraps', (
     tester,
   ) async {
+    await tester.runAsync(
+      () => UixText.preloadFontMetrics('packages/metro_ui/Segoe WP'),
+    );
     const label = 'A long settings description';
     const key = ValueKey('tight label');
     await tester.pumpWidget(
@@ -93,7 +96,11 @@ void main() {
         home: Center(
           child: SizedBox(
             width: 64,
-            child: UixTightText.fromText(Text(label), key: key),
+            child: UixText.fromText(
+              Text(label),
+              key: key,
+              boundsType: UixTextBounds.tight,
+            ),
           ),
         ),
       ),
@@ -110,7 +117,11 @@ void main() {
         home: Center(
           child: SizedBox(
             width: 500,
-            child: UixTightText.fromText(Text(label), key: key),
+            child: UixText.fromText(
+              Text(label),
+              key: key,
+              boundsType: UixTextBounds.tight,
+            ),
           ),
         ),
       ),
@@ -120,6 +131,105 @@ void main() {
       lessThan(tester.getSize(paragraph).height),
     );
   });
+
+  testWidgets(
+    'UixText uses the registered face and independent boundary flags',
+    (tester) async {
+      final bundle = _AlternateFontBundle();
+      await tester.runAsync(() async {
+        await (FontLoader(
+          _AlternateFontBundle.family,
+        )..addFont(bundle.load('fonts/alternate.ttf'))).load();
+        await UixText.preloadFontMetrics(
+          _AlternateFontBundle.family,
+          bundle: bundle,
+        );
+      });
+
+      const size = 64.0;
+      const style = TextStyle(
+        inherit: false,
+        fontFamily: _AlternateFontBundle.family,
+        fontSize: size,
+      );
+      const pivot = UixTextBounds(
+        alignToAscender: true,
+        trimLeftSideBearing: true,
+      );
+      const labels = [
+        UixText('H', key: Key('full'), style: style),
+        UixText('H', key: Key('pivot'), boundsType: pivot, style: style),
+        UixText(
+          'g',
+          key: Key('tight'),
+          boundsType: UixTextBounds.tight,
+          style: style,
+        ),
+        UixText(
+          'j',
+          key: Key('negative-bearing'),
+          boundsType: pivot,
+          style: style,
+        ),
+        UixText(
+          'H',
+          key: Key('baseline'),
+          boundsType: UixTextBounds(alignToBaseline: true),
+          style: style,
+        ),
+        UixText(
+          'H文',
+          key: Key('fallback'),
+          boundsType: UixTextBounds.tight,
+          style: style,
+        ),
+      ];
+      await tester.pumpWidget(
+        DefaultAssetBundle(
+          bundle: bundle,
+          child: const MaterialApp(
+            home: Center(
+              child: Column(mainAxisSize: MainAxisSize.min, children: labels),
+            ),
+          ),
+        ),
+      );
+
+      Rect box(String id) => tester.getRect(find.byKey(Key(id)));
+      Finder paragraph(String id) => find.descendant(
+        of: find.byKey(Key(id)),
+        matching: find.byType(RichText),
+      );
+      final pivotParagraph = tester.renderObject<RenderParagraph>(
+        paragraph('pivot'),
+      );
+      final baseline = pivotParagraph.getDryBaseline(
+        pivotParagraph.constraints,
+        TextBaseline.alphabetic,
+      )!;
+
+      // The bundle supplies a different cap height from the original font asset.
+      const cap = 1200 / 2048 * size;
+      const descent = 514 / 2048 * size;
+      const bearing = 188 / 2048 * size;
+      expect(box('pivot').height, closeTo(cap + descent, .001));
+      expect(box('tight').height, closeTo(cap, .001));
+      expect(box('baseline').height, closeTo(2210 / 2048 * size, .001));
+      expect(box('full').width - box('pivot').width, closeTo(bearing, .001));
+      expect(
+        tester.getTopLeft(paragraph('pivot')).dy + baseline - box('pivot').top,
+        closeTo(cap, .001),
+      );
+      expect(
+        tester.getTopLeft(paragraph('negative-bearing')).dx,
+        box('negative-bearing').left,
+      );
+      expect(
+        box('fallback').height,
+        tester.getSize(paragraph('fallback')).height,
+      );
+    },
+  );
 
   testWidgets('A Metro scope uses its own font metrics inside Material', (
     tester,
@@ -236,7 +346,13 @@ void main() {
       MetroApp(
         home: DefaultTextStyle.merge(
           style: const TextStyle(height: 1.8),
-          child: const UixTightText('native font metrics override', key: key),
+          child: const UixText(
+            'native font metrics override',
+            key: key,
+            boundsType: UixTextBounds.tight,
+            maxLines: 1,
+            softWrap: false,
+          ),
         ),
       ),
     );
@@ -245,4 +361,38 @@ void main() {
     );
     expect(paragraph.text.style!.height, 1.8);
   });
+}
+
+class _AlternateFontBundle extends CachingAssetBundle {
+  static const family = 'Alternate UIX test face';
+
+  @override
+  Future<String> loadString(String key, {bool cache = true}) async {
+    if (key == 'FontManifest.json') {
+      return '[{"family":"$family","fonts":[{"asset":"fonts/alternate.ttf"}]}]';
+    }
+    return super.loadString(key, cache: cache);
+  }
+
+  @override
+  Future<ByteData> load(String key) async {
+    if (key != 'fonts/alternate.ttf') return rootBundle.load(key);
+    final original = await rootBundle.load('fonts/SegoeWP.ttf');
+    final bytes = ByteData.sublistView(
+      Uint8List.fromList(
+        original.buffer.asUint8List(
+          original.offsetInBytes,
+          original.lengthInBytes,
+        ),
+      ),
+    );
+    for (var i = 0; i < bytes.getUint16(4); i++) {
+      final record = 12 + 16 * i;
+      if (bytes.getUint32(record) == 0x4f532f32) {
+        bytes.setInt16(bytes.getUint32(record + 8) + 88, 1200);
+        return bytes;
+      }
+    }
+    throw StateError('Missing OS/2 table in the test font');
+  }
 }

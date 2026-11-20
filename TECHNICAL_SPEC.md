@@ -47,7 +47,7 @@ const MetroApp(
 
 ### 页面小标题与栏目标题
 
-`MetroPageHeader.title` 对应原版 `PageHeader` 的 `TitleHost`。直接传 `Text` 即可使用 WP8 默认的 17 pt SemiBold。固定单栏目页可以另外传 `singlePivotHeader`，它使用 54 pt SemiLight。两种字号都已按 `uixFontSize` 的比例换算，页眉负责安全区和默认边距。
+`MetroPageHeader.title` 对应原版 `PageHeader` 的 `TitleHost` 插槽。原版在这里装入 `DefaultPageTitleContent` 或 `Page.TitleType` 指定的标题内容。直接传 `Text` 即可使用 WP8 默认的 17 pt SemiBold。固定单栏目页可以另外传 `singlePivotHeader`，它使用 54 pt SemiLight。两种字号都已按 `uixFontSize` 的比例换算，页眉负责安全区和默认边距。
 
 有 Pivot 的页面把栏目名传给 `PivotItem.title`，把对应内容传给 `PivotItem.page`。Pivot 自己负责栏目标题的样式、选中状态和移动。需要暂时隐藏栏目标题时使用 `Pivot.showHeader`。`MetroPageHeader.titleGap` 在普通页面默认使用 56 个设计单位，搭配 `singlePivotHeader` 时默认使用 24 个设计单位。搭配独立 Pivot 时可传 `24 * uixScale`，专用页面可按资源覆盖。
 
@@ -67,10 +67,47 @@ const MetroPageScaffold(
 
 ### 文字规范
 
-- 业务页面默认写 `Text(...)`。`MetroApp` 的默认 UIX 标签用 Segoe WP Regular、15 pt 换算后字号、零字距。传给 `MetroButton(child: Text(...))` 等已有控件的文字，由控件内部选择排版规则。
-- 新控件确认原版 `BoundsType = 7` 时，可在内部使用 `UixTightText`。单行字符串使用 `UixTightText('SETTINGS')`，富文本用 `.rich(...)`，保留已有 `Text` 参数用 `.fromText(...)`。这一实现按原版 Segoe WP 的 ASCII 字形测量单行垂直边界。中文回退字体、其他字体、显式行高与实际换行段落沿用 Flutter 常规布局。
-- `BoundsType` 跟随原版文字角色。标准 UIX `LabelStyle` 默认为 7，普通 Pivot 标题用 5，Panorama 大标题用 4。Flutter 通用行高系数无法表达不同字形的边界。当前 Pivot 标题使用 Flutter 行框。原版 `BoundsType = 5` 的字承和基线，以及多行 `LineSpacing` 和通用 `CharacterSpacing` 的换算，仍需单独核对。
-- 字体统一注册为 `Segoe WP`，借助 [`UixFontWeight`](lib/uix_typography.dart) 选字型。Light 300、SemiLight 350、Regular 400、SemiBold 600、Bold 700、Black 800。Flutter 清单只允许声明整百值，SemiLight 条目省略 `weight`，由引擎从字体文件读取 350。调用时用 `FontWeight(350)`。
+页面默认写 `Text(...)`，由 `MetroApp` 或 `MetroTheme` 提供默认样式。默认 UIX 标签字号为 15 pt，使用 Segoe WP Regular 和零字距。把 `Text` 直接交给 Metro 控件的标签或标题槽时，控件按原版角色应用边界规则。自己实现 UIX 控件时，从 `package:metro_ui/widgets/uix_text.dart` 导入 `UixText`。
+
+```dart
+const UixText(
+  'history',
+  boundsType: UixTextBounds(
+    alignToAscender: true,
+    trimLeftSideBearing: true,
+  ),
+);
+
+const UixText(
+  'phone',
+  boundsType: UixTextBounds.tight,
+);
+```
+
+`UixText.rich(TextSpan(...))` 接受富文本。`UixText.fromText(text, boundsType: ...)` 保留传入的 `Text` 属性。单字符串与富文本构造函数也接受 `maxLines`、`softWrap`、`overflow` 和 `style`。默认边界为 `UixTextBounds.full`。
+
+| 原版规则 | Dart 选项 | 作用 |
+| --- | --- | --- |
+| AlignToAscender | `alignToAscender` | 文字框的上边界落在字型的大写字高线。 |
+| AlignToBaseline | `alignToBaseline` | 文字框底边收在字母基线。 |
+| TrimLeftSideBearing | `trimLeftSideBearing` | 按起始字形的正左字承移动绘制位置并缩减宽度。 |
+| Tight | `UixTextBounds.tight` | 组合以上三个选项。适用于标准 `LabelStyle`、页面小标题和 `SinglePivotHeader`。 |
+
+| WP8 文字角色 | 边界规则 | 原版资源 |
+| --- | --- | --- |
+| 标准按钮、确认框文字及按钮、展开的 AppBar 圆钮标签、文字命令 | Tight | `UIXMobile!Button.uix`、`MessageBox.uix`、`ShellChrome!ApplicationBarItem.uix` 及其标签样式 |
+| 页面小标题、单页大标题、列表行、开关标签、ListPicker 选项及全屏选择标题 | Tight | `UIXMobile!Page.uix`、`List.uix`、`ToggleSwitch.uix`、`ListPicker.uix`、`PickerBoxBase.uix` |
+| 普通 Pivot 分栏标题 | AlignToAscender + TrimLeftSideBearing | `UIXMobile!Pivot.uix` |
+| Panorama 大标题和分栏标题 | TrimLeftSideBearing | `UIXMobile!Panorama.uix` 的 `TitleText` 和 `HeaderText` |
+| 上下文菜单文字、AppBar 菜单文字、ListPicker 占位文字 | Full | `ShellChrome!Menu.uix`、`ApplicationBarMenu.uix`、`UIXMobile!ListPicker.uix` 的原生 Text |
+
+边界计算的原版入口见 `UIXRender.dll` VA `0x1005ec4d`（垂直）和 `0x1005f051` 至 `0x1005f224`（水平）。标题之间的间距从布局框边缘计算，裁切和字形可见范围分别由控件的视口和 Flutter 绘制处理。
+
+布局层解析 `FontManifest.json` 中已注册的静态 TTF、OTF 字型，每个资源包按字体族缓存。读取 `head`、`OS/2`、`hhea`、`cmap`、`hmtx` 等表，按实际字号与缩放换算。字体资源随现有 `pubspec.yaml` 声明即可。需要首帧就使用边界度量时，在页面显示前可调用 `UixText.preloadFontMetrics(family)`。控件可以直接嵌入普通 Flutter 应用。需要隔离宿主继承的字号或行高时，可以用局部 `MetroTheme`。
+
+当前垂直计算覆盖能解析到同一个静态字型的单行文字，包括只改变颜色的文字段。水平字承覆盖从左到右、起始对齐的普通拉丁标签，按首字符映射的字形读取字承。实际发生换行、使用未知系统回退字型、混合字号或显式行高的文字沿用 Flutter 排版。字形替换、复杂文字方向和多行原版边界仍需独立核对。
+
+本库字体注册为 `Segoe WP`，借助 [`UixFontWeight`](lib/uix_typography.dart) 选择 Light 300、SemiLight 350、Regular 400、SemiBold 600、Bold 700、Black 800。Flutter 清单只允许声明整百值，SemiLight 条目省略 `weight`，引擎和度量读取器均使用该字体文件的字重 350。调用时用 `FontWeight(350)`。
 
 ## 从 WP 源码落实到 Flutter
 
@@ -97,7 +134,7 @@ const MetroPageScaffold(
 | 把同名近似的位图当成实际资源，或顺手替换现成图标。 | 从控件的状态绑定追到原文件，再核对文件尺寸、透明边和哈希。记录可见图形和点击范围的区别。用户已确认的图标、位置及操作入口按现有约定保留。 |
 | 为避免重叠而自行缩小软件返回，或因为原机有实体键而在触屏上关掉软件返回。 | 把框架的软件返回当作已存在的公共交互。排版修改单独处理。用带可返回路由的可见预览检查原 SVG、尺寸、偏移和透明度，再点按验证返回。 |
 | 原始字号直接乘布局系数，或用第二个字体族绕开 350 字重。 | 点字号使用 `uixFontSize`，布局使用 `uixScale`。核查 TTF 中的 `usWeightClass`，并验证实际引擎选中的字型。保持 `Segoe WP` 的单一字体族约定。 |
-| 清除 Material 行高后就认为所有文字边界一致，或直接把每个 `Text` 换成紧边界标签。 | 区分自然行框、可见字形和原版 `BoundsType`。普通页面继续用 `Text`，对应原版角色的控件内部选择测量方式。测试窄宽换行、显式行高和自定义字体，并注明单行与字符覆盖范围。 |
+| 清除 Material 行高后就认为所有文字边界一致，或直接把每个 `Text` 换成紧边界标签。 | 区分自然行框、可见字形和原版 `BoundsType`。普通页面继续用 `Text`，对应原版角色的控件内部选择测量方式。测试窄宽换行、显式行高和自定义字体，并注明已验证的文字方向、字型和换行范围。 |
 | 把应用配置、测试夹具或原版参数的推定值写成框架默认。 | 通用默认值以公开构造函数和预设为准。本库默认 WP8。移植记录分列原值、换算结果、适配选择和待验证项。用默认调用路径和指定版本分别验收。 |
 | 测试通过就把外观宣称为像素级一致。 | 测试覆盖行为和数值，视觉结论需要相同分辨率、主题和状态的实际渲染对照。提交说明写清已经检查的范围。 |
 

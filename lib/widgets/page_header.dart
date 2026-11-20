@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../metro_theme_extensions.dart';
 import '../uix_metrics.dart';
 import '../uix_typography.dart';
-import 'uix_tight_text.dart';
+import 'uix_text.dart';
 
 /// The TitleHost and optional SinglePivotHeader in UIXMobile!PageHeader.
 ///
@@ -101,7 +101,9 @@ class MetroPageHeader extends StatelessWidget {
       maxLines: 1,
       softWrap: false,
       overflow: TextOverflow.clip,
-      child: child is Text ? UixTightText.fromText(child) : child,
+      child: child is Text
+          ? UixText.fromText(child, boundsType: UixTextBounds.tight)
+          : child,
     ),
   );
 }

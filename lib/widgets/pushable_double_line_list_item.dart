@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 
 import '../uix_metrics.dart';
 import '../uix_typography.dart';
-import 'uix_tight_text.dart';
+import 'uix_text.dart';
 
 /// The text part of Phone!Controls.uix!DoubleLinePushItem.
 ///
@@ -71,7 +71,7 @@ class _PushableDoubleLineListItemState extends State<PushableDoubleLineListItem>
             top: 10 * uixScale,
             bottom: 4 * uixScale,
           ),
-          child: UixTightText.rich(
+          child: UixText.rich(
             _headerText(),
             overflow: TextOverflow.fade,
             style: TextStyle(
@@ -79,12 +79,15 @@ class _PushableDoubleLineListItemState extends State<PushableDoubleLineListItem>
               fontWeight: UixFontWeight.semiLight,
               color: widget.headerColor,
             ),
+            boundsType: UixTextBounds.tight,
+            maxLines: 1,
+            softWrap: false,
           ),
         ),
         Padding(
           // ProgressBarDoubleLineListItemSubHeaderMargins
           padding: const EdgeInsets.only(top: 8 * uixScale),
-          child: UixTightText(
+          child: UixText(
             widget.subHeader,
             overflow: TextOverflow.fade,
             style: TextStyle(
@@ -92,6 +95,9 @@ class _PushableDoubleLineListItemState extends State<PushableDoubleLineListItem>
               fontWeight: UixFontWeight.normal,
               color: widget.subHeaderColor,
             ),
+            boundsType: UixTextBounds.tight,
+            maxLines: 1,
+            softWrap: false,
           ),
         ),
       ],

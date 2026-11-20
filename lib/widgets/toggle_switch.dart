@@ -6,7 +6,7 @@ import 'package:metro_ui/uix_metrics.dart';
 import 'package:metro_ui/uix_typography.dart';
 import 'package:metro_ui/metro_theme_extensions.dart';
 
-import 'uix_tight_text.dart';
+import 'uix_text.dart';
 
 class _UixLog150 extends Curve {
   const _UixLog150();
@@ -543,7 +543,7 @@ class ToggleSwitch extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    UixTightText.fromText(
+                    UixText.fromText(
                       Text(
                         label,
                         maxLines: 2,
@@ -554,13 +554,14 @@ class ToggleSwitch extends StatelessWidget {
                           color: mid,
                         ),
                       ),
+                      boundsType: UixTextBounds.tight,
                     ),
                     Padding(
                       padding: const EdgeInsets.only(
                         top: 18 * uixScale,
                         bottom: 36 * uixScale,
                       ),
-                      child: UixTightText.fromText(
+                      child: UixText.fromText(
                         Text(
                           value ? onLabel : offLabel,
                           softWrap: true,
@@ -570,6 +571,7 @@ class ToggleSwitch extends StatelessWidget {
                             color: high,
                           ),
                         ),
+                        boundsType: UixTextBounds.tight,
                       ),
                     ),
                   ],
@@ -584,7 +586,7 @@ class ToggleSwitch extends StatelessWidget {
           if (description.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 40 * uixScale),
-              child: UixTightText.fromText(
+              child: UixText.fromText(
                 Text(
                   description,
                   softWrap: true,
@@ -594,6 +596,7 @@ class ToggleSwitch extends StatelessWidget {
                     color: mid,
                   ),
                 ),
+                boundsType: UixTextBounds.tight,
               ),
             ),
         ],

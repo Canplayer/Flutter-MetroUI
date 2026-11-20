@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:metro_ui/widgets/panorama.dart';
+import 'package:metro_ui/widgets/uix_text.dart';
 
 /// 依据 WP8 `UIXMobile` Panorama 的静态分析结果校验布局、视差与吸附：
 /// 设计宽度 480×0.8 = 384，Pane 宽 408×0.8 = 326.4，
@@ -110,6 +111,18 @@ void main() {
           .first,
     );
     expect(headerStyle.style.fontSize, closeTo(50 * (4 / 3) * 0.8, 0.01));
+
+    for (final text in ['photos', 'header0']) {
+      final label = tester.widget<UixText>(
+        find.ancestor(
+          of: find.text(text).first,
+          matching: find.byType(UixText),
+        ),
+      );
+      expect(label.boundsType.trimLeftSideBearing, isTrue);
+      expect(label.boundsType.alignToAscender, isFalse);
+      expect(label.boundsType.alignToBaseline, isFalse);
+    }
   });
 
   testWidgets('可见宽度规则：未过半吸附回原页，过半吸附到下一页', (WidgetTester tester) async {

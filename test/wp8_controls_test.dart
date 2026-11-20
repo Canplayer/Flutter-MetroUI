@@ -4,6 +4,7 @@ import 'package:metro_ui/widgets/tile.dart';
 import 'package:metro_ui/widgets/button.dart';
 import 'package:metro_ui/widgets/metro_circle_button.dart';
 import 'package:metro_ui/widgets/toggle_switch.dart';
+import 'package:metro_ui/widgets/uix_text.dart';
 
 Matrix4 _tileMatrix(WidgetTester tester) => tester
     .widget<Transform>(
@@ -59,6 +60,23 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+  testWidgets('MetroButton applies native tight bounds to a Text child', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Center(child: MetroButton(child: Text('button label'))),
+      ),
+    );
+    final label = tester.widget<UixText>(
+      find.descendant(
+        of: find.byType(MetroButton),
+        matching: find.byType(UixText),
+      ),
+    );
+    expect(label.boundsType, same(UixTextBounds.tight));
+  });
+
   testWidgets('switch tap asks for opposite value', (tester) async {
     bool? value;
     await tester.pumpWidget(

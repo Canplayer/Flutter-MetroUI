@@ -4,6 +4,7 @@ import 'package:metro_ui/metro_theme_extensions.dart';
 import 'package:metro_ui/uix_metrics.dart';
 import 'package:metro_ui/uix_typography.dart';
 import 'package:metro_ui/widgets/pivot_pane_view.dart';
+import 'package:metro_ui/widgets/uix_text.dart';
 
 export 'pivot_pane_view.dart' show PivotTransition, PivotController;
 
@@ -351,6 +352,7 @@ class _PivotState extends State<Pivot> with _PivotSyncState<Pivot> {
 
     // 整体内边距：标题与主体统一内缩
     return ClipRect(
+      clipper: widget.showHeader ? _PivotHeaderClipper(context) : null,
       child: Padding(
         padding: widget.padding,
         child: Column(
@@ -375,6 +377,7 @@ class _PivotStackState extends State<PivotStack>
     if (widget.items.isEmpty) return const SizedBox.shrink();
 
     return ClipRect(
+      clipper: _PivotHeaderClipper(context),
       child: Stack(
         clipBehavior: Clip.none,
         fit: StackFit.expand,
@@ -474,9 +477,6 @@ class _PivotHeaderState extends State<PivotHeader>
     with TickerProviderStateMixin {
   /// 已测量的标题宽度（key：标题在列表中的索引）。
   final Map<int, double> _widths = {};
-
-  /// 已测量的标题高度；Stack 必须有确定高度，先用估计值占位。
-  double _titleHeight = uixPivotHeaderFontSize * 1.43;
 
   late final AnimationController _controller;
 
@@ -634,6 +634,9 @@ class _PivotHeaderState extends State<PivotHeader>
     // 在换页瞬间让最外侧标题从左跳到右。
     return ClipRect(
       clipBehavior: widget.clipBehavior,
+      clipper: widget.clipBehavior == Clip.none
+          ? null
+          : _PivotHeaderClipper(context),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final anchor = _anchorX(constraints.maxWidth);
@@ -647,24 +650,22 @@ class _PivotHeaderState extends State<PivotHeader>
             hi = _sign < 0 ? hi + 1 : hi;
           }
           return SizedBox(
-            height: _titleHeight,
+            width: double.infinity,
             child: Transform.translate(
               // 用取模后的标题索引做 key（负页码也能得到 0..n-1）。
               key: ValueKey('bar-${cur % _n}'),
               offset: Offset(offset, 0),
               child: Stack(
                 clipBehavior: Clip.none,
+                alignment: Alignment.topLeft,
                 children: [
                   for (var k = lo; k <= hi; k++)
-                    Positioned(
-                      left: anchor + _slotX(k) - base,
-                      top: 0,
-                      bottom: 0,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: 1,
-                        // Selection commits on release; layout retains the old anchor
-                        // until the title motion has finished.
+                    Transform.translate(
+                      offset: Offset(anchor + _slotX(k) - base, 0),
+                      child: OverflowBox(
+                        maxWidth: double.infinity,
+                        alignment: Alignment.topLeft,
+                        fit: OverflowBoxFit.deferToChild,
                         child: _title(
                           k,
                           selected: k == (widget.swapTargetIndex ?? cur),
@@ -683,6 +684,7 @@ class _PivotHeaderState extends State<PivotHeader>
   Widget _title(int index, {required bool selected}) {
     final theme = Theme.of(context);
     final headings = theme.extension<MetroHeadingTheme>();
+    final title = widget.titles[index % _n];
     final contrast = MetroSystemThemeData.of(context).highContrast;
     final selectedColor =
         theme.textTheme.bodyLarge?.color ?? theme.colorScheme.onSurface;
@@ -707,13 +709,9 @@ class _PivotHeaderState extends State<PivotHeader>
               : () => widget.onTitleTap!(index),
           child: _MeasureSize(
             onSize: (size) {
-              final changedWidth = size.width != (_widths[index % _n] ?? -1);
-              final changedHeight = size.height != _titleHeight;
-              if (!changedWidth && !changedHeight) return;
-              setState(() {
-                if (changedWidth) _widths[index % _n] = size.width;
-                if (changedHeight) _titleHeight = size.height;
-              });
+              final slot = index % _n;
+              if (!mounted || size.width == _widths[slot]) return;
+              setState(() => _widths[slot] = size.width);
             },
             child: DefaultTextStyle.merge(
               style:
@@ -730,13 +728,38 @@ class _PivotHeaderState extends State<PivotHeader>
                         ? headings?.pivotSelectedStyle
                         : headings?.pivotIdleStyle,
                   ),
-              child: widget.titles[index % _n],
+              child: title is Text
+                  ? UixText.fromText(
+                      title,
+                      boundsType: const UixTextBounds(
+                        alignToAscender: true,
+                        trimLeftSideBearing: true,
+                      ),
+                    )
+                  : title,
             ),
           ),
         ),
       ),
     );
   }
+}
+
+/// Preserve the horizontal viewport while allowing title ink above its
+/// layout box. Any visible overhang fits within the screen's height.
+class _PivotHeaderClipper extends CustomClipper<Rect> {
+  _PivotHeaderClipper(BuildContext context)
+    : viewportHeight = MediaQuery.maybeSizeOf(context)?.height ?? 0;
+
+  final double viewportHeight;
+
+  @override
+  Rect getClip(Size size) =>
+      Rect.fromLTRB(0, -viewportHeight, size.width, size.height);
+
+  @override
+  bool shouldReclip(_PivotHeaderClipper oldClipper) =>
+      oldClipper.viewportHeight != viewportHeight;
 }
 
 /// 测量子组件尺寸并回调（尺寸变化时才回调）。

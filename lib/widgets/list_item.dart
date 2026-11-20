@@ -4,7 +4,7 @@ import 'package:metro_ui/uix_typography.dart';
 import 'package:metro_ui/metro_theme_extensions.dart';
 import 'package:metro_ui/widgets/tile.dart';
 
-import 'uix_tight_text.dart';
+import 'uix_text.dart';
 
 /// UIX List.uix!SingleLineListItem. Does not add PageMargins: the page owns them.
 class SingleLineListItem extends StatelessWidget {
@@ -108,7 +108,7 @@ class _ListItemContent extends StatelessWidget {
             top: 10 * uixScale,
             bottom: subHeaderText == null ? 46 * uixScale : 0,
           ),
-          child: UixTightText.fromText(
+          child: UixText.fromText(
             Text(
               headerText,
               maxLines: wrap ? 2 : 1,
@@ -120,6 +120,7 @@ class _ListItemContent extends StatelessWidget {
                 color: enabled ? foreground : disabled,
               ).merge(tokens?.headerStyle).merge(headerStyle),
             ),
+            boundsType: UixTextBounds.tight,
           ),
         ),
         if (subHeaderText != null)
@@ -128,7 +129,7 @@ class _ListItemContent extends StatelessWidget {
               top: 12 * uixScale,
               bottom: 23 * uixScale,
             ),
-            child: UixTightText.fromText(
+            child: UixText.fromText(
               Text(
                 subHeaderText!,
                 softWrap: true,
@@ -138,6 +139,7 @@ class _ListItemContent extends StatelessWidget {
                   color: enabled ? secondary : disabled,
                 ).merge(tokens?.subHeaderStyle).merge(subHeaderStyle),
               ),
+              boundsType: UixTextBounds.tight,
             ),
           ),
       ],

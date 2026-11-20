@@ -5,7 +5,7 @@ import 'package:metro_ui/page_scaffold.dart';
 import 'package:metro_ui/uix_metrics.dart';
 import 'package:metro_ui/uix_typography.dart';
 import 'package:metro_ui/widgets/page_header.dart';
-import 'package:metro_ui/widgets/uix_tight_text.dart';
+import 'package:metro_ui/widgets/uix_text.dart';
 
 void main() {
   testWidgets('PageHeader lays out the system title and single-pivot header', (
@@ -28,7 +28,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final lines = find.byType(UixTightText);
+    final lines = find.byType(UixText);
     expect(lines, findsNWidgets(2));
     final title = tester.getRect(lines.at(0));
     final singlePivotHeader = tester.getRect(lines.at(1));
