@@ -36,15 +36,43 @@ void main() {
         ),
       ),
     );
-    final g = await tester.startGesture(tester.getCenter(find.byType(Tile)));
+    final position = tester.getCenter(find.byType(Tile)) + const Offset(20, 10);
+    final g = await tester.startGesture(position);
     await tester.pump();
     expect(states, [true]);
+    expect(_tileMatrix(tester).entry(2, 3), greaterThan(0));
+    expect(_tileMatrix(tester).entry(0, 2).abs(), greaterThan(0));
+    expect(taps, 0);
     await g.up();
     await tester.pump();
     expect(states, [true, false]);
     expect(taps, 1);
     await tester.pump(const Duration(milliseconds: 500));
   });
+  testWidgets('a tap within one frame still shows the tilt and returns', (
+    tester,
+  ) async {
+    var taps = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: Tile(
+            onTap: () => taps++,
+            child: const SizedBox(width: 100, height: 80),
+          ),
+        ),
+      ),
+    );
+    final position = tester.getCenter(find.byType(Tile)) + const Offset(20, 10);
+    await tester.tapAt(position);
+    expect(taps, 1);
+    await tester.pump();
+    expect(_tileMatrix(tester).entry(2, 3), greaterThan(0));
+    expect(_tileMatrix(tester).entry(0, 2).abs(), greaterThan(0));
+    await tester.pumpAndSettle();
+    expect(_tilted(tester), isFalse);
+  });
+
   testWidgets('button and circle button tolerate absent optional data', (
     tester,
   ) async {

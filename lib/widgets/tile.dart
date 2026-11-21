@@ -1,11 +1,10 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
 import '../uix_metrics.dart';
 
-/// A pressable surface using the WP8 UIX TiltHelper timing and rotation model.
+/// A pressable surface with immediate tilt and a WP8-style release.
 class Tile extends StatefulWidget {
   const Tile({
     super.key,
@@ -28,7 +27,6 @@ class Tile extends StatefulWidget {
 }
 
 class TileState extends State<Tile> with SingleTickerProviderStateMixin {
-  static const Duration _holdDelay = Duration(milliseconds: 50);
   static const double _originTolerance = 1;
 
   late final AnimationController _release;
@@ -36,13 +34,10 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
   double _releaseX = 0, _releaseY = 0, _releaseZ = 0;
   int? _pointer;
   Offset? _anchor;
-  Offset? _pendingLocal;
   RenderBox? _box;
   Offset? _pendingGlobal;
   bool _reacquireScheduled = false;
   bool _active = false; // onTouch(true) has fired for the current pointer
-  bool _pressed = false; // hold delay elapsed; tilt is applied
-  Timer? _pressDelay;
   bool get _enabled => widget.onTap != null || widget.onTouch != null;
 
   @override
@@ -77,41 +72,17 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
     });
   }
 
-  void _press(Offset local, Size size, {required bool immediate}) {
+  void _press(Offset local, Size size) {
     _release.stop();
-    _pressDelay?.cancel();
-    _pendingLocal = local;
-    if (!_active) {
-      _active = true;
-      widget.onTouch?.call(true);
-    }
-    if (immediate) {
-      _pressed = true;
-      _applyTilt(local, size);
-      return;
-    }
-    _pressDelay = Timer(_holdDelay, () {
-      if (!mounted || !_active || _pointer == null) return;
-      final renderBox = _box;
-      final pending = _pendingLocal;
-      final anchor = _anchor;
-      if (renderBox == null || pending == null || anchor == null) return;
-      if (!renderBox.attached ||
-          (renderBox.localToGlobal(Offset.zero) - anchor).distance >
-              _originTolerance) {
-        _cancel();
-        return;
-      }
-      _pressed = true;
-      _applyTilt(pending, renderBox.size);
-    });
+    _active = true;
+    // Store the tilt on contact so release can use it even before a frame.
+    _applyTilt(local, size);
+    widget.onTouch?.call(true);
   }
 
   void _end() {
-    _pressDelay?.cancel();
     if (!_active) return;
     _active = false;
-    _pressed = false;
     widget.onTouch?.call(false);
     if (widget.allowBack) {
       _releaseX = _rx;
@@ -131,7 +102,6 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
     _pointer = null;
     _anchor = null;
     _box = null;
-    _pendingLocal = null;
     _pendingGlobal = null;
     _reacquireScheduled = false;
     _end();
@@ -153,18 +123,13 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
     }
     final local = box.globalToLocal(event.position);
     if (!_contains(box.size, local)) {
-      _pendingLocal = null;
       _pendingGlobal = null;
       _end();
       return;
     }
-    if (_pressed) {
+    if (_active) {
       _applyTilt(local, box.size);
-    } else if (_pressDelay?.isActive ?? false) {
-      _pendingLocal = local;
-      _pendingGlobal = event.position;
     } else {
-      _pendingLocal = local;
       _pendingGlobal = event.position;
       _scheduleReacquire();
     }
@@ -181,7 +146,6 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
       if (!mounted ||
           _pointer == null ||
           _active ||
-          _pressed ||
           renderBox == null ||
           !renderBox.attached ||
           global == null ||
@@ -198,7 +162,7 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
       }
       final local = renderBox.globalToLocal(global);
       if (!_contains(renderBox.size, local)) return;
-      _press(local, renderBox.size, immediate: true);
+      _press(local, renderBox.size);
     });
     WidgetsBinding.instance.scheduleFrame();
   }
@@ -211,7 +175,6 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
 
   @override
   void dispose() {
-    _pressDelay?.cancel();
     _release.dispose();
     super.dispose();
   }
@@ -261,7 +224,6 @@ class TileState extends State<Tile> with SingleTickerProviderStateMixin {
                   _press(
                     renderBox.globalToLocal(event.position),
                     renderBox.size,
-                    immediate: false,
                   );
                 }
               : null,
